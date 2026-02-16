@@ -144,7 +144,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private val onLogonEnded: (SteamEvent.LogonEnded) -> Unit = {
+    private val onLogonEnded: (SteamEvent.LogonEnded) -> Unit = { event ->
         Timber.tag("MainViewModel").i("Received logon ended")
         viewModelScope.launch {
             _uiEvent.send(MainUiEvent.OnLogonEnded(event.loginResult))

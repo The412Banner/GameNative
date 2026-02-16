@@ -1,5 +1,6 @@
 package app.gamenative.ui.model
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.gamenative.PluviaApp
@@ -107,7 +108,7 @@ class UserLoginViewModel : ViewModel() {
         // Only handle auto-login state, connection state is managed by MainViewModel
         if (it.isAutoLoggingIn) {
             _loginState.update { currentState ->
-                currentState.copy(isLoggingIn = true)
+                currentState.copy(isLoggingIn = true, isSteamConnected = true,)
             }
         }
     }
@@ -196,6 +197,7 @@ class UserLoginViewModel : ViewModel() {
         Timber.tag("UserLoginViewModel").i("Received logged out")
         _loginState.update {
             it.copy(
+                isSteamConnected = false,
                 isLoggingIn = false,
                 isQrFailed = false,
                 loginResult = LoginResult.Failed,

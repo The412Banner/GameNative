@@ -55,6 +55,8 @@ import app.gamenative.ui.enums.PaneType
 import app.gamenative.ui.theme.PluviaTheme
 import app.gamenative.ui.util.ListItemImage
 import app.gamenative.utils.CustomGameScanner
+import app.gamenative.service.epic.EpicService
+import app.gamenative.service.gog.GOGService
 import java.io.File
 
 /**
@@ -242,6 +244,8 @@ private fun GridStatusIcons(appInfo: LibraryItem) {
             when (appInfo.gameSource) {
                 GameSource.STEAM -> SteamService.isAppInstalled(appInfo.gameId)
                 GameSource.CUSTOM_GAME -> true
+                GameSource.GOG -> GOGService.isGameInstalled(appInfo.gameId.toString())
+                GameSource.EPIC -> EpicService.isGameInstalled(appInfo.gameId)
             },
         )
     }

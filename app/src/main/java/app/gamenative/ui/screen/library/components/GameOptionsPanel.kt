@@ -33,6 +33,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.AddToHomeScreen
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
@@ -332,6 +335,10 @@ private fun getIconForOption(type: AppOptionMenuType): ImageVector {
         AppOptionMenuType.ForceDownloadRemote -> Icons.Default.CloudDownload
         AppOptionMenuType.ForceUploadLocal -> Icons.Default.CloudUpload
         AppOptionMenuType.FetchSteamGridDBImages -> Icons.Default.Image
+        AppOptionMenuType.TestGraphics -> Icons.Default.Build
+        AppOptionMenuType.ImportConfig -> Icons.Default.ArrowDownward
+        AppOptionMenuType.ExportConfig -> Icons.Default.ArrowUpward
+        AppOptionMenuType.ManageGameContent -> Icons.Default.Apps
     }
 }
 
@@ -376,6 +383,10 @@ private fun groupOptions(options: List<AppMenuOption>): Map<OptionCategory, List
             AppOptionMenuType.GetSupport,
             AppOptionMenuType.SubmitFeedback,
             AppOptionMenuType.FetchSteamGridDBImages,
+            AppOptionMenuType.TestGraphics,
+            AppOptionMenuType.ImportConfig,
+            AppOptionMenuType.ExportConfig,
+            AppOptionMenuType.ManageGameContent
             -> helpInfo.add(option)
         }
     }

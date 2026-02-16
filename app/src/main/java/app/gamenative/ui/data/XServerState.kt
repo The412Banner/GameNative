@@ -1,12 +1,12 @@
 package app.gamenative.ui.data
 
+import androidx.compose.runtime.saveable.mapSaver
 import com.winlator.container.Container
+import com.winlator.core.DXVKHelper
 import com.winlator.core.KeyValueSet
 import com.winlator.core.WineInfo
-import com.winlator.inputcontrols.ControlElement
 
 data class XServerState(
-    // Wine/Container configuration
     var winStarted: Boolean = false,
     val dxwrapper: String = Container.DEFAULT_DXWRAPPER,
     val dxwrapperConfig: KeyValueSet? = null,
@@ -15,16 +15,33 @@ data class XServerState(
     val graphicsDriver: String = Container.DEFAULT_GRAPHICS_DRIVER,
     val graphicsDriverVersion: String = "",
     val audioDriver: String = Container.DEFAULT_AUDIO_DRIVER,
-
-    // UI Control State
-    val areControlsVisible: Boolean = false,
-    val isEditMode: Boolean = false,
-    val showQuickMenu: Boolean = false,
-    val showPhysicalControllerDialog: Boolean = false,
-    val showElementEditor: Boolean = false,
-    val hasPhysicalController: Boolean = false,
-
-    // Element Editor State
-    val elementToEdit: ControlElement? = null,
-    val elementPositionsSnapshot: Map<ControlElement, Pair<Int, Int>> = emptyMap(),
-)
+) {
+    companion object {
+        val Saver = mapSaver(
+            save = { state ->
+                mapOf(
+                    "winStarted" to state.winStarted,
+                    "dxwrapper" to state.dxwrapper,
+                    "dxwrapperConfig" to (state.dxwrapperConfig?.data ?: ""),
+                    "screenSize" to state.screenSize,
+                    "wineInfo" to state.wineInfo,
+                    "graphicsDriver" to state.graphicsDriver,
+                    "graphicsDriverVersion" to state.graphicsDriverVersion,
+                    "audioDriver" to state.audioDriver,
+                )
+            },
+            restore = { map ->
+                XServerState(
+                    winStarted = map["winStarted"] as Boolean,
+                    dxwrapper = map["dxwrapper"] as String,
+                    dxwrapperConfig = DXVKHelper.parseConfig(map["dxwrapperConfig"] as String),
+                    screenSize = map["screenSize"] as String,
+                    wineInfo = map["wineInfo"] as WineInfo,
+                    graphicsDriver = map["graphicsDriver"] as String,
+                    graphicsDriverVersion = map["graphicsDriverVersion"] as String? ?: "",
+                    audioDriver = map["audioDriver"] as String,
+                )
+            },
+        )
+    }
+}

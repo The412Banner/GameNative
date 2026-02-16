@@ -50,7 +50,6 @@ import app.gamenative.service.SteamService
 import app.gamenative.ui.component.ConnectionStatusBanner
 import app.gamenative.service.epic.EpicService
 import app.gamenative.service.gog.GOGService
-import app.gamenative.ui.component.ConnectingServersScreen
 import app.gamenative.ui.component.dialog.GameFeedbackDialog
 import app.gamenative.ui.component.dialog.LoadingDialog
 import app.gamenative.ui.component.dialog.MessageDialog
@@ -171,16 +170,20 @@ private fun resolveGameAppId(appId: String): GameResolutionResult {
     }
 
     if(!isInstalled){
-        GameResolutionResult.NotFound(
+        return GameResolutionResult.NotFound(
             gameId = gameId,
             originalAppId = appId
         )
     }
 
+    val isSteamInstalled = gameSource == GameSource.STEAM && isInstalled
+    val isCustomGame = gameSource == GameSource.CUSTOM_GAME
+
     return GameResolutionResult.Success(
-        finalAppId = finalAppId,
+        finalAppId = appId,
         gameId = gameId,
-        gameSource = gameSource,
+        isSteamInstalled = isSteamInstalled,
+        isCustomGame = isCustomGame,
     )
 }
 
@@ -239,13 +242,13 @@ fun PluviaMain(
 
                     when (val resolution = resolveGameAppId(event.appId)) {
                         is GameResolutionResult.Success -> {
-                            Timber.i("[PluviaMain]: Using appId: ${resolution.appId} (original: ${event.appId}, isSteamInstalled: ${resolution.isSteamInstalled}, isCustomGame: ${resolution.isCustomGame})")
+                            Timber.i("[PluviaMain]: Using appId: ${resolution.finalAppId} (original: ${event.appId}, isSteamInstalled: ${resolution.isSteamInstalled}, isCustomGame: ${resolution.isCustomGame})")
 
-                            viewModel.setLaunchedAppId(resolution.appId)
+                            viewModel.setLaunchedAppId(resolution.finalAppId)
                             viewModel.setBootToContainer(false)
                             preLaunchApp(
                                 context = context,
-                                appId = resolution.appId,
+                                appId = resolution.finalAppId,
                                 setLoadingDialogVisible = viewModel::setLoadingDialogVisible,
                                 setLoadingProgress = viewModel::setLoadingDialogProgress,
                                 setLoadingMessage = viewModel::setLoadingDialogMessage,
@@ -312,17 +315,14 @@ fun PluviaMain(
                                         }
 
                                         is GameResolutionResult.Success -> {
-                                            launchRequest
-                                            }
-
-                                            if (updatedLaunchRequest.containerConfig != null) {
+                                            if (launchRequest.containerConfig != null) {
                                                 IntentLaunchManager.applyTemporaryConfigOverride(
                                                     context,
-                                                    updatedLaunchRequest.appId,
-                                                    updatedLaunchRequest.containerConfig,
+                                                    launchRequest.appId,
+                                                    launchRequest.containerConfig,
                                                 )
                                                 Timber.tag("IntentLaunch")
-                                                    .i("Applied container config override for app ${updatedLaunchRequest.appId}")
+                                                    .i("Applied container config override for app ${launchRequest.appId}")
                                             }
 
                                             // Navigate to Home if not already there (for pending launch requests)
@@ -334,11 +334,11 @@ fun PluviaMain(
                                                 }
                                             }
 
-                                            viewModel.setLaunchedAppId(updatedLaunchRequest.appId)
+                                            viewModel.setLaunchedAppId(launchRequest.appId)
                                             viewModel.setBootToContainer(false)
                                             preLaunchApp(
                                                 context = context,
-                                                appId = updatedLaunchRequest.appId,
+                                                appId = launchRequest.appId,
                                                 setLoadingDialogVisible = viewModel::setLoadingDialogVisible,
                                                 setLoadingProgress = viewModel::setLoadingDialogProgress,
                                                 setLoadingMessage = viewModel::setLoadingDialogMessage,
@@ -483,7 +483,7 @@ fun PluviaMain(
             // Only attempt reconnection if not already connected/connecting and not in offline mode
             val shouldAttemptReconnect = !state.isSteamConnected &&
                 !isConnecting &&
-                !SteamService.isGameRunning &&
+                !SteamService.keepAlive &&
                 state.connectionState != ConnectionState.OFFLINE_MODE
 
             if (shouldAttemptReconnect) {
@@ -1065,7 +1065,8 @@ fun PluviaMain(
             }
 
             /** Full Screen Chat **/
-            composable(
+            // Chat feature temporarily disabled - screen component removed
+            /* composable(
                 route = "chat/{id}",
                 arguments = listOf(
                     navArgument(PluviaScreen.Chat.ARG_ID) {
@@ -1082,7 +1083,7 @@ fun PluviaMain(
                         }
                     },
                 )
-            }
+            } */
 
             /** Game Screen **/
             composable(route = PluviaScreen.XServer.route) {

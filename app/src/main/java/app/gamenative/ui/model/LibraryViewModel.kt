@@ -16,7 +16,6 @@ import app.gamenative.data.SteamApp
 import app.gamenative.events.AndroidEvent
 import app.gamenative.data.GOGGame
 import app.gamenative.data.EpicGame
-import app.gamenative.data.GameSource
 import app.gamenative.db.dao.SteamAppDao
 import app.gamenative.db.dao.GOGGameDao
 import app.gamenative.db.dao.EpicGameDao
@@ -38,6 +37,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -492,7 +492,7 @@ class LibraryViewModel @Inject constructor(
             val includeGOG = if (currentTab == app.gamenative.ui.enums.LibraryTab.ALL) {
                 _state.value.showGOGInLibrary
             } else {
-                currentTab.showGOG
+                currentTab.showGoG
             }
 
             val includeEpic = if (currentTab == app.gamenative.ui.enums.LibraryTab.ALL) {

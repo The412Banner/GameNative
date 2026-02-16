@@ -53,6 +53,8 @@ import app.gamenative.ui.util.rememberWindowWidthClass
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import timber.log.Timber
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

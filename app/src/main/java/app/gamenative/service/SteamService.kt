@@ -34,7 +34,6 @@ import app.gamenative.db.PluviaDatabase
 import app.gamenative.db.dao.AppInfoDao
 import app.gamenative.db.dao.CachedLicenseDao
 import app.gamenative.db.dao.ChangeNumbersDao
-import app.gamenative.db.dao.EmoticonDao
 import app.gamenative.db.dao.EncryptedAppTicketDao
 import app.gamenative.db.dao.FileChangeListsDao
 import app.gamenative.db.dao.SteamAppDao
@@ -47,14 +46,10 @@ import app.gamenative.enums.SaveLocation
 import app.gamenative.enums.SyncResult
 import app.gamenative.events.AndroidEvent
 import app.gamenative.events.SteamEvent
-import app.gamenative.service.callback.EmoticonListCallback
-import app.gamenative.service.handler.PluviaHandler
 import app.gamenative.utils.LicenseSerializer
 import app.gamenative.utils.MarkerUtils
 import app.gamenative.utils.Net
 import app.gamenative.utils.SteamUtils
-import app.gamenative.utils.MarkerUtils
-import app.gamenative.enums.Marker
 import app.gamenative.utils.generateSteamApp
 import com.winlator.container.Container
 import com.winlator.xenvironment.ImageFs
@@ -78,8 +73,6 @@ import `in`.dragonbra.javasteam.steam.authentication.AuthenticationException
 import `in`.dragonbra.javasteam.steam.authentication.IAuthenticator
 import `in`.dragonbra.javasteam.steam.authentication.IChallengeUrlChanged
 import `in`.dragonbra.javasteam.steam.authentication.QrAuthSession
-import `in`.dragonbra.javasteam.depotdownloader.DepotDownloader
-import `in`.dragonbra.javasteam.depotdownloader.IDownloadListener
 import `in`.dragonbra.javasteam.depotdownloader.Steam3Session
 import `in`.dragonbra.javasteam.steam.discovery.FileServerListProvider
 import `in`.dragonbra.javasteam.steam.discovery.ServerQuality
@@ -156,35 +149,14 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import timber.log.Timber
-import java.lang.NullPointerException
-import app.gamenative.data.AppInfo
-import app.gamenative.db.dao.AppInfoDao
-import kotlinx.coroutines.ensureActive
-import app.gamenative.utils.LicenseSerializer
-import app.gamenative.data.CachedLicense
-import com.winlator.container.Container
-import `in`.dragonbra.javasteam.depotdownloader.data.AppItem
-import `in`.dragonbra.javasteam.depotdownloader.data.DownloadItem
-import `in`.dragonbra.javasteam.steam.handlers.steamapps.License
-import `in`.dragonbra.javasteam.steam.handlers.steamuser.callback.PlayingSessionStateCallback
-import `in`.dragonbra.javasteam.steam.steamclient.AsyncJobFailedException
-import `in`.dragonbra.javasteam.types.DepotManifest
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import app.gamenative.data.DownloadingAppInfo
+import app.gamenative.db.dao.DownloadingAppInfoDao
+import kotlinx.coroutines.flow.update
+import java.util.concurrent.CopyOnWriteArrayList
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.FormBody
 import org.json.JSONObject
-import android.util.Base64
-import app.gamenative.data.DownloadingAppInfo
-import app.gamenative.db.dao.DownloadingAppInfoDao
-import app.gamenative.db.dao.EncryptedAppTicketDao
-import kotlinx.coroutines.flow.update
-import java.io.InputStream
-import java.io.OutputStream
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
 class SteamService : Service(), IChallengeUrlChanged {
