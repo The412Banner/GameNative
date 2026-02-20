@@ -17,13 +17,11 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -56,9 +54,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -99,11 +94,6 @@ import app.gamenative.ui.theme.PluviaTheme
 import app.gamenative.ui.util.AdaptiveHeroHeight
 import com.skydoves.landscapist.ImageOptions
 import com.skydoves.landscapist.coil.CoilImage
-import app.gamenative.utils.ContainerUtils
-import app.gamenative.utils.SteamUtils
-import com.winlator.container.ContainerData
-import com.winlator.xenvironment.ImageFsInstaller
-import com.winlator.fexcore.FEXCoreManager
 import app.gamenative.ui.screen.library.appscreen.SteamAppScreen
 import app.gamenative.ui.screen.library.appscreen.CustomGameAppScreen
 import app.gamenative.ui.screen.library.appscreen.GOGAppScreen
@@ -447,12 +437,7 @@ internal fun AppScreenContent(
     }
 
     LaunchedEffect(Unit) {
-        try {
-            playButtonFocusRequester.requestFocus()
-        } catch (_: IllegalStateException) {
-            // FocusRequester not attached - the PrimaryActionButton may not be
-            // in composition (e.g. non-downloading layout uses regular Buttons)
-        }
+        playButtonFocusRequester.requestFocus()
     }
 
     // Handle gamepad button presses
@@ -513,309 +498,32 @@ internal fun AppScreenContent(
             .fillMaxSize()
             .onKeyEvent { handleKeyEvent(it.nativeKeyEvent) },
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-        // Hero Section with Game Image Background
-        Box(modifier = Modifier.weight(1f)) {
-            // Hero background image
-            if (displayInfo.heroImageUrl != null) {
-            CoilImage(
-                modifier = Modifier.fillMaxSize(),
-                    imageModel = { displayInfo.heroImageUrl },
-                imageOptions = ImageOptions(contentScale = ContentScale.Crop),
-                loading = { LoadingScreen() },
-                failure = {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        // Gradient background as fallback
-                        Surface(
-                            modifier = Modifier.fillMaxSize(),
-                            color = MaterialTheme.colorScheme.primary
-                        ) { }
-                    }
-                },
-                previewPlaceholder = painterResource(R.drawable.testhero),
-            )
-            } else {
-                // Fallback gradient background when no hero image
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.primary
-                ) { }
-            }
-
-            // Gradient overlay
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.8f)
-                            )
-                        )
-                    )
-            )
-
-            // Compatibility status overlay (bottom center)
-            // Must be after gradient but before title to ensure visibility
-            if (displayInfo.compatibilityMessage != null && displayInfo.compatibilityColor != null) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .background(Color.Black.copy(alpha = 0.4f))
-                        .padding(horizontal = 8.dp, vertical = 1.dp)
-                ) {
-                    Text(
-                        text = displayInfo.compatibilityMessage,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(displayInfo.compatibilityColor),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-            }
-
-            // Back button (top left)
-            Box(
-                modifier = Modifier
-                    .padding(20.dp)
-                    .background(
-                        color = Color.Black.copy(alpha = 0.5f),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-            ) {
-                BackButton(onClick = onBack)
-            }
-
-            // Settings/options button (top right)
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(20.dp)
-            ) {
-                IconButton(
-                    modifier = Modifier
-                        .background(
-                            color = Color.Black.copy(alpha = 0.5f),
-                            shape = RoundedCornerShape(12.dp)
-                        ),
-                    onClick = { optionsMenuVisible = !optionsMenuVisible },
-                    content = {
-                        Icon(
-                            Icons.Filled.MoreVert,
-                            contentDescription = "Settings",
-                            tint = Color.White
-                        )
-                    },
-                )
-            }
-
-            // Game title and subtitle
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(20.dp)
-            ) {
-                Text(
-                    text = displayInfo.name,
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        shadow = Shadow(
-                            color = Color.Black.copy(alpha = 0.5f),
-                            offset = Offset(0f, 2f),
-                            blurRadius = 10f
-                        )
-                    ),
-                    color = Color.White
-                )
-
-                Text(
-                    text = "${displayInfo.developer} • ${remember(displayInfo.releaseDate) {
-                        if (displayInfo.releaseDate > 0) {
-                            SimpleDateFormat("yyyy", Locale.getDefault()).format(Date(displayInfo.releaseDate * 1000))
-                        } else {
-                            ""
-                        }
-                    }}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.9f)
-                )
-            }
-        }
-
-        // Content section
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(24.dp)
+                .fillMaxSize()
+                .verticalScroll(scrollState),
         ) {
-            // Action buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            // Hero Section (Parallax)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(AdaptiveHeroHeight.get()),
             ) {
-                // Pause/Resume and Delete when downloading or paused
-                // Use hasPartialDownload from BaseAppScreen (implemented per game source)
-                // Disable resume when Wi-Fi only is enabled and there's no Wi-Fi
-                val isResume = !isDownloading && hasPartialDownload
-                val pauseResumeEnabled = if (isResume) wifiAllowed else true
-                if (isDownloading || hasPartialDownload) {
-                    // Pause or Resume
-                    Button(
-                        enabled = pauseResumeEnabled,
-                        modifier = Modifier.weight(1f),
-                        onClick = onPauseResumeClick,
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        contentPadding = PaddingValues(16.dp)
-                    ) {
-                        Text(
-                            text = if (isDownloading) stringResource(R.string.pause_download)
-                                   else stringResource(R.string.resume_download),
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
-                        )
-                    }
-                    // Delete (Cancel) download data
-                    OutlinedButton(
-                        modifier = Modifier.weight(1f),
-                        onClick = onDeleteDownloadClick,
-                        shape = RoundedCornerShape(16.dp),
-                        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-                        contentPadding = PaddingValues(16.dp)
-                    ) {
-                        Text(stringResource(R.string.delete_app), style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
-                    }
-                } else {
-                    // Disable install when Wi-Fi only is enabled and there's no Wi-Fi
-                    val isInstall = !isInstalled
-                    val installEnabled = if (isInstall) wifiAllowed && hasInternet else true
-                    // For installed games, button should always be enabled (regardless of isValidToDownload)
-                    // For games that need installation, check isValidToDownload
-                    val buttonEnabled = if (isInstalled) {
-                        installEnabled // Installed games can always be played
-                    } else {
-                        installEnabled && isValidToDownload // Only check download validity when not installed
-                    }
-                    // Install or Play button
-                    Button(
-                        enabled = buttonEnabled,
-                        modifier = Modifier.weight(1f),
-                        onClick = {
-                            onDownloadInstallClick()
-                        },
-                        shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        contentPadding = PaddingValues(16.dp)
-                    ) {
-                        val text = when {
-                            isInstalled -> stringResource(R.string.run_app)
-                            !hasInternet -> stringResource(R.string.library_need_internet)
-                            !wifiConnected && PrefManager.downloadOnWifiOnly -> stringResource(R.string.library_wifi_only_enabled)
-                            else -> stringResource(R.string.install_app)
-                        }
-                        Text(
-                            text = text,
-                            style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
-                        )
-                    }
-                    // Uninstall/Delete button if already installed
-                    // This is shared functionality - all game types show delete button when installed
-                    // The action is handled by onDeleteDownloadClick which is implemented per game source
-                    if (isInstalled) {
-                        OutlinedButton(
-                            modifier = Modifier.weight(1f),
-                            onClick = { onDeleteDownloadClick() },
-                            shape = RoundedCornerShape(16.dp),
-                            border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-                            contentPadding = PaddingValues(16.dp)
-                        ) {
-                            val buttonText = if (ContainerUtils.extractGameSourceFromContainerId(displayInfo.appId) == app.gamenative.data.GameSource.CUSTOM_GAME) {
-                                stringResource(R.string.remove)
-                            } else {
-                                stringResource(R.string.uninstall)
-                            }
-                            Text(
-                                text = buttonText,
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold)
-                            )
-                        }
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Download progress section
-            if (isDownloading) {
-                // downloadInfo passed from BaseAppScreen based on game source
-                val statusMessageFlow = downloadInfo?.getStatusMessageFlow()
-                val statusMessageState = statusMessageFlow?.collectAsState(initial = statusMessageFlow.value)
-                val statusMessage = statusMessageState?.value
-
-                // Use DownloadInfo's byte-based ETA when available for more stable estimates
-                val timeLeftText = remember(displayInfo.appId, downloadProgress, downloadInfo, statusMessage) {
-                    val etaMs = downloadInfo?.getEstimatedTimeRemaining()
-                    if (etaMs != null && etaMs > 0L) {
-                        val totalSeconds = etaMs / 1000
-                        val minutesLeft = totalSeconds / 60
-                        val secondsPart = totalSeconds % 60
-                        "${minutesLeft}m ${secondsPart}s left"
-                    } else if (downloadProgress in 0f..1f && downloadProgress < 1f) {
-                        val statusText = statusMessage?.takeUnless { it.isBlank() }
-                        statusText ?: "Calculating..."
-                    } else {
-                        ""
-                    }
-                }
-                Column(
+                // Hero background image
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(scrollState),
+                        .graphicsLayer {
+                            translationY = parallaxOffset
+                        },
                 ) {
-                    // Hero Section  (Parallax)
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(AdaptiveHeroHeight.get()),
-                    ) {
-                        // Hero background image
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .graphicsLayer {
-                                    translationY = parallaxOffset
-                                },
-                        ) {
-                            if (displayInfo.heroImageUrl != null) {
-                                CoilImage(
-                                    modifier = Modifier.fillMaxSize(),
-                                    imageModel = { displayInfo.heroImageUrl },
-                                    imageOptions = ImageOptions(contentScale = ContentScale.Crop),
-                                    loading = { LoadingScreen() },
-                                    failure = {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .background(
-                                                    brush = Brush.verticalGradient(
-                                                        colors = listOf(
-                                                            MaterialTheme.colorScheme.primary,
-                                                            MaterialTheme.colorScheme.primaryContainer,
-                                                        ),
-                                                    ),
-                                                ),
-                                        )
-                                    },
-                                    previewPlaceholder = painterResource(R.drawable.testhero),
-                                )
-                            } else {
+                    if (displayInfo.heroImageUrl != null) {
+                        CoilImage(
+                            modifier = Modifier.fillMaxSize(),
+                            imageModel = { displayInfo.heroImageUrl },
+                            imageOptions = ImageOptions(contentScale = ContentScale.Crop),
+                            loading = { LoadingScreen() },
+                            failure = {
                                 Box(
                                     modifier = Modifier
                                         .fillMaxSize()
@@ -828,445 +536,458 @@ internal fun AppScreenContent(
                                             ),
                                         ),
                                 )
-                            }
-                        }
-
-                        // Gradient overlay
+                            },
+                            previewPlaceholder = painterResource(R.drawable.testhero),
+                        )
+                    } else {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(
                                     brush = Brush.verticalGradient(
                                         colors = listOf(
-                                            Color.Transparent,
-                                            Color.Black.copy(alpha = 0.3f),
-                                            Color.Black.copy(alpha = 0.85f),
+                                            MaterialTheme.colorScheme.primary,
+                                            MaterialTheme.colorScheme.primaryContainer,
                                         ),
-                                        startY = 0f,
-                                        endY = Float.POSITIVE_INFINITY,
                                     ),
                                 ),
                         )
-
-                        // Back button (top left)
-                        Box(
-                            modifier = Modifier
-                                .padding(16.dp)
-                                .size(44.dp)
-                                .background(
-                                    color = Color.Black.copy(alpha = 0.4f),
-                                    shape = RoundedCornerShape(8.dp),
-                                ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            BackButton(onClick = onBack)
-                        }
-
-                        // Bottom overlay with title and action bar
-                        Column(
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 16.dp),
-                        ) {
-                            // Game title
-                            Text(
-                                text = displayInfo.name,
-                                style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    shadow = Shadow(
-                                        color = Color.Black.copy(alpha = 0.6f),
-                                        offset = Offset(0f, 2f),
-                                        blurRadius = 8f,
-                                    ),
-                                ),
-                                color = Color.White,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-
-                            // Developer and year
-                            Text(
-                                text = "${displayInfo.developer} • ${
-                                    remember(displayInfo.releaseDate) {
-                                        if (displayInfo.releaseDate > 0) {
-                                            SimpleDateFormat("yyyy", Locale.getDefault()).format(Date(displayInfo.releaseDate * 1000))
-                                        } else {
-                                            ""
-                                        }
-                                    }
-                                }",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.85f),
-                            )
-
-                            Spacer(modifier = Modifier.height(16.dp))
-
-                            // Integrated action bar - overlaid on hero
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.Black.copy(alpha = 0.5f))
-                                    .padding(12.dp)
-                                    .focusGroup(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                // Primary action button (left-aligned)
-                                if (isDownloading || hasPartialDownload) {
-                                    PrimaryActionButton(
-                                        text = if (isDownloading) {
-                                            stringResource(R.string.pause_download)
-                                        } else {
-                                            stringResource(R.string.resume_download)
-                                        },
-                                        onClick = onPauseResumeClick,
-                                        enabled = pauseResumeEnabled,
-                                        isInstalled = false,
-                                        isDownloading = isDownloading,
-                                        downloadProgress = downloadProgress,
-                                        focusRequester = playButtonFocusRequester,
-                                    )
-                                } else {
-                                    val text = when {
-                                        isInstalled -> stringResource(R.string.run_app)
-                                        !hasInternet -> stringResource(R.string.library_need_internet)
-                                        !wifiConnected && PrefManager.downloadOnWifiOnly -> stringResource(R.string.library_wifi_only_enabled)
-                                        else -> stringResource(R.string.install_app)
-                                    }
-                                    PrimaryActionButton(
-                                        text = text,
-                                        onClick = onDownloadInstallClick,
-                                        enabled = buttonEnabled,
-                                        isInstalled = isInstalled,
-                                        focusRequester = playButtonFocusRequester,
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.weight(1f))
-
-                                // Secondary action icons (right-aligned)
-                                ActionIconButton(
-                                    icon = Icons.Default.Settings,
-                                    contentDescription = stringResource(R.string.options),
-                                    onClick = { optionsMenuVisible = true },
-                                )
-
-                                if (isInstalled) {
-                                    ActionIconButton(
-                                        icon = Icons.Default.Cloud,
-                                        contentDescription = stringResource(R.string.cloud),
-                                        onClick = {
-                                            optionsMenu.find { it.optionType == AppOptionMenuType.ForceCloudSync }?.onClick?.invoke()
-                                        },
-                                    )
-                                }
-
-                                if (isInstalled || hasPartialDownload) {
-                                    ActionIconButton(
-                                        icon = Icons.Default.Delete,
-                                        contentDescription = if (isInstalled) stringResource(R.string.uninstall) else stringResource(R.string.delete_app),
-                                        onClick = onDeleteDownloadClick,
-                                    )
-                                }
-                            }
-
-                            // Compatibility status (if applicable)
-                            if (displayInfo.compatibilityMessage != null && displayInfo.compatibilityColor != null) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = displayInfo.compatibilityMessage,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(displayInfo.compatibilityColor),
-                                )
-                            }
-                        }
                     }
+                }
 
-                    // Content section below hero with solid background
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(MaterialTheme.colorScheme.background)
-                            .padding(20.dp),
-                    ) {
-                        // Download progress section
-                        if (isDownloading) {
-                            // downloadInfo passed from BaseAppScreen based on game source
-                            val statusMessageFlow = downloadInfo?.getStatusMessageFlow()
-                            val statusMessageState = statusMessageFlow?.collectAsState(initial = statusMessageFlow.value)
-                            val statusMessage = statusMessageState?.value
+                // Gradient overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.3f),
+                                    Color.Black.copy(alpha = 0.85f),
+                                ),
+                                startY = 0f,
+                                endY = Float.POSITIVE_INFINITY,
+                            ),
+                        ),
+                )
 
-                            val timeLeftText = remember(displayInfo.appId, downloadProgress, downloadInfo, statusMessage) {
-                                val etaMs = downloadInfo?.getEstimatedTimeRemaining()
-                                if (etaMs != null && etaMs > 0L) {
-                                    val totalSeconds = etaMs / 1000
-                                    val minutesLeft = totalSeconds / 60
-                                    val secondsPart = totalSeconds % 60
-                                    "${minutesLeft}m ${secondsPart}s left"
-                                } else if (downloadProgress in 0f..1f && downloadProgress < 1f) {
-                                    statusMessage?.takeUnless { it.isBlank() } ?: "Calculating..."
+                // Back button (top left)
+                Box(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .size(44.dp)
+                        .background(
+                            color = Color.Black.copy(alpha = 0.4f),
+                            shape = RoundedCornerShape(8.dp),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    BackButton(onClick = onBack)
+                }
+
+                // Bottom overlay with title and action bar
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                ) {
+                    // Game title
+                    Text(
+                        text = displayInfo.name,
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.6f),
+                                offset = Offset(0f, 2f),
+                                blurRadius = 8f,
+                            ),
+                        ),
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                    // Developer and year
+                    Text(
+                        text = "${displayInfo.developer} • ${
+                            remember(displayInfo.releaseDate) {
+                                if (displayInfo.releaseDate > 0) {
+                                    SimpleDateFormat("yyyy", Locale.getDefault()).format(Date(displayInfo.releaseDate * 1000))
                                 } else {
                                     ""
                                 }
                             }
+                        }",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.85f),
+                    )
 
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                            ) {
-                                Column(modifier = Modifier.padding(16.dp)) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.installation_progress),
-                                            style = MaterialTheme.typography.titleSmall,
-                                        )
-                                        Text(
-                                            text = "${(downloadProgress * 100f).toInt()}%",
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        )
-                                    }
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                                    Spacer(modifier = Modifier.height(12.dp))
-
-                                    LinearProgressIndicator(
-                                        progress = { downloadProgress },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(6.dp)
-                                            .clip(RoundedCornerShape(3.dp)),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    )
-
-                                    Spacer(modifier = Modifier.height(8.dp))
-
-                                    val downloadingText = stringResource(R.string.downloading)
-                                    val sizeText = remember(displayInfo.gameId, downloadProgress, downloadInfo) {
-                                        val (bytesDone, bytesTotal) = downloadInfo?.getBytesProgress() ?: (0L to 0L)
-                                        if (bytesTotal > 0L) {
-                                            "${formatBytes(bytesDone)} / ${formatBytes(bytesTotal)}"
-                                        } else if (bytesDone > 0L) {
-                                            formatBytes(bytesDone)
-                                        } else {
-                                            downloadingText
-                                        }
-                                    }
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                    ) {
-                                        Text(
-                                            text = sizeText,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                        Text(
-                                            text = timeLeftText,
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
+                    // Integrated action bar - overlaid on hero
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .padding(12.dp)
+                            .focusGroup(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        // Primary action button (left-aligned)
+                        if (isDownloading || hasPartialDownload) {
+                            PrimaryActionButton(
+                                text = if (isDownloading) {
+                                    stringResource(R.string.pause_download)
+                                } else {
+                                    stringResource(R.string.resume_download)
+                                },
+                                onClick = onPauseResumeClick,
+                                enabled = pauseResumeEnabled,
+                                isInstalled = false,
+                                isDownloading = isDownloading,
+                                downloadProgress = downloadProgress,
+                                focusRequester = playButtonFocusRequester,
+                            )
+                        } else {
+                            val text = when {
+                                isInstalled -> stringResource(R.string.run_app)
+                                !hasInternet -> stringResource(R.string.library_need_internet)
+                                !wifiConnected && PrefManager.downloadOnWifiOnly -> stringResource(R.string.library_wifi_only_enabled)
+                                else -> stringResource(R.string.install_app)
                             }
-                            Spacer(modifier = Modifier.height(16.dp))
+                            PrimaryActionButton(
+                                text = text,
+                                onClick = onDownloadInstallClick,
+                                enabled = buttonEnabled,
+                                isInstalled = isInstalled,
+                                focusRequester = playButtonFocusRequester,
+                            )
                         }
 
-                        // Update available banner
-                        if (isUpdatePending) {
-                            Surface(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer,
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(16.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CloudDownload,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    )
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = stringResource(R.string.update_available),
-                                            style = MaterialTheme.typography.titleSmall,
-                                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        )
-                                    }
-                                    Button(
-                                        onClick = onUpdateClick,
-                                        shape = RoundedCornerShape(8.dp),
-                                        colors = ButtonDefaults.buttonColors(
-                                            containerColor = MaterialTheme.colorScheme.primary,
-                                        ),
-                                    ) {
-                                        Text(stringResource(R.string.update_now))
-                                    }
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
+                        Spacer(modifier = Modifier.weight(1f))
 
-                        // Game information section
-                        Text(
-                            text = stringResource(R.string.game_information),
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-                            modifier = Modifier.padding(bottom = 12.dp),
+                        // Secondary action icons (right-aligned)
+                        ActionIconButton(
+                            icon = Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.options),
+                            onClick = { optionsMenuVisible = true },
                         )
 
-                        // Info cards in 2-column grid
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            val statusText = when {
-                                isInstalled -> stringResource(R.string.installed)
-                                isDownloading -> stringResource(R.string.installing)
-                                else -> stringResource(R.string.not_installed)
-                            }
-                            val statusColor = when {
-                                isInstalled -> PluviaTheme.colors.statusInstalled
-                                isDownloading -> MaterialTheme.colorScheme.tertiary
-                                else -> null
-                            }
-                            InfoCard(
-                                label = stringResource(R.string.status),
-                                value = statusText,
-                                statusColor = statusColor,
-                                isCompact = true,
-                                modifier = Modifier.weight(1f),
-                            )
-                            InfoCard(
-                                label = stringResource(R.string.size),
-                                value = when {
-                                    isInstalled && displayInfo.sizeOnDisk != null -> displayInfo.sizeOnDisk
-                                    !isInstalled && displayInfo.sizeFromStore != null -> displayInfo.sizeFromStore
-                                    else -> "Unknown"
+                        if (isInstalled) {
+                            ActionIconButton(
+                                icon = Icons.Default.Cloud,
+                                contentDescription = stringResource(R.string.cloud),
+                                onClick = {
+                                    optionsMenu.find { it.optionType == AppOptionMenuType.ForceCloudSync }?.onClick?.invoke()
                                 },
-                                isCompact = true,
-                                modifier = Modifier.weight(1f),
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            InfoCard(
-                                label = stringResource(R.string.developer),
-                                value = displayInfo.developer,
-                                isCompact = true,
-                                modifier = Modifier.weight(1f),
-                            )
-                            InfoCard(
-                                label = stringResource(R.string.release_date),
-                                value = remember(displayInfo.releaseDate) {
-                                    if (displayInfo.releaseDate > 0) {
-                                        SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
-                                            .format(Date(displayInfo.releaseDate * 1000))
-                                    } else {
-                                        "Unknown"
-                                    }
-                                },
-                                isCompact = true,
-                                modifier = Modifier.weight(1f),
+                        if (isInstalled || hasPartialDownload) {
+                            ActionIconButton(
+                                icon = Icons.Default.Delete,
+                                contentDescription = if (isInstalled) stringResource(R.string.uninstall) else stringResource(R.string.delete_app),
+                                onClick = onDeleteDownloadClick,
                             )
                         }
+                    }
 
-                        // Install location (when installed)
-                        if (isInstalled && displayInfo.installLocation != null) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            InfoCard(
-                                label = stringResource(R.string.location),
-                                value = displayInfo.installLocation,
-                                isCompact = true,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-
-                        // Play time and last played
-                        if (displayInfo.playtimeText != null || displayInfo.lastPlayedText != null) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            ) {
-                                if (displayInfo.playtimeText != null) {
-                                    InfoCard(
-                                        label = stringResource(R.string.play_time),
-                                        value = displayInfo.playtimeText,
-                                        isCompact = true,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                }
-                                if (displayInfo.lastPlayedText != null) {
-                                    InfoCard(
-                                        label = stringResource(R.string.last_played),
-                                        value = displayInfo.lastPlayedText,
-                                        isCompact = true,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                }
-                            }
-                        }
+                    // Compatibility status (if applicable)
+                    if (displayInfo.compatibilityMessage != null && displayInfo.compatibilityColor != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = displayInfo.compatibilityMessage,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color(displayInfo.compatibilityColor),
+                        )
                     }
                 }
             }
 
-            GamepadActionBar(
-                actions = listOf(
-                    if (isInstalled) {
-                        GamepadAction(
-                            button = GamepadButton.START,
-                            labelResId = R.string.run_app,
-                            onClick = onDownloadInstallClick,
-                        )
-                    } else if (isDownloading) {
-                        GamepadAction(
-                            button = GamepadButton.START,
-                            labelResId = R.string.pause_download,
-                            onClick = onPauseResumeClick,
-                        )
-                    } else if (hasPartialDownload) {
-                        GamepadAction(
-                            button = GamepadButton.START,
-                            labelResId = R.string.resume_download,
-                            onClick = onPauseResumeClick,
-                        )
-                    } else {
-                        GamepadAction(
-                            button = GamepadButton.START,
-                            labelResId = R.string.install_app,
-                            onClick = onDownloadInstallClick,
-                        )
-                    },
+            // Content section below hero with solid background
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(20.dp),
+            ) {
+                // Download progress section
+                if (isDownloading) {
+                    // downloadInfo passed from BaseAppScreen based on game source
+                    val statusMessageFlow = downloadInfo?.getStatusMessageFlow()
+                    val statusMessageState = statusMessageFlow?.collectAsState(initial = statusMessageFlow.value)
+                    val statusMessage = statusMessageState?.value
+
+                    val timeLeftText = remember(displayInfo.appId, downloadProgress, downloadInfo, statusMessage) {
+                        val etaMs = downloadInfo?.getEstimatedTimeRemaining()
+                        if (etaMs != null && etaMs > 0L) {
+                            val totalSeconds = etaMs / 1000
+                            val minutesLeft = totalSeconds / 60
+                            val secondsPart = totalSeconds % 60
+                            "${minutesLeft}m ${secondsPart}s left"
+                        } else if (downloadProgress in 0f..1f && downloadProgress < 1f) {
+                            statusMessage?.takeUnless { it.isBlank() } ?: "Calculating..."
+                        } else {
+                            ""
+                        }
+                    }
+
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.installation_progress),
+                                    style = MaterialTheme.typography.titleSmall,
+                                )
+                                Text(
+                                    text = "${(downloadProgress * 100f).toInt()}%",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            LinearProgressIndicator(
+                                progress = { downloadProgress },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp)
+                                    .clip(RoundedCornerShape(3.dp)),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            val downloadingText = stringResource(R.string.downloading)
+                            val sizeText = remember(displayInfo.gameId, downloadProgress, downloadInfo) {
+                                val (bytesDone, bytesTotal) = downloadInfo?.getBytesProgress() ?: (0L to 0L)
+                                if (bytesTotal > 0L) {
+                                    "${formatBytes(bytesDone)} / ${formatBytes(bytesTotal)}"
+                                } else if (bytesDone > 0L) {
+                                    formatBytes(bytesDone)
+                                } else {
+                                    downloadingText
+                                }
+                            }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    text = sizeText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    text = timeLeftText,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // Update available banner
+                if (isUpdatePending) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CloudDownload,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = stringResource(R.string.update_available),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                )
+                            }
+                            Button(
+                                onClick = onUpdateClick,
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                ),
+                            ) {
+                                Text(stringResource(R.string.update_now))
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+
+                // Game information section
+                Text(
+                    text = stringResource(R.string.game_information),
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                    modifier = Modifier.padding(bottom = 12.dp),
+                )
+
+                // Info cards in 2-column grid
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    val statusText = when {
+                        isInstalled -> stringResource(R.string.installed)
+                        isDownloading -> stringResource(R.string.installing)
+                        else -> stringResource(R.string.not_installed)
+                    }
+                    val statusColor = when {
+                        isInstalled -> PluviaTheme.colors.statusInstalled
+                        isDownloading -> MaterialTheme.colorScheme.tertiary
+                        else -> null
+                    }
+                    InfoCard(
+                        label = stringResource(R.string.status),
+                        value = statusText,
+                        statusColor = statusColor,
+                        isCompact = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    InfoCard(
+                        label = stringResource(R.string.size),
+                        value = when {
+                            isInstalled && displayInfo.sizeOnDisk != null -> displayInfo.sizeOnDisk
+                            !isInstalled && displayInfo.sizeFromStore != null -> displayInfo.sizeFromStore
+                            else -> "Unknown"
+                        },
+                        isCompact = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    InfoCard(
+                        label = stringResource(R.string.developer),
+                        value = displayInfo.developer,
+                        isCompact = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                    InfoCard(
+                        label = stringResource(R.string.release_date),
+                        value = remember(displayInfo.releaseDate) {
+                            if (displayInfo.releaseDate > 0) {
+                                SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+                                    .format(Date(displayInfo.releaseDate * 1000))
+                            } else {
+                                "Unknown"
+                            }
+                        },
+                        isCompact = true,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+
+                // Install location (when installed)
+                if (isInstalled && displayInfo.installLocation != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    InfoCard(
+                        label = stringResource(R.string.location),
+                        value = displayInfo.installLocation,
+                        isCompact = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                // Play time and last played
+                if (displayInfo.playtimeText != null || displayInfo.lastPlayedText != null) {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        if (displayInfo.playtimeText != null) {
+                            InfoCard(
+                                label = stringResource(R.string.play_time),
+                                value = displayInfo.playtimeText,
+                                isCompact = true,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        if (displayInfo.lastPlayedText != null) {
+                            InfoCard(
+                                label = stringResource(R.string.last_played),
+                                value = displayInfo.lastPlayedText,
+                                isCompact = true,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        GamepadActionBar(
+            actions = listOf(
+                if (isInstalled) {
                     GamepadAction(
-                        button = GamepadButton.SELECT,
-                        labelResId = R.string.options,
-                        onClick = { optionsMenuVisible = true },
-                    ),
+                        button = GamepadButton.START,
+                        labelResId = R.string.run_app,
+                        onClick = onDownloadInstallClick,
+                    )
+                } else if (isDownloading) {
                     GamepadAction(
-                        button = GamepadButton.B,
-                        labelResId = R.string.back,
-                        onClick = onBack,
-                    ),
+                        button = GamepadButton.START,
+                        labelResId = R.string.pause_download,
+                        onClick = onPauseResumeClick,
+                    )
+                } else if (hasPartialDownload) {
+                    GamepadAction(
+                        button = GamepadButton.START,
+                        labelResId = R.string.resume_download,
+                        onClick = onPauseResumeClick,
+                    )
+                } else {
+                    GamepadAction(
+                        button = GamepadButton.START,
+                        labelResId = R.string.install_app,
+                        onClick = onDownloadInstallClick,
+                    )
+                },
+                GamepadAction(
+                    button = GamepadButton.SELECT,
+                    labelResId = R.string.options,
+                    onClick = { optionsMenuVisible = true },
                 ),
-                visible = !optionsMenuVisible,
-            )
-        }
-        }
+                GamepadAction(
+                    button = GamepadButton.B,
+                    labelResId = R.string.back,
+                    onClick = onBack,
+                ),
+            ),
+            visible = !optionsMenuVisible,
+        )
 
         // Options panel - slides in from right
         GameOptionsPanel(
