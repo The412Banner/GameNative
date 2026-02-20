@@ -50,12 +50,15 @@ import app.gamenative.service.SteamService
 import app.gamenative.ui.component.ConnectionStatusBanner
 import app.gamenative.service.epic.EpicService
 import app.gamenative.service.gog.GOGService
+import app.gamenative.ui.component.ConnectingServersScreen
+import app.gamenative.ui.component.dialog.ContainerConfigDialog
 import app.gamenative.ui.component.dialog.GameFeedbackDialog
 import app.gamenative.ui.component.dialog.LoadingDialog
 import app.gamenative.ui.component.dialog.MessageDialog
 import app.gamenative.ui.component.dialog.state.GameFeedbackDialogState
 import app.gamenative.ui.component.dialog.state.MessageDialogState
 import app.gamenative.ui.components.BootingSplash
+import app.gamenative.ui.enums.AppOptionMenuType
 import app.gamenative.ui.enums.ConnectionState
 import app.gamenative.ui.enums.DialogType
 import app.gamenative.ui.enums.Orientation
@@ -75,6 +78,7 @@ import app.gamenative.utils.UpdateInfo
 import app.gamenative.utils.UpdateInstaller
 import com.google.android.play.core.splitcompat.SplitCompat
 import com.winlator.container.Container
+import com.winlator.container.ContainerData
 import com.winlator.container.ContainerManager
 import com.winlator.core.TarCompressorUtils
 import com.winlator.xenvironment.ImageFs
@@ -88,6 +92,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 /**
@@ -215,6 +220,8 @@ fun PluviaMain(
     var gameBackAction by remember { mutableStateOf<() -> Unit?>({}) }
 
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+
+    var openContainerConfigForAppId by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Check for updates on app start
     LaunchedEffect(Unit) {
@@ -643,6 +650,20 @@ fun PluviaMain(
             }
         }
 
+        DialogType.EXECUTABLE_NOT_FOUND -> {
+            onConfirmClick = null
+            onDismissClick = {
+                setMessageDialogState(MessageDialogState(false))
+            }
+            onDismissRequest = {
+                setMessageDialogState(MessageDialogState(false))
+            }
+            onActionClick = {
+                setMessageDialogState(MessageDialogState(false))
+                openContainerConfigForAppId = state.launchedAppId
+            }
+        }
+
         DialogType.SYNC_IN_PROGRESS -> {
             onConfirmClick = {
                 setMessageDialogState(MessageDialogState(false))
@@ -900,6 +921,38 @@ fun PluviaMain(
             message = msgDialogState.message,
         )
 
+        val scope = rememberCoroutineScope()
+        var containerConfigForDialog by remember(openContainerConfigForAppId) { mutableStateOf<ContainerData?>(null) }
+        LaunchedEffect(openContainerConfigForAppId) {
+            val appId = openContainerConfigForAppId
+            if (appId == null) {
+                containerConfigForDialog = null
+                return@LaunchedEffect
+            }
+            containerConfigForDialog = withContext(Dispatchers.IO) {
+                val container = ContainerUtils.getOrCreateContainer(context, appId)
+                ContainerUtils.toContainerData(container)
+            }
+        }
+        openContainerConfigForAppId?.let { appId ->
+            containerConfigForDialog?.let { config ->
+                ContainerConfigDialog(
+                    visible = true,
+                    title = context.getString(R.string.container_config_title),
+                    initialConfig = config,
+                    onDismissRequest = { openContainerConfigForAppId = null },
+                    onSave = { newConfig ->
+                        scope.launch {
+                            withContext(Dispatchers.IO) {
+                                ContainerUtils.applyToContainer(context, appId, newConfig)
+                            }
+                            openContainerConfigForAppId = null
+                        }
+                    },
+                )
+            }
+        }
+
         GameFeedbackDialog(
             state = gameFeedbackState,
             onStateChange = { gameFeedbackState = it },
@@ -1027,6 +1080,7 @@ fun PluviaMain(
                             setMessageDialogState = { msgDialogState = it },
                             onSuccess = viewModel::launchApp,
                             isOffline = isOffline,
+                            bootToContainer = asContainer,
                         )
                     },
                     onTestGraphics = { appId ->
@@ -1043,6 +1097,7 @@ fun PluviaMain(
                             setMessageDialogState = { msgDialogState = it },
                             onSuccess = viewModel::launchApp,
                             isOffline = isOffline,
+                            bootToContainer = true,
                         )
                     },
                     onClickExit = {
@@ -1146,6 +1201,7 @@ fun preLaunchApp(
     onSuccess: KFunction2<Context, String, Unit>,
     retryCount: Int = 0,
     isOffline: Boolean = false,
+    bootToContainer: Boolean = false,
 ) {
     setLoadingDialogVisible(true)
     // TODO: add a way to cancel
@@ -1166,9 +1222,37 @@ fun preLaunchApp(
         // Clear session metadata on every launch to ensure fresh values
         container.clearSessionMetadata()
 
+        val gameSource = ContainerUtils.extractGameSourceFromContainerId(appId)
+
+        // When "Open container" is used we boot to desktop/file manager only — skip executable check
+        if (!bootToContainer) {
+            // Verify we have a launch executable for all platforms before proceeding (fail fast, avoid black screen)
+            val effectiveExe = when (gameSource) {
+                GameSource.STEAM -> SteamService.getLaunchExecutable(appId, container)
+                GameSource.GOG -> GOGService.getLaunchExecutable(appId, container)
+                GameSource.EPIC -> EpicService.getLaunchExecutable(appId)
+                GameSource.CUSTOM_GAME -> CustomGameScanner.getLaunchExecutable(container)
+            }
+            if (effectiveExe.isBlank()) {
+                Timber.tag("preLaunchApp").w("Cannot launch $appId: no executable found (game source: $gameSource)")
+                setLoadingDialogVisible(false)
+                setMessageDialogState(
+                    MessageDialogState(
+                        visible = true,
+                        type = DialogType.EXECUTABLE_NOT_FOUND,
+                        title = context.getString(R.string.game_executable_not_found_title),
+                        message = context.getString(R.string.game_executable_not_found),
+                        dismissBtnText = context.getString(R.string.ok),
+                        actionBtnText = AppOptionMenuType.EditContainer.text,
+                    ),
+                )
+                return@launch
+            }
+        }
+
         // Check if this is a Custom Game and validate executable selection before installing components
         // Skip the check if booting to container (Open Container menu option)
-        val isCustomGame = ContainerUtils.extractGameSourceFromContainerId(appId) == GameSource.CUSTOM_GAME
+        val isCustomGame = gameSource == GameSource.CUSTOM_GAME
 
         // set up Ubuntu file system
         SplitCompat.install(context)
@@ -1276,7 +1360,7 @@ fun preLaunchApp(
         containerManager.activateContainer(container)
 
         // If another game is running on this account elsewhere, prompt user first (cross-app session)
-        val isSteamGame = ContainerUtils.extractGameSourceFromContainerId(appId) == GameSource.STEAM
+        val isSteamGame = gameSource == GameSource.STEAM
         if(isSteamGame) {
             try {
                 val currentPlaying = SteamService.getSelfCurrentlyPlayingAppId()
@@ -1306,8 +1390,8 @@ fun preLaunchApp(
             return@launch
         }
 
-        // For GOG Games, sync cloud saves before launch
-        val isGOGGame = ContainerUtils.extractGameSourceFromContainerId(appId) == GameSource.GOG
+        // For GOG Games, sync cloud saves before launch (executable already verified above via GOGService.getLaunchExecutable)
+        val isGOGGame = gameSource == GameSource.GOG
         if (isGOGGame) {
             Timber.tag("GOG").i("[Cloud Saves] GOG Game detected for $appId — syncing cloud saves before launch")
 
@@ -1330,8 +1414,8 @@ fun preLaunchApp(
             return@launch
         }
 
-        // For Epic Games, sync cloud saves before launch
-        val isEpicGame = ContainerUtils.extractGameSourceFromContainerId(appId) == GameSource.EPIC
+        // For Epic Games, sync cloud saves before launch (executable already verified above via EpicService.getLaunchExecutable)
+        val isEpicGame = gameSource == GameSource.EPIC
         if (isEpicGame) {
             // Handle Cloud Saves
             Timber.tag("Epic").i("[Cloud Saves] Epic Game detected for $appId — syncing cloud saves before launch")
@@ -1421,6 +1505,7 @@ fun preLaunchApp(
                         setMessageDialogState = setMessageDialogState,
                         onSuccess = onSuccess,
                         retryCount = retryCount + 1,
+                        bootToContainer = bootToContainer,
                     )
                 } else {
                     setMessageDialogState(
