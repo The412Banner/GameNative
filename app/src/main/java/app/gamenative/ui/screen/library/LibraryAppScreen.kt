@@ -772,7 +772,7 @@ internal fun AppScreenContent(
                             Spacer(modifier = Modifier.height(8.dp))
 
                             val downloadingText = stringResource(R.string.downloading)
-                            val sizeText = remember(displayInfo.gameId, downloadInfo) {
+                            val sizeText = remember(displayInfo.gameId, downloadProgress, downloadInfo) {
                                 val (bytesDone, bytesTotal) = downloadInfo?.getBytesProgress() ?: (0L to 0L)
                                 if (bytesTotal > 0L) {
                                     "${formatBytes(bytesDone)} / ${formatBytes(bytesTotal)}"
