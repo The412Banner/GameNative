@@ -222,6 +222,14 @@ fun PluviaMain(
 
     var openContainerConfigForAppId by rememberSaveable { mutableStateOf<String?>(null) }
 
+    // Track if connection banner was dismissed by user
+    var connectionBannerDismissed by rememberSaveable { mutableStateOf(false) }
+
+    // Reset dismissed state when connection state changes
+    LaunchedEffect(state.connectionState) {
+        connectionBannerDismissed = false
+    }
+
     // Check for updates on app start
     LaunchedEffect(Unit) {
         val checkedUpdateInfo = UpdateChecker.checkForUpdate(context)
@@ -1009,8 +1017,8 @@ fun PluviaMain(
             )
         }
 
-        // Connection status banner (overlay)
-        if (state.currentScreen != PluviaScreen.LoginUser) {
+        // Connection status banner (overlay) - dismissible so users can access navigation
+        if (state.currentScreen != PluviaScreen.LoginUser && !connectionBannerDismissed) {
             Box(modifier = Modifier.zIndex(5f)) {
                 ConnectionStatusBanner(
                     connectionState = state.connectionState,
@@ -1022,6 +1030,9 @@ fun PluviaMain(
                     onRetry = {
                         viewModel.retryConnection()
                         context.startForegroundService(Intent(context, SteamService::class.java))
+                    },
+                    onDismiss = {
+                        connectionBannerDismissed = true
                     },
                 )
             }

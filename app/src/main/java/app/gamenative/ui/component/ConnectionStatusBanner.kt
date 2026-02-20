@@ -20,9 +20,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -52,6 +54,7 @@ fun ConnectionStatusBanner(
     timeoutSeconds: Int,
     onContinueOffline: () -> Unit,
     onRetry: () -> Unit,
+    onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val isVisible = connectionState == ConnectionState.CONNECTING ||
@@ -143,6 +146,19 @@ fun ConnectionStatusBanner(
                         }
                         else -> {}
                     }
+
+                    // Dismiss button
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = stringResource(R.string.close),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }
@@ -212,6 +228,7 @@ private fun Preview_ConnectionStatusBanner_Connecting() {
             timeoutSeconds = 3,
             onContinueOffline = {},
             onRetry = {},
+            onDismiss = {},
         )
     }
 }
@@ -226,6 +243,7 @@ private fun Preview_ConnectionStatusBanner_Connecting_WithTimeout() {
             timeoutSeconds = 8,
             onContinueOffline = {},
             onRetry = {},
+            onDismiss = {},
         )
     }
 }
@@ -240,6 +258,7 @@ private fun Preview_ConnectionStatusBanner_Disconnected() {
             timeoutSeconds = 0,
             onContinueOffline = {},
             onRetry = {},
+            onDismiss = {},
         )
     }
 }
@@ -255,6 +274,7 @@ private fun Preview_ConnectionStatusBanner_Connected() {
             timeoutSeconds = 0,
             onContinueOffline = {},
             onRetry = {},
+            onDismiss = {},
         )
     }
 }
