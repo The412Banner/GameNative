@@ -56,15 +56,9 @@ fun SettingsGroupDebug() {
     // Load Wine debug channels and prepare selection state
     var allWineChannels by remember { mutableStateOf<List<String>>(emptyList()) }
     var showChannelsDialog by remember { mutableStateOf(false) }
-    var selectedWineChannels by remember {
-        mutableStateOf(
-            if (isPreview) {
-                emptyList()
-            } else {
-                PrefManager.wineDebugChannels.split(",")
-            },
-        )
-    }
+    var selectedWineChannels by remember { mutableStateOf(
+        if (isPreview) emptyList() else PrefManager.wineDebugChannels.split(",")
+    ) }
     LaunchedEffect(Unit) {
         // Read the list of channels from assets
         val json = context.assets.open("wine_debug_channels.json").bufferedReader().use { it.readText() }
@@ -92,15 +86,9 @@ fun SettingsGroupDebug() {
     var enableWineDebugPref by rememberSaveable {
         mutableStateOf(if (isPreview) false else PrefManager.enableWineDebug)
     }
-    var enableBox86Logs by rememberSaveable {
-        mutableStateOf(
-            if (isPreview) {
-                false
-            } else {
-                WinlatorPrefManager.getBoolean("enable_box86_64_logs", false)
-            },
-        )
-    }
+    var enableBox86Logs by rememberSaveable { mutableStateOf(
+        if (isPreview) false else WinlatorPrefManager.getBoolean("enable_box86_64_logs", false)
+    ) }
     var latestCrashFile: File? by rememberSaveable { mutableStateOf(null) }
     LaunchedEffect(Unit) {
         val crashDir = File(context.getExternalFilesDir(null), "crash_logs")
@@ -191,10 +179,7 @@ fun SettingsGroupDebug() {
         )
     }
 
-    SettingsGroup(
-        modifier = Modifier.background(Color.Transparent),
-        title = { Text(text = stringResource(R.string.settings_debug_title)) }
-    ) {
+    SettingsGroup(modifier = Modifier.background(Color.Transparent), title = { Text(text = stringResource(R.string.settings_debug_title)) }) {
         SettingsMenuLink(
             colors = settingsTileColors(),
             title = { Text(text = stringResource(R.string.settings_save_logcat_title)) },

@@ -22,15 +22,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-/**
- * ViewModel for the login screen.
- *
- * Note: Connection state is managed by MainViewModel and passed to UserLoginScreen
- * as a parameter. This ViewModel only handles login-specific state (username, password,
- * 2FA, etc.) to maintain a single source of truth for connection status.
- *
- * Worth reconsidering once we merge GoG and Epic integration.
- */
 class UserLoginViewModel : ViewModel() {
     private val _loginState = MutableStateFlow(UserLoginState())
     val loginState: StateFlow<UserLoginState> = _loginState.asStateFlow()
