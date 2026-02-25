@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.horizontalScroll
@@ -198,10 +199,17 @@ private fun CompactLibraryTabBar(
                     Box(
                         modifier = Modifier
                             .then(
-                                if (isTabFocused && !isSelected) {
+                                if (isTabFocused) {
                                     Modifier.border(
-                                        2.dp,
-                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                                        BorderStroke(
+                                            2.dp,
+                                            Brush.verticalGradient(
+                                                colors = listOf(
+                                                    MaterialTheme.colorScheme.primary,
+                                                    MaterialTheme.colorScheme.tertiary,
+                                                ),
+                                            ),
+                                        ),
                                         RoundedCornerShape(16.dp),
                                     )
                                 } else {
@@ -284,8 +292,15 @@ private fun CompactIconButton(
             .then(
                 if (isFocused) {
                     Modifier.border(
-                        2.dp,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        BorderStroke(
+                            2.dp,
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.tertiary,
+                                ),
+                            ),
+                        ),
                         CircleShape,
                     )
                 } else {
@@ -527,8 +542,15 @@ private fun IconActionButton(
             .then(
                 if (isFocused) {
                     Modifier.border(
-                        2.dp,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        BorderStroke(
+                            2.dp,
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.tertiary,
+                                ),
+                            ),
+                        ),
                         CircleShape,
                     )
                 } else {
@@ -604,10 +626,17 @@ private fun TabItem(
     Box(
         modifier = modifier
             .then(
-                if (isFocused && !isSelected) {
+                if (isFocused) {
                     Modifier.border(
-                        2.dp,
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.6f),
+                        BorderStroke(
+                            2.dp,
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.primary,
+                                    MaterialTheme.colorScheme.tertiary,
+                                ),
+                            ),
+                        ),
                         RoundedCornerShape(20.dp),
                     )
                 } else {
