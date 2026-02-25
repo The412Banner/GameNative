@@ -484,6 +484,8 @@
     <string name="force_dlc">Forzar DLC</string>
     <string name="force_dlc_description">Actívalo solo si los DLC no se detectan o los archivos de guardados con DLC no funcionan.</string>
     <string name="launch_steam_client_beta">Iniciar cliente de Steam (Beta)</string>
+    <string name="steam_offline_mode">Modo Offline de Steam</string>
+    <string name="steam_offline_mode_description">Iniciar juegos de Steam en modo offline</string>
     <string name="launch_steam_client_description">Reduce el rendimiento y ralentiza el inicio.\nPermite el juego en línea y soluciona problemas de DRM y de mando.\nNo todos los juegos funcionan.</string>
     <string name="allow_steam_updates">Permitir actualizaciones de Steam</string>
     <string name="allow_steam_updates_description">Actualiza Steam a la última versión. Reduce significativamente el rendimiento.</string>

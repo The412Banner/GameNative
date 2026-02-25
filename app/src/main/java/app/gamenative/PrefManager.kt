@@ -297,6 +297,13 @@ object PrefManager {
             setPref(FORCE_DLC, value)
         }
 
+    private val STEAM_OFFLINE_MODE = booleanPreferencesKey("steam_offline_mode")
+    var steamOfflineMode: Boolean
+        get() = getPref(STEAM_OFFLINE_MODE, false)
+        set(value) {
+            setPref(STEAM_OFFLINE_MODE, value)
+        }
+
     private val USE_LEGACY_DRM = booleanPreferencesKey("use_legacy_drm")
     var useLegacyDRM: Boolean
         get() = getPref(USE_LEGACY_DRM, false)
