@@ -265,10 +265,12 @@ private fun LibraryScreenContent(
     // Recapture focus on the root container when the list becomes empty (e.g. switching to
     // an empty tab), so bumper key events keep working even when there are no grid items.
     // Include currentTab as a key so switching between empty tabs (e.g. GoG→Epic) still
-    // recaptures focus. The focus steal mentioned in the old comment only applies to D-pad
-    // navigation of the tab bar, not bumper-initiated tab changes.
+    // recaptures focus. Add a small delay to ensure composition is complete before requesting.
+    // TODO: This fix is incomplete - R1/L1 still stops working at empty tabs like GoG.
+    // Need deeper investigation into focus system behavior when carousel/list has no items.
     LaunchedEffect(state.appInfoList.isEmpty(), state.currentTab) {
         if (state.appInfoList.isEmpty()) {
+            kotlinx.coroutines.delay(50)
             try {
                 rootFocusRequester.requestFocus()
             } catch (_: IllegalStateException) {
