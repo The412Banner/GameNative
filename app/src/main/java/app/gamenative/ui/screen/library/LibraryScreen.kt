@@ -2,6 +2,7 @@ package app.gamenative.ui.screen.library
 
 import android.content.res.Configuration
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -31,10 +32,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -53,10 +57,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.gamenative.PrefManager
+import app.gamenative.PluviaApp
 import app.gamenative.R
 import app.gamenative.data.GameCompatibilityStatus
 import app.gamenative.data.GameSource
 import app.gamenative.data.LibraryItem
+import app.gamenative.events.AndroidEvent
 import app.gamenative.ui.component.GamepadAction
 import app.gamenative.ui.component.GamepadActionBar
 import app.gamenative.ui.component.GamepadButton
@@ -80,6 +86,7 @@ import app.gamenative.ui.screen.library.components.LibraryTabBar
 import app.gamenative.ui.screen.library.components.SystemMenu
 import app.gamenative.ui.theme.PluviaTheme
 import app.gamenative.utils.CustomGameScanner
+import android.os.SystemClock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -172,6 +179,27 @@ private fun LibraryScreenContent(
     // Dialog state for add custom game prompt
     var showAddCustomGameDialog by remember { mutableStateOf(false) }
     var dontShowAgain by remember { mutableStateOf(false) }
+    var previousAppCount by remember { mutableIntStateOf(state.appInfoList.size) }
+    var controllerBootstrapNeeded by remember { mutableStateOf(true) }
+    var rootHasFocus by remember { mutableStateOf(false) }
+    var lastBootstrapAtMs by remember { mutableLongStateOf(0L) }
+
+    fun requestGridFocusOrDefer() {
+        if (state.appInfoList.isEmpty()) return
+        try {
+            gridFirstItemFocusRequester.requestFocus()
+            pendingGridFocusRequest = false
+            lastBootstrapAtMs = SystemClock.uptimeMillis()
+        } catch (_: IllegalStateException) {
+            pendingGridFocusRequest = true
+        }
+    }
+
+    fun requestRootFocusSafe() {
+        try {
+            rootFocusRequester.requestFocus()
+        } catch (_: IllegalStateException) {}
+    }
 
     val storagePermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions(),
@@ -239,20 +267,17 @@ private fun LibraryScreenContent(
 
     // Restore focus when returning from game detail (without reloading list)
     LaunchedEffect(selectedAppId) {
+        if (selectedAppId != null) {
+            controllerBootstrapNeeded = true
+        }
         if (selectedAppId == null) {
             // Brief delay to let the UI settle after transition
             kotlinx.coroutines.delay(100)
             // Restore focus to content area
             if (state.appInfoList.isNotEmpty()) {
-                try {
-                    gridFirstItemFocusRequester.requestFocus()
-                } catch (_: IllegalStateException) {
-                    pendingGridFocusRequest = true
-                }
+                requestGridFocusOrDefer()
             } else {
-                try {
-                    rootFocusRequester.requestFocus()
-                } catch (_: IllegalStateException) {}
+                requestRootFocusSafe()
             }
         }
     }
@@ -280,29 +305,57 @@ private fun LibraryScreenContent(
 
         if (state.appInfoList.isEmpty()) {
             // Empty tab - focus root so bumpers still work
-            try {
-                rootFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {}
+            requestRootFocusSafe()
         } else {
             // Tab has content - focus the first grid item
             gridFocusTargetListIndex = 0
-            try {
-                gridFirstItemFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {
-                pendingGridFocusRequest = true
+            requestGridFocusOrDefer()
+        }
+    }
+
+    LaunchedEffect(
+        pendingGridFocusRequest,
+        gridFocusTargetListIndex,
+        state.appInfoList.size,
+        selectedAppId,
+        isSystemMenuOpen,
+        state.isOptionsPanelOpen,
+        state.isSearching,
+    ) {
+        if (pendingGridFocusRequest && state.appInfoList.isNotEmpty()) {
+            if (selectedAppId == null && !isSystemMenuOpen && !state.isOptionsPanelOpen && !state.isSearching) {
+                var retries = 0
+                while (pendingGridFocusRequest && retries < 8) {
+                    try {
+                        gridFirstItemFocusRequester.requestFocus()
+                        pendingGridFocusRequest = false
+                    } catch (_: IllegalStateException) {
+                        retries++
+                        // FocusRequester can be temporarily detached during recomposition.
+                        kotlinx.coroutines.delay(32)
+                    }
+                }
             }
         }
     }
 
-    LaunchedEffect(pendingGridFocusRequest, gridFocusTargetListIndex, state.appInfoList.size) {
-        if (pendingGridFocusRequest && state.appInfoList.isNotEmpty()) {
-            try {
-                gridFirstItemFocusRequester.requestFocus()
-            } catch (_: IllegalStateException) {
-                // FocusRequester not yet attached during recomposition
-            }
-            pendingGridFocusRequest = false
+    // If the app list starts empty and populates later, bootstrap controller focus once content is ready.
+    LaunchedEffect(
+        state.appInfoList.size,
+        selectedAppId,
+        isSystemMenuOpen,
+        state.isOptionsPanelOpen,
+        state.isSearching,
+    ) {
+        val currentCount = state.appInfoList.size
+        val listBecameNonEmpty = previousAppCount == 0 && currentCount > 0
+
+        if (listBecameNonEmpty && selectedAppId == null && !isSystemMenuOpen && !state.isOptionsPanelOpen && !state.isSearching) {
+            gridFocusTargetListIndex = listState.firstVisibleItemIndex.coerceIn(0, state.appInfoList.lastIndex)
+            requestGridFocusOrDefer()
         }
+
+        previousAppCount = currentCount
     }
 
     // Restore focus when System Menu or Options Panel closes
@@ -331,6 +384,91 @@ private fun LibraryScreenContent(
         wasOptionsPanelOpen = state.isOptionsPanelOpen
     }
 
+    // Global key/motion bootstrap path for cases where Compose focus was lost by touch mode.
+    // This runs at the app event bus layer, independent of current Compose focus target.
+    DisposableEffect(
+        selectedAppId,
+        isSystemMenuOpen,
+        state.isOptionsPanelOpen,
+        state.isSearching,
+        state.appInfoList.size,
+        state.currentTab,
+    ) {
+        val canBootstrap: () -> Boolean = {
+            val now = SystemClock.uptimeMillis()
+            selectedAppId == null &&
+                !isSystemMenuOpen &&
+                !state.isOptionsPanelOpen &&
+                !state.isSearching &&
+                state.appInfoList.isNotEmpty() &&
+                controllerBootstrapNeeded &&
+                !rootHasFocus &&
+                (now - lastBootstrapAtMs) > 250L
+        }
+
+        val onGlobalKeyEvent: (AndroidEvent.KeyEvent) -> Boolean = { androidEvent ->
+            val event = androidEvent.event
+            if (event.action != KeyEvent.ACTION_DOWN || !canBootstrap()) {
+                false
+            } else {
+                when (event.keyCode) {
+                    KeyEvent.KEYCODE_DPAD_UP,
+                    KeyEvent.KEYCODE_DPAD_DOWN,
+                    KeyEvent.KEYCODE_DPAD_LEFT,
+                    KeyEvent.KEYCODE_DPAD_RIGHT,
+                    KeyEvent.KEYCODE_BUTTON_L2,
+                    KeyEvent.KEYCODE_BUTTON_R2,
+                    KeyEvent.KEYCODE_BUTTON_THUMBL,
+                    KeyEvent.KEYCODE_BUTTON_THUMBR,
+                    -> {
+                        gridFocusTargetListIndex = listState.firstVisibleItemIndex
+                            .coerceIn(0, state.appInfoList.lastIndex)
+                        requestGridFocusOrDefer()
+                        // Do not consume: let normal key routing continue after bootstrap.
+                        false
+                    }
+
+                    else -> false
+                }
+            }
+        }
+
+        val onGlobalMotionEvent: (AndroidEvent.MotionEvent) -> Boolean = { androidEvent ->
+            val event = androidEvent.event
+            if (event == null || !canBootstrap()) {
+                false
+            } else {
+                val isMoveLike = event.actionMasked == MotionEvent.ACTION_MOVE
+                val hatX = event.getAxisValue(MotionEvent.AXIS_HAT_X)
+                val hatY = event.getAxisValue(MotionEvent.AXIS_HAT_Y)
+                val leftX = event.getAxisValue(MotionEvent.AXIS_X)
+                val leftY = event.getAxisValue(MotionEvent.AXIS_Y)
+                val hasDirectionalAxis = kotlin.math.abs(hatX) >= 0.5f ||
+                    kotlin.math.abs(hatY) >= 0.5f ||
+                    kotlin.math.abs(leftX) >= 0.6f ||
+                    kotlin.math.abs(leftY) >= 0.6f
+
+                if (isMoveLike && hasDirectionalAxis) {
+                    gridFocusTargetListIndex = listState.firstVisibleItemIndex
+                        .coerceIn(0, state.appInfoList.lastIndex)
+                    requestGridFocusOrDefer()
+                    // Do not consume: allow normal movement handling after bootstrap.
+                    false
+                } else {
+                    false
+                }
+            }
+        }
+
+        PluviaApp.events.on<AndroidEvent.KeyEvent, Boolean>(onGlobalKeyEvent)
+        PluviaApp.events.on<AndroidEvent.MotionEvent, Boolean>(onGlobalMotionEvent)
+
+        onDispose {
+            PluviaApp.events.off<AndroidEvent.KeyEvent, Boolean>(onGlobalKeyEvent)
+            PluviaApp.events.off<AndroidEvent.MotionEvent, Boolean>(onGlobalMotionEvent)
+        }
+    }
+
     Box(
         Modifier
             .fillMaxSize()
@@ -338,15 +476,56 @@ private fun LibraryScreenContent(
             .then(safePaddingModifier)
             .focusRequester(rootFocusRequester)
             .focusable()
+            .onFocusChanged { focusState ->
+                rootHasFocus = focusState.hasFocus
+                if (focusState.hasFocus) {
+                    controllerBootstrapNeeded = false
+                } else {
+                    controllerBootstrapNeeded = true
+                }
+            }
             .focusGroup()
             .onPreviewKeyEvent { keyEvent ->
                 // TODO: consider abstracting this
                 // Handle gamepad buttons
                 if (keyEvent.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
-                    when (keyEvent.nativeKeyEvent.keyCode) {
+                    val keyCode = keyEvent.nativeKeyEvent.keyCode
+                    val canBootstrapGridFocus = selectedAppId == null &&
+                        !state.isOptionsPanelOpen &&
+                        !isSystemMenuOpen &&
+                        !state.isSearching &&
+                        state.appInfoList.isNotEmpty() &&
+                        controllerBootstrapNeeded
+
+                    when (keyCode) {
+                        // Navigation keys should bootstrap focus even before any item is selected.
+                        KeyEvent.KEYCODE_DPAD_UP,
+                        KeyEvent.KEYCODE_DPAD_DOWN,
+                        KeyEvent.KEYCODE_DPAD_LEFT,
+                        KeyEvent.KEYCODE_DPAD_RIGHT,
+                        KeyEvent.KEYCODE_BUTTON_L2,
+                        KeyEvent.KEYCODE_BUTTON_R2,
+                        KeyEvent.KEYCODE_BUTTON_THUMBL,
+                        KeyEvent.KEYCODE_BUTTON_THUMBR,
+                        -> {
+                            if (canBootstrapGridFocus) {
+                                gridFocusTargetListIndex = listState.firstVisibleItemIndex
+                                    .coerceIn(0, state.appInfoList.lastIndex)
+                                requestGridFocusOrDefer()
+                                false
+                            } else {
+                                false
+                            }
+                        }
+
                         // L1 button - previous tab
                         KeyEvent.KEYCODE_BUTTON_L1 -> {
                             if (selectedAppId == null && !state.isOptionsPanelOpen && !isSystemMenuOpen) {
+                                if (canBootstrapGridFocus) {
+                                    gridFocusTargetListIndex = listState.firstVisibleItemIndex
+                                        .coerceIn(0, state.appInfoList.lastIndex)
+                                    requestGridFocusOrDefer()
+                                }
                                 onTabChanged(state.currentTab.previous())
                                 true
                             } else {
@@ -357,6 +536,11 @@ private fun LibraryScreenContent(
                         // R1 button - next tab
                         KeyEvent.KEYCODE_BUTTON_R1 -> {
                             if (selectedAppId == null && !state.isOptionsPanelOpen && !isSystemMenuOpen) {
+                                if (canBootstrapGridFocus) {
+                                    gridFocusTargetListIndex = listState.firstVisibleItemIndex
+                                        .coerceIn(0, state.appInfoList.lastIndex)
+                                    requestGridFocusOrDefer()
+                                }
                                 onTabChanged(state.currentTab.next())
                                 true
                             } else {
