@@ -5,17 +5,19 @@ import android.content.Intent
 import android.content.res.Configuration
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -49,10 +52,6 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -64,11 +63,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalUriHandler
@@ -234,6 +233,16 @@ fun UserLoginScreen(
         }
     }
 
+    LaunchedEffect(userLoginState.loginScreen, userLoginState.isLoggingIn) {
+        if (
+            userLoginState.loginScreen != LoginScreen.TWO_FACTOR &&
+            userLoginState.loginScreen != LoginScreen.QR &&
+            userLoginState.isLoggingIn.not()
+        ) {
+            viewModel.onShowLoginScreen(LoginScreen.QR)
+        }
+    }
+
     LaunchedEffect(Unit) {
         viewModel.snackEvents.collect { message ->
             snackBarHostState.showSnackbar(message)
@@ -260,7 +269,7 @@ fun UserLoginScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun UserLoginScreenContent(
     snackBarHostState: SnackbarHostState,
@@ -282,6 +291,9 @@ private fun UserLoginScreenContent(
 ) {
     val primaryColor = MaterialTheme.colorScheme.primary
     val tertiaryColor = MaterialTheme.colorScheme.tertiary
+
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     Box(
         modifier = Modifier
@@ -348,9 +360,7 @@ private fun UserLoginScreenContent(
                     Card(
                         modifier = Modifier
                             .padding(16.dp)
-                            .fillMaxWidth()
-                            .width(400.dp)
-                            .heightIn(min = 450.dp),
+                            .fillMaxWidth(),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
                         ),
@@ -375,97 +385,54 @@ private fun UserLoginScreenContent(
                             modifier = Modifier
                                 .padding(24.dp)
                                 .fillMaxWidth()
-                                .verticalScroll(scrollState),
+                                .verticalScroll(scrollState)
+                                .focusGroup(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
-                            // Title
-                            Text(
-                                text = stringResource(R.string.login_welcome_back),
-                                style = MaterialTheme.typography.headlineMedium.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                ),
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
+                            if (userLoginState.loginScreen == LoginScreen.TWO_FACTOR) {
+                                TwoFactorAuthScreenContent(
+                                    userLoginState = userLoginState,
+                                    message = when {
+                                        userLoginState.previousCodeIncorrect ->
+                                            stringResource(R.string.steam_2fa_incorrect)
 
-                            // Subtitle
-                            Text(
-                                text = stringResource(R.string.login_subtitle),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(bottom = 24.dp),
-                            )
+                                        userLoginState.loginResult == LoginResult.DeviceAuth ->
+                                            stringResource(R.string.steam_2fa_device)
 
-                            // Tab selection between Credentials and QR Code
-                            val selectedTabIndex = when (userLoginState.loginScreen) {
-                                LoginScreen.QR -> 1
-                                else -> 0
-                            }
+                                        userLoginState.loginResult == LoginResult.DeviceConfirm ->
+                                            stringResource(R.string.steam_2fa_confirmation)
 
-                            TabRow(
-                                selectedTabIndex = selectedTabIndex,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp)),
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                contentColor = MaterialTheme.colorScheme.primary,
-                                indicator = { tabPositions ->
-                                    if (selectedTabIndex < tabPositions.size) {
-                                        TabRowDefaults.Indicator(
-                                            modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                                            height = 3.dp,
-                                            color = MaterialTheme.colorScheme.primary,
-                                        )
-                                    }
-                                },
-                            ) {
-                                Tab(
-                                    selected = selectedTabIndex == 0,
-                                    onClick = {
-                                        onShowLoginScreen(LoginScreen.CREDENTIAL)
+                                        userLoginState.loginResult == LoginResult.EmailAuth ->
+                                            stringResource(
+                                                R.string.steam_2fa_email,
+                                                userLoginState.email ?: "...",
+                                            )
+
+                                        else -> ""
                                     },
-                                    text = {
-                                        Text(
-                                            stringResource(R.string.login_tab_credentials),
-                                            color = if (selectedTabIndex == 0) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                            },
-                                        )
-                                    },
+                                    onSetTwoFactor = onSetTwoFactor,
+                                    onLogin = onTwoFactorLogin,
                                 )
-                                Tab(
-                                    selected = selectedTabIndex == 1,
-                                    onClick = {
-                                        onShowLoginScreen(LoginScreen.QR)
-                                    },
-                                    text = {
-                                        Text(
-                                            stringResource(R.string.login_tab_qr_code),
-                                            color = if (selectedTabIndex == 1) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurfaceVariant
-                                            },
+                            } else {
+                                if (isLandscape) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    ) {
+                                        QRCodeLogin(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight(),
+                                            isQrFailed = userLoginState.isQrFailed,
+                                            qrCode = userLoginState.qrCode,
+                                            onQrRetry = onQrRetry,
                                         )
-                                    },
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(24.dp))
-
-                            // Content based on selected tab
-                            Crossfade(
-                                targetState = userLoginState.loginScreen,
-                                modifier = Modifier.fillMaxWidth(),
-                            ) { screen ->
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(min = 350.dp),
-                                ) {
-                                    when (screen) {
-                                        LoginScreen.CREDENTIAL -> {
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxHeight(),
+                                        ) {
                                             CredentialsForm(
                                                 connectionState = connectionState,
                                                 username = userLoginState.username,
@@ -479,40 +446,32 @@ private fun UserLoginScreenContent(
                                                 onContinueOffline = onContinueOffline,
                                             )
                                         }
-
-                                        LoginScreen.TWO_FACTOR -> {
-                                            TwoFactorAuthScreenContent(
-                                                userLoginState = userLoginState,
-                                                message = when {
-                                                    userLoginState.previousCodeIncorrect ->
-                                                        stringResource(R.string.steam_2fa_incorrect)
-
-                                                    userLoginState.loginResult == LoginResult.DeviceAuth ->
-                                                        stringResource(R.string.steam_2fa_device)
-
-                                                    userLoginState.loginResult == LoginResult.DeviceConfirm ->
-                                                        stringResource(R.string.steam_2fa_confirmation)
-
-                                                    userLoginState.loginResult == LoginResult.EmailAuth ->
-                                                        stringResource(
-                                                            R.string.steam_2fa_email,
-                                                            userLoginState.email ?: "...",
-                                                        )
-
-                                                    else -> ""
-                                                },
-                                                onSetTwoFactor = onSetTwoFactor,
-                                                onLogin = onTwoFactorLogin,
-                                            )
-                                        }
-
-                                        LoginScreen.QR -> {
-                                            QRCodeLogin(
-                                                isQrFailed = userLoginState.isQrFailed,
-                                                qrCode = userLoginState.qrCode,
-                                                onQrRetry = onQrRetry,
-                                            )
-                                        }
+                                    }
+                                } else {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                                    ) {
+                                        QRCodeLogin(
+                                            modifier = Modifier
+                                                .fillMaxWidth(),
+                                            isQrFailed = userLoginState.isQrFailed,
+                                            qrCode = userLoginState.qrCode,
+                                            onQrRetry = onQrRetry,
+                                        )
+                                        CredentialsForm(
+                                            connectionState = connectionState,
+                                            username = userLoginState.username,
+                                            onUsername = onUsername,
+                                            password = userLoginState.password,
+                                            onPassword = onPassword,
+                                            rememberSession = userLoginState.rememberSession,
+                                            onRememberSession = onRememberSession,
+                                            onLoginBtnClick = onCredentialLogin,
+                                            onRetryConnection = onRetryConnection,
+                                            onContinueOffline = onContinueOffline,
+                                        )
                                     }
                                 }
                             }
@@ -523,68 +482,55 @@ private fun UserLoginScreenContent(
                     LoadingScreen()
                 }
             }
-            
+
             // Or sign in with: Epic · GOG · Amazon · Skip login
             if (
                 userLoginState.isLoggingIn.not() &&
                 userLoginState.loginResult != LoginResult.Success
             ) {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
                         .padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
                         text = stringResource(R.string.login_or_sign_in_with),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    TextButton(onClick = onLaunchEpic) {
-                        Text(
-                            text = "Epic",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    Text(
-                        text = " · ",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    TextButton(onClick = onLaunchGog) {
-                        Text(
-                            text = "GOG",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    Text(
-                        text = " · ",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    TextButton(onClick = onLaunchAmazon) {
-                        Text(
-                            text = "Amazon",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    Text(
-                        text = " · ",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    TextButton(onClick = onContinueOffline) {
-                        Text(
-                            text = stringResource(R.string.login_skip_login),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+                    FlowRow(
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        TextButton(onClick = onLaunchEpic) {
+                            Text(
+                                text = "Epic",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        TextButton(onClick = onLaunchGog) {
+                            Text(
+                                text = "GOG",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        TextButton(onClick = onLaunchAmazon) {
+                            Text(
+                                text = "Amazon",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        TextButton(onClick = onContinueOffline) {
+                            Text(
+                                text = stringResource(R.string.login_skip_login),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
                 }
             }
@@ -614,8 +560,7 @@ private fun CredentialsForm(
 
     Column(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 16.dp),
+            .fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         // Username field
@@ -815,26 +760,6 @@ private fun CredentialsForm(
             )
         }
 
-        // Remember session checkbox
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Checkbox(
-                checked = rememberSession,
-                onCheckedChange = onRememberSession,
-            )
-            Text(
-                text = stringResource(R.string.login_remember_session),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
         // Login button
         Button(
             onClick = {
@@ -844,6 +769,7 @@ private fun CredentialsForm(
             enabled = isSteamConnected && username.isNotEmpty() && password.isNotEmpty(),
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(top=12.dp)
                 .height(56.dp),
             shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors(
@@ -862,15 +788,13 @@ private fun CredentialsForm(
 
 @Composable
 private fun QRCodeLogin(
+    modifier: Modifier = Modifier,
     isQrFailed: Boolean,
     qrCode: String?,
     onQrRetry: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 350.dp)
-            .padding(vertical = 16.dp),
+        modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -899,16 +823,25 @@ private fun QRCodeLogin(
         } else if (qrCode.isNullOrEmpty()) {
             CircularProgressIndicator(
                 modifier = Modifier
-                    .padding(32.dp)
-                    .size(48.dp),
+                    .padding(vertical = 16.dp)
+                    .size(160.dp),
                 color = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text(
+                text = stringResource(R.string.login_qr_instructions),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
         } else {
             // QR Code with fancy border
             Box(
                 modifier = Modifier
                     .padding(vertical = 16.dp)
-                    .size(220.dp)
+                    .size(160.dp)
                     .background(
                         brush = Brush.linearGradient(
                             colors = listOf(
@@ -974,6 +907,42 @@ private class UserLoginPreview : PreviewParameterProvider<LoginPreviewData> {
 @Preview(uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
 @Composable
 private fun Preview_UserLoginScreen(
+    @PreviewParameter(UserLoginPreview::class) previewData: LoginPreviewData,
+) {
+    val snackBarHostState = remember { SnackbarHostState() }
+
+    PluviaTheme {
+        Surface {
+            UserLoginScreenContent(
+                snackBarHostState = snackBarHostState,
+                connectionState = previewData.connectionState,
+                userLoginState = previewData.loginState,
+                onUsername = { },
+                onPassword = { },
+                onRememberSession = { },
+                onCredentialLogin = { },
+                onTwoFactorLogin = { },
+                onQrRetry = { },
+                onSetTwoFactor = { },
+                onShowLoginScreen = { },
+                onRetryConnection = { },
+                onContinueOffline = { },
+                onLaunchGog = { },
+                onLaunchEpic = { },
+                onLaunchAmazon = { },
+            )
+        }
+    }
+}
+
+@Preview(
+    name = "UserLoginScreen - Landscape",
+    widthDp = 960,
+    heightDp = 540,
+    uiMode = Configuration.UI_MODE_NIGHT_NO or Configuration.UI_MODE_TYPE_NORMAL,
+)
+@Composable
+private fun Preview_UserLoginScreen_Landscape(
     @PreviewParameter(UserLoginPreview::class) previewData: LoginPreviewData,
 ) {
     val snackBarHostState = remember { SnackbarHostState() }

@@ -2218,7 +2218,7 @@ class SteamService : Service(), IChallengeUrlChanged {
             accessToken: String? = null,
             refreshToken: String? = null,
             password: String? = null,
-            rememberSession: Boolean = false,
+            rememberSession: Boolean = true,
             twoFactorAuth: String? = null,
             emailAuth: String? = null,
             clientId: Long? = null,

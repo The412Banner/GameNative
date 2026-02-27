@@ -6,7 +6,7 @@ import app.gamenative.enums.LoginScreen
 data class UserLoginState(
     val username: String = "",
     val password: String = "",
-    val rememberSession: Boolean = false,
+    val rememberSession: Boolean = true,
     val twoFactorCode: String = "",
 
     val isSteamConnected: Boolean = false,
