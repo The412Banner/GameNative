@@ -50,6 +50,8 @@ object VcRedistLaunchStep : LaunchStep {
         "A:\\_CommonRedist\\vcredist\\2017\\vc_redist.x64.exe" to "/install /passive /norestart",
         "A:\\_CommonRedist\\vcredist\\2019\\vc_redist.x86.exe" to "/install /passive /norestart",
         "A:\\_CommonRedist\\vcredist\\2019\\vc_redist.x64.exe" to "/install /passive /norestart",
+        "A:\\redist\\vcredist_x86.exe" to "", // We can't be sure about the version so this install has to be manual.
+        "A:\\redist\\vcredist_x64.exe" to "", // We can't be sure about the version so this install has to be manual.
         // GOG
         "A:\\_CommonRedist\\MSVC2013\\vcredist_x86.exe" to "/install /passive /norestart",
         "A:\\_CommonRedist\\MSVC2013_x64\\vcredist_x64.exe" to "/install /passive /norestart",
