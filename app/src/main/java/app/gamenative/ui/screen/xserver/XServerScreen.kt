@@ -1997,6 +1997,7 @@ private fun setupXEnvironment(
             container!!,
             gameSource,
             xServer.screenInfo.toString(),
+            containerVariantChanged,
         )
         guestProgramLauncherComponent.isWoW64Mode = wow64Mode
         // Set steam type for selecting appropriate box64rc

@@ -46,7 +46,12 @@ object LaunchSteps {
         container: Container,
         gameSource: GameSource,
         screenInfo: String,
+        containerVariantChanged: Boolean,
     ) {
+        if (containerVariantChanged) {
+            resetRunOnceMarkers(container)
+        }
+
         val applicablePreSteps = preSteps.filter { it.appliesTo(container, appId, gameSource) }
         val steps = (applicablePreSteps + gameStep).filter { step ->
             !step.runOnce || step.stepId == null || container.getExtra(STEP_DONE_EXTRA_PREFIX + step.stepId, "") != "done"
@@ -121,6 +126,29 @@ object LaunchSteps {
                 launcher.setGuestExecutable(firstExecutable)
                 return
             }
+        }
+    }
+
+    /**
+     * Clears all persisted run-once markers for pre-launch steps so they will run again
+     * (e.g. after switching the underlying imagefs variant between glibc and bionic).
+     */
+    fun resetRunOnceMarkers(container: Container) {
+        var changed = false
+
+        for (step in preSteps) {
+            if (!step.runOnce) continue
+            val id = step.stepId ?: continue
+            val key = STEP_DONE_EXTRA_PREFIX + id
+            val existing = container.getExtra(key, "")
+            if (existing.isNotEmpty()) {
+                container.putExtra(key, null)
+                changed = true
+            }
+        }
+
+        if (changed) {
+            container.saveData()
         }
     }
 
