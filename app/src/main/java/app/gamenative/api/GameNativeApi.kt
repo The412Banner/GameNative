@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit
 object GameNativeApi {
 
     val BASE_URL: String =
-        if (BuildConfig.DEBUG) "http://10.0.2.2:8787" else "https://api.gamenative.app"
+        if (BuildConfig.DEBUG) "https://gamenative-api-worker-test.gamenative.workers.dev" else "https://api.gamenative.app"
 
     val httpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
