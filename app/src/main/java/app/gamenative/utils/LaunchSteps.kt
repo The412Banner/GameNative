@@ -85,12 +85,7 @@ object LaunchSteps {
 
             val stepRunner = object : StepRunner {
                 override fun runStepContent(stepContent: String) {
-                    val executable =
-                        if (next.terminationCallback() != null) {
-                            stepContent
-                        } else {
-                            buildStepExecutable(stepContent, screenInfo)
-                        }
+                    val executable = buildGameExecutable(stepContent, screenInfo)
                     runLauncher(launcher, executable)
                     currentStep = next
                 }
@@ -111,12 +106,7 @@ object LaunchSteps {
             val captureRunner = object : StepRunner {
                 var builtExecutable: String? = null
                 override fun runStepContent(stepContent: String) {
-                    builtExecutable =
-                        if (step.terminationCallback() != null) {
-                            stepContent
-                        } else {
-                            buildStepExecutable(stepContent, screenInfo)
-                        }
+                    builtExecutable = buildGameExecutable(stepContent, screenInfo)
                 }
             }
             if (step.run(context, appId, container, captureRunner, gameSource)) {
@@ -152,9 +142,12 @@ object LaunchSteps {
         }
     }
 
-    private fun buildStepExecutable(stepContent: String, screenInfo: String): String {
-        val cmd = "winhandler.exe cmd /c \"$stepContent & taskkill /F /IM explorer.exe\""
-        return "wine explorer /desktop=shell,$screenInfo $cmd"
+    fun wrapInWinHandler(stepContent: String): String {
+        return "winhandler.exe cmd /c \"$stepContent & taskkill /F /IM explorer.exe\""
+    }
+
+    private fun buildGameExecutable(stepContent: String, screenInfo: String): String {
+        return "wine explorer /desktop=shell,$screenInfo $stepContent"
     }
 
     private fun runLauncher(launcher: InstallDepsLauncher, executable: String) {

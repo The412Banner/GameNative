@@ -2,6 +2,7 @@ package app.gamenative.utils.launchdependencies
 
 import android.content.Context
 import app.gamenative.data.GameSource
+import app.gamenative.utils.LaunchSteps
 import com.winlator.container.Container
 import com.winlator.xenvironment.ImageFs
 import java.io.File
@@ -91,7 +92,8 @@ object VcRedistLaunchStep : LaunchStep {
         }
         val content = if (parts.isEmpty()) null else parts.joinToString(" & ")
         if (content.isNullOrBlank()) return false
-        stepRunner.runStepContent(content)
+        val wrapped = LaunchSteps.wrapInWinHandler(content)
+        stepRunner.runStepContent(wrapped)
         return true
     }
 }

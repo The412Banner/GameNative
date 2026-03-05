@@ -79,7 +79,6 @@ import app.gamenative.utils.ContainerUtils
 import app.gamenative.utils.InstallDepsLauncher
 import app.gamenative.utils.LaunchSteps
 import app.gamenative.utils.launchdependencies.GameLaunchStep
-import app.gamenative.utils.launchdependencies.LaunchStep
 import app.gamenative.utils.ExecutableSelectionUtils
 import app.gamenative.utils.CustomGameScanner
 import app.gamenative.utils.SteamTokenLogin
@@ -1975,9 +1974,9 @@ private fun setupXEnvironment(
             }
             PluviaApp.events.emit(AndroidEvent.GuestProgramTerminated)
         }
-        val fullGameCommand = "wine explorer /desktop=shell," + xServer.screenInfo + " " +
+        val gameCommand =
             getWineStartCommand(context, appId, container!!, bootToContainer, testGraphics, appLaunchInfo, envVars, guestProgramLauncherComponent, gameSource) +
-            (if (container.execArgs.isNotEmpty()) " " + container.execArgs else "")
+                (if (container.execArgs.isNotEmpty()) " " + container.execArgs else "")
         val launcher = object : InstallDepsLauncher {
             override fun setGuestExecutable(executable: String) = guestProgramLauncherComponent.setGuestExecutable(executable)
             override fun setPreUnpack(block: (() -> Unit)?) = guestProgramLauncherComponent.setPreUnpack(block)
@@ -1991,7 +1990,7 @@ private fun setupXEnvironment(
         }
         LaunchSteps.start(
             launcher,
-            GameLaunchStep({ fullGameCommand }, gameTerminationCallback),
+            GameLaunchStep({ gameCommand }, gameTerminationCallback),
             context,
             appId,
             container!!,
