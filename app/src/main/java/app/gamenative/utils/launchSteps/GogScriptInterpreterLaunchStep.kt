@@ -6,12 +6,12 @@ import app.gamenative.service.gog.GOGService
 import app.gamenative.utils.LaunchSteps
 import com.winlator.container.Container
 
-/** Pre-launch step that runs GOG scriptinterpreter.exe when required by the game manifest. */
+/** Runs the GOG scriptinterpreter.exe when required by the game manifest. (Currently only compatible with GLIBC) */
 object GogScriptInterpreterLaunchStep : LaunchStep {
     override val runOnce: Boolean = true
 
     override fun appliesTo(container: Container, appId: String, gameSource: GameSource): Boolean =
-        gameSource == GameSource.GOG
+        gameSource == GameSource.GOG && container.containerVariant.equals(Container.GLIBC)
 
     override fun run(
         context: Context,
