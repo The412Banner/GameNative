@@ -2014,6 +2014,11 @@ private fun setupXEnvironment(
                 containerVariantChanged = containerVariantChanged,
                 onError = onGameLaunchError
             )
+            if (preInstallCommands.isNotEmpty()) {
+                PluviaApp.events.emit(AndroidEvent.SetBootingSplashText("Installing prerequisites..."))
+            } else {
+                PluviaApp.events.emit(AndroidEvent.SetBootingSplashText("Launching game..."))
+            }
         }
 
         val enableGstreamer = container.isGstreamerWorkaround()
@@ -2104,7 +2109,13 @@ private fun setupXEnvironment(
             } catch (e: Exception) {
                 Timber.w(e, "wineserver -k between pre-install steps (non-fatal)")
             }
-            chainPreInstallSteps(remaining.drop(1))
+            val nextRemaining = remaining.drop(1)
+            if (nextRemaining.isEmpty()) {
+                PluviaApp.events.emit(AndroidEvent.SetBootingSplashText("Launching game..."))
+            } else {
+                PluviaApp.events.emit(AndroidEvent.SetBootingSplashText("Installing prerequisites..."))
+            }
+            chainPreInstallSteps(nextRemaining)
             guestProgramLauncherComponent.start()
         }
     }
