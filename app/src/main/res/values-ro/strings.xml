@@ -1223,4 +1223,8 @@
     <string name="manifest_content_untrusted">Conținutul nu este de încredere și nu a fost instalat.</string>
     <string name="manifest_type_mismatch">Conținutul descărcat nu corespunde tipului așteptat.</string>
     <string name="manifest_glibc_not_supported">Build-urile GLIBC nu sunt acceptate.</string>
+    <string name="download_failed_title">Descărcarea a eșuat</string>
+    <string name="download_failed_message">Un fișier necesar nu a putut fi descărcat. Verifică conexiunea la rețea și încearcă din nou.</string>
+    <string name="install_failed_title">Instalarea a eșuat</string>
+    <string name="install_failed_message">Fișierele de sistem nu au putut fi instalate. Încearcă din nou. Dacă problema persistă, încearcă o altă rețea sau folosește un VPN.</string>
 </resources>

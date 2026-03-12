@@ -1214,5 +1214,9 @@
     <string name="manifest_content_untrusted">Вміст не є надійним, тому його не інстальовано.</string>
     <string name="manifest_type_mismatch">Завантажений вміст не відповідає очікуваному типу.</string>
     <string name="manifest_glibc_not_supported">Збірки GLIBC не підтримуються.</string>
+    <string name="download_failed_title">Помилка завантаження</string>
+    <string name="download_failed_message">Не вдалося завантажити необхідний файл. Перевірте підключення до мережі та спробуйте ще раз.</string>
+    <string name="install_failed_title">Помилка інсталяції</string>
+    <string name="install_failed_message">Не вдалося інсталювати системні файли. Спробуйте ще раз. Якщо проблема не зникає, спробуйте іншу мережу або скористайтеся VPN.</string>
 </resources>
 

@@ -1150,4 +1150,8 @@ https://gamenative.app
     <string name="wmdecoder">Декодер Windows Media</string>
     <string name="working">Работа...</string>
     <string name="yes">Да</string>
+    <string name="download_failed_title">Ошибка загрузки</string>
+    <string name="download_failed_message">Не удалось загрузить необходимый файл. Проверьте подключение к сети и попробуйте снова.</string>
+    <string name="install_failed_title">Ошибка установки</string>
+    <string name="install_failed_message">Не удалось установить системные файлы. Попробуйте снова. Если проблема сохраняется, попробуйте другую сеть или используйте VPN.</string>
 </resources>

@@ -1088,4 +1088,8 @@
     <string name="manifest_content_untrusted">O conteúdo não é confiável e não foi instalado.</string>
     <string name="manifest_type_mismatch">O conteúdo baixado não corresponde ao tipo esperado.</string>
     <string name="manifest_glibc_not_supported">Compilações GLIBC não são suportadas.</string>
+    <string name="download_failed_title">Falha no Download</string>
+    <string name="download_failed_message">Um arquivo necessário não pôde ser baixado. Verifique sua conexão de rede e tente novamente.</string>
+    <string name="install_failed_title">Falha na Instalação</string>
+    <string name="install_failed_message">Os arquivos do sistema não puderam ser instalados. Tente novamente. Se o problema persistir, tente uma rede diferente ou use uma VPN.</string>
 </resources>
