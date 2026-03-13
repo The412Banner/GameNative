@@ -1138,6 +1138,12 @@ fun XServerScreen(
                             }
                         } catch (e: Exception) {
                             Timber.e(e, "Error during wine setup operations")
+                            try {
+                                PluviaApp.xEnvironment?.stopEnvironmentComponents()
+                            } catch (cleanupEx: Exception) {
+                                Timber.e(cleanupEx, "Error cleaning up environment after setup failure")
+                            }
+                            PluviaApp.xEnvironment = null
                             onGameLaunchError?.invoke("Failed to setup wine: ${e.message}")
                         } finally {
                             setupExecutor.shutdown()
@@ -2330,7 +2336,17 @@ private fun setupXEnvironment(
         }
     }
 
-    environment.startEnvironmentComponents()
+    try {
+        environment.startEnvironmentComponents()
+    } catch (e: Exception) {
+        Timber.e(e, "Failed to start environment components, cleaning up")
+        try {
+            environment.stopEnvironmentComponents()
+        } catch (cleanupEx: Exception) {
+            Timber.e(cleanupEx, "Error during environment cleanup")
+        }
+        throw e
+    }
 
     // put in separate scope since winhandler start method does some network stuff
     CoroutineScope(Dispatchers.IO).launch {
