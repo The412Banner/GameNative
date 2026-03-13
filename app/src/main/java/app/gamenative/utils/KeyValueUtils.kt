@@ -147,18 +147,35 @@ fun KeyValue.generateSteamApp(): SteamApp {
             steamInputManifestPath = this["config"]["steaminputmanifestpath"].value.orEmpty(),
             steamControllerConfigDetails = parseSteamControllerConfigDetails(),
         ),
-        ufs = UFS(
-            quota = this["ufs"]["quota"].asInteger(),
-            maxNumFiles = this["ufs"]["maxnumfiles"].asInteger(),
-            saveFilePatterns = this["ufs"]["savefiles"].children.map {
-                SaveFilePattern(
-                    root = PathType.from(it["root"].value),
-                    path = it["path"].value.orEmpty(),
-                    pattern = it["pattern"].value.orEmpty(),
-                    recursive = it["recursive"].asInteger(0),
-                )
-            },
-        ),
+        ufs = run {
+            // Parse rootoverrides: Steam allows per-OS root replacements. Since GameNative
+            // always runs Windows games via Wine, apply only the Windows overrides.
+            val rootOverrides = this["ufs"]["rootoverrides"].children.mapNotNull { override ->
+                val os = override["os"].value.orEmpty()
+                if (!os.equals("Windows", ignoreCase = true)) return@mapNotNull null
+                val fromRoot = PathType.from(override["root"].value)
+                val toRoot = PathType.from(override["useinstead"].value)
+                val addPath = override["addpath"].value.orEmpty()
+                Triple(fromRoot, toRoot, addPath)
+            }
+
+            UFS(
+                quota = this["ufs"]["quota"].asInteger(),
+                maxNumFiles = this["ufs"]["maxnumfiles"].asInteger(),
+                saveFilePatterns = this["ufs"]["savefiles"].children.map { saveFile ->
+                    val originalRoot = PathType.from(saveFile["root"].value)
+                    val originalPath = saveFile["path"].value.orEmpty()
+                    val rootRemap = rootOverrides.find { (fromRoot, _, _) -> fromRoot == originalRoot }
+
+                    SaveFilePattern(
+                        root = rootRemap?.second ?: originalRoot,
+                        path = (rootRemap?.third?.takeIf { it.isNotEmpty() } ?: "") + originalPath,
+                        pattern = saveFile["pattern"].value.orEmpty(),
+                        recursive = saveFile["recursive"].asInteger(0),
+                    )
+                },
+            )
+        },
     )
 }
 
