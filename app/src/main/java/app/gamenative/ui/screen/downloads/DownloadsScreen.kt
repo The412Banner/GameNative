@@ -131,7 +131,7 @@ fun HomeDownloadsScreen(
                 selectedSection = selectedSection,
                 onSectionSelected = { selectedSectionIndex = it.ordinal },
                 modifier = Modifier
-                    .width(228.dp)
+                    .width(96.dp)
                     .fillMaxHeight(),
             )
 
@@ -282,7 +282,7 @@ private fun DownloadsSidebarItem(
     }
     val isHighlighted = selected || isFocused
 
-    Row(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
@@ -316,9 +316,8 @@ private fun DownloadsSidebarItem(
                 indication = null,
                 onClick = onClick,
             )
-            .padding(horizontal = 14.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(vertical = 18.dp),
+        contentAlignment = Alignment.Center,
     ) {
         Box(
             modifier = Modifier
@@ -335,41 +334,12 @@ private fun DownloadsSidebarItem(
         ) {
             Icon(
                 imageVector = section.icon,
-                contentDescription = null,
+                contentDescription = stringResource(section.titleResId),
                 tint = when {
                     isHighlighted -> accentColor
                     else -> MaterialTheme.colorScheme.onSurfaceVariant
                 },
                 modifier = Modifier.size(22.dp),
-            )
-        }
-
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
-        ) {
-            Text(
-                text = stringResource(section.titleResId),
-                style = MaterialTheme.typography.titleSmall,
-                color = when {
-                    isHighlighted -> accentColor
-                    else -> MaterialTheme.colorScheme.onSurface
-                },
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                text = stringResource(
-                    when (section) {
-                        DownloadsSection.Downloads -> R.string.downloads_overview_subtitle
-                        DownloadsSection.Storage -> R.string.settings_storage_manage_subtitle
-                    },
-                ),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
             )
         }
     }

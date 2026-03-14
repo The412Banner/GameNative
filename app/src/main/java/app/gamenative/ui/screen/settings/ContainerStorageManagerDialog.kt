@@ -383,6 +383,7 @@ fun ContainerStorageManagerContent(
                     text = stringResource(R.string.settings_storage_manage_title),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     text = stringResource(R.string.settings_storage_manage_subtitle),
