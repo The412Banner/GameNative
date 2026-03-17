@@ -41,6 +41,10 @@ class KeyValueUtilsTest {
                             "root"      "gameinstall"
                             "path"      "love/blue-revolver-final"
                             "pattern"   "save2.lua"
+                            "platforms"
+                            {
+                                "1"     "Linux"
+                            }
                         }
                     }
                     "rootoverrides"
@@ -77,7 +81,7 @@ class KeyValueUtilsTest {
         val steamApp = kv.generateSteamApp()
 
         val patterns = steamApp.ufs.saveFilePatterns
-        assertEquals(3, patterns.size)
+        assertEquals(2, patterns.size)
 
         assertEquals(PathType.WinAppDataRoaming, patterns[0].root)
         assertEquals("blue-revolver-final", patterns[0].path)
@@ -88,11 +92,6 @@ class KeyValueUtilsTest {
         assertEquals("blue-revolver-double-action", patterns[1].path)
         assertEquals("brda_save.sav", patterns[1].pattern)
         assertEquals(0, patterns[1].recursive)
-
-        assertEquals(PathType.WinAppDataRoaming, patterns[2].root)
-        assertEquals("love/blue-revolver-final", patterns[2].path)
-        assertEquals("save2.lua", patterns[2].pattern)
-        assertEquals(0, patterns[2].recursive)
     }
 
     /**
@@ -189,6 +188,191 @@ class KeyValueUtilsTest {
         assertEquals("MyGame/saves", patterns[0].path)
         assertEquals("*.sav", patterns[0].pattern)
         assertEquals(0, patterns[0].recursive)
+    }
+
+    /**
+     * A savefile restricted to Linux via a `platforms` block should be excluded on Windows.
+     * A savefile with no `platforms` block should always be included.
+     */
+    @Test
+    fun saveFileWithNonWindowsPlatformIsExcluded() {
+        val kvString = """
+            "appinfo"
+            {
+                "appid"     "111111"
+                "ufs"
+                {
+                    "quota"         "1000000000"
+                    "maxnumfiles"   "10"
+                    "savefiles"
+                    {
+                        "0"
+                        {
+                            "root"      "WinMyDocuments"
+                            "path"      "saves"
+                            "pattern"   "*.sav"
+                            "platforms"
+                            {
+                                "1"     "Linux"
+                            }
+                        }
+                        "1"
+                        {
+                            "root"      "WinMyDocuments"
+                            "path"      "saves"
+                            "pattern"   "*.bak"
+                        }
+                    }
+                }
+            }
+        """.trimIndent()
+        val kv = KeyValue.loadFromString(kvString)!!
+        val steamApp = kv.generateSteamApp()
+
+        val patterns = steamApp.ufs.saveFilePatterns
+        assertEquals(1, patterns.size)
+        assertEquals(PathType.WinMyDocuments, patterns[0].root)
+        assertEquals("*.bak", patterns[0].pattern)
+    }
+
+    /**
+     * Savefiles with an explicit `platforms { "Windows" }` block (Noita-style) should be included.
+     */
+    @Test
+    fun noitaExplicitWindowsPlatformIsIncluded() {
+        val kvString = """
+            "appinfo"
+            {
+                "appid"     "881100"
+                "ufs"
+                {
+                    "quota"         "1000000000"
+                    "maxnumfiles"   "10"
+                    "savefiles"
+                    {
+                        "0"
+                        {
+                            "root"      "WinAppDataLocalLow"
+                            "path"      "Nolla_Games_Noita"
+                            "pattern"   "save00/world/*.bin"
+                            "recursive" "1"
+                            "platforms"
+                            {
+                                "1"     "Windows"
+                            }
+                        }
+                        "1"
+                        {
+                            "root"      "WinAppDataLocalLow"
+                            "path"      "Nolla_Games_Noita"
+                            "pattern"   "save00/*.xml"
+                            "recursive" "0"
+                            "platforms"
+                            {
+                                "1"     "Windows"
+                            }
+                        }
+                    }
+                }
+            }
+        """.trimIndent()
+        val kv = KeyValue.loadFromString(kvString)!!
+        val steamApp = kv.generateSteamApp()
+
+        val patterns = steamApp.ufs.saveFilePatterns
+        assertEquals(2, patterns.size)
+        assertEquals(PathType.WinAppDataLocalLow, patterns[0].root)
+        assertEquals("Nolla_Games_Noita", patterns[0].path)
+        assertEquals("save00/world/*.bin", patterns[0].pattern)
+        assertEquals(1, patterns[0].recursive)
+        assertEquals(PathType.WinAppDataLocalLow, patterns[1].root)
+        assertEquals("Nolla_Games_Noita", patterns[1].path)
+        assertEquals("save00/*.xml", patterns[1].pattern)
+        assertEquals(0, patterns[1].recursive)
+    }
+
+    /**
+     * Cult of the Lamb uses a Windows rootoverride with `pathtransforms` to remap the save
+     * path from `saves` to `Massive Monster/Cult Of The Lamb/saves`.
+     */
+    @Test
+    fun cultOfTheLambPathtransformsRemapsPath() {
+        val kvString = """
+            "appinfo"
+            {
+                "appid"     "1313140"
+                "ufs"
+                {
+                    "quota"         "1048576000"
+                    "maxnumfiles"   "10000"
+                    "savefiles"
+                    {
+                        "0"
+                        {
+                            "root"      "gameinstall"
+                            "path"      "saves"
+                            "pattern"   "*.json"
+                            "recursive" "1"
+                        }
+                        "1"
+                        {
+                            "root"      "gameinstall"
+                            "path"      "saves"
+                            "pattern"   "*.mp"
+                            "recursive" "1"
+                        }
+                    }
+                    "rootoverrides"
+                    {
+                        "0"
+                        {
+                            "root"          "gameinstall"
+                            "os"            "Windows"
+                            "oscompare"     "="
+                            "useinstead"    "WinAppDataLocalLow"
+                            "pathtransforms"
+                            {
+                                "0"
+                                {
+                                    "find"      "saves"
+                                    "replace"   "Massive Monster/Cult Of The Lamb/saves"
+                                }
+                            }
+                        }
+                        "1"
+                        {
+                            "root"          "gameinstall"
+                            "os"            "MacOS"
+                            "oscompare"     "="
+                            "useinstead"    "MacAppSupport"
+                            "pathtransforms"
+                            {
+                                "0"
+                                {
+                                    "find"      "saves"
+                                    "replace"   "Massive Monster/Cult Of The Lamb/saves"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        """.trimIndent()
+        val kv = KeyValue.loadFromString(kvString)!!
+        val steamApp = kv.generateSteamApp()
+
+        val patterns = steamApp.ufs.saveFilePatterns
+        assertEquals(2, patterns.size)
+
+        assertEquals(PathType.WinAppDataLocalLow, patterns[0].root)
+        assertEquals("Massive Monster/Cult Of The Lamb/saves", patterns[0].path)
+        assertEquals("*.json", patterns[0].pattern)
+        assertEquals(1, patterns[0].recursive)
+
+        assertEquals(PathType.WinAppDataLocalLow, patterns[1].root)
+        assertEquals("Massive Monster/Cult Of The Lamb/saves", patterns[1].path)
+        assertEquals("*.mp", patterns[1].pattern)
+        assertEquals(1, patterns[1].recursive)
     }
 
     /**

@@ -150,27 +150,48 @@ fun KeyValue.generateSteamApp(): SteamApp {
         ufs = run {
             // Parse rootoverrides: Steam allows per-OS root replacements. Since GameNative
             // always runs Windows games via Wine, apply only the Windows overrides.
-            val rootOverrides = this["ufs"]["rootoverrides"].children.mapNotNull { override ->
-                val os = override["os"].value.orEmpty()
+            data class RootOverride(
+                val fromRoot: PathType,
+                val toRoot: PathType,
+                val addPath: String,
+                val pathTransforms: List<Pair<String, String>>,
+            )
+
+            val rootOverrides = this["ufs"]["rootoverrides"].children.mapNotNull { rootOverride ->
+                val os = rootOverride["os"].value.orEmpty()
                 if (!os.equals("Windows", ignoreCase = true)) return@mapNotNull null
-                val fromRoot = PathType.from(override["root"].value)
-                val toRoot = PathType.from(override["useinstead"].value)
-                val addPath = override["addpath"].value.orEmpty()
-                Triple(fromRoot, toRoot, addPath)
+                val pathTransforms = rootOverride["pathtransforms"].children.map { transform ->
+                    transform["find"].value.orEmpty() to transform["replace"].value.orEmpty()
+                }
+                RootOverride(
+                    fromRoot = PathType.from(rootOverride["root"].value),
+                    toRoot = PathType.from(rootOverride["useinstead"].value),
+                    addPath = rootOverride["addpath"].value.orEmpty(),
+                    pathTransforms = pathTransforms,
+                )
             }
 
             UFS(
                 quota = this["ufs"]["quota"].asInteger(),
                 maxNumFiles = this["ufs"]["maxnumfiles"].asInteger(),
-                saveFilePatterns = this["ufs"]["savefiles"].children.map { saveFile ->
+                saveFilePatterns = this["ufs"]["savefiles"].children.mapNotNull { saveFile ->
+                    val platforms = saveFile["platforms"].children.map { it.value?.lowercase() }
+                    if (platforms.isNotEmpty() && "windows" !in platforms) return@mapNotNull null
+
                     val originalRoot = PathType.from(saveFile["root"].value)
                     val originalPath = saveFile["path"].value.orEmpty()
-                    val rootRemap = rootOverrides.find { (fromRoot, _, _) -> fromRoot == originalRoot }
+                    val rootRemap = rootOverrides.find { it.fromRoot == originalRoot }
 
                     SaveFilePattern(
-                        root = rootRemap?.second ?: originalRoot,
-                        path = rootRemap?.third?.takeIf { it.isNotEmpty() }?.let { addPath ->
-                            "${addPath.trimEnd('/')}/$originalPath"
+                        root = rootRemap?.toRoot ?: originalRoot,
+                        path = rootRemap?.let { rootOverride ->
+                            var p = if (rootOverride.addPath.isNotEmpty()) {
+                                "${rootOverride.addPath.trimEnd('/')}/$originalPath"
+                            } else {
+                                originalPath
+                            }
+                            rootOverride.pathTransforms.forEach { (find, replace) -> p = p.replace(find, replace) }
+                            p
                         } ?: originalPath,
                         pattern = saveFile["pattern"].value.orEmpty(),
                         recursive = saveFile["recursive"].asInteger(0),
