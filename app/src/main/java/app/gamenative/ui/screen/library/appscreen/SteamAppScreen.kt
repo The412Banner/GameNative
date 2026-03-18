@@ -1044,11 +1044,7 @@ class SteamAppScreen : BaseAppScreen() {
                 val granted = Environment.isExternalStorageManager()
                 hasStoragePermission = granted
                 if (!granted) {
-                    Toast.makeText(
-                        context,
-                        context.getString(R.string.steam_storage_permission_required),
-                        Toast.LENGTH_SHORT,
-                    ).show()
+                    SnackbarManager.show(context.getString(R.string.steam_storage_permission_required))
                     hideInstallDialog(gameId)
                     hideGameManagerDialog(gameId)
                 }

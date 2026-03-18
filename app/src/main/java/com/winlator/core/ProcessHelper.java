@@ -83,6 +83,7 @@ public abstract class ProcessHelper {
         int pid = -1;
         java.lang.Process process = null;
         try {
+            command = "/system/bin/linker64 " + command;
             Log.d("ProcessHelper", "Executing: " + Arrays.toString(splitCommand(command)) + ", " + Arrays.toString(envp) + ", " + workingDir);
             process = Runtime.getRuntime().exec(splitCommand(command), envp, workingDir);
 

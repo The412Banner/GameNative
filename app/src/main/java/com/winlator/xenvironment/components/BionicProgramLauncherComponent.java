@@ -251,8 +251,9 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
 
         envVars.put("PATH", winePath + ":" +
                 rootDir.getPath() + "/usr/bin");
+        envVars.put("REDIRECT_EXEC__PROC_SELF_EXE", winePath + "/wine");
 
-        envVars.put("LD_LIBRARY_PATH", rootDir.getPath() + "/usr/lib" + ":" + "/system/lib64");
+        envVars.put("LD_LIBRARY_PATH", rootDir.getPath() + "/usr/lib" + ":" + "/system/lib64" + ":" + imageFs.getWinePath() + "/lib");
         envVars.put("ANDROID_SYSVSHM_SERVER", rootDir.getPath() + UnixSocketConfig.SYSVSHM_SERVER_PATH);
         envVars.put("FONTCONFIG_PATH", rootDir.getPath() + "/usr/etc/fonts");
 
@@ -466,8 +467,9 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         Log.d("BionicProgramLauncherComponent", "WinePath is " + winePath);
 
         envVars.put("PATH", winePath + ":" + rootDir.getPath() + "/usr/bin");
+        envVars.put("REDIRECT_EXEC__PROC_SELF_EXE", winePath + "/wine");
 
-        envVars.put("LD_LIBRARY_PATH", rootDir.getPath() + "/usr/lib" + ":" + "/system/lib64");
+        envVars.put("LD_LIBRARY_PATH", rootDir.getPath() + "/usr/lib" + ":" + "/system/lib64" + ":" + imageFs.getWinePath() + "/lib");
         envVars.put("ANDROID_SYSVSHM_SERVER", rootDir.getPath() + UnixSocketConfig.SYSVSHM_SERVER_PATH);
         envVars.put("WINE_NO_DUPLICATE_EXPLORER", "1");
         envVars.put("PREFIX", rootDir.getPath() + "/usr");
@@ -495,6 +497,7 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
 
         // Execute the command and capture its output
         try {
+            finalCommand = "/system/bin/linker64 " + finalCommand;
             Log.d("BionicProgramLauncherComponent", "Shell command is " + finalCommand);
             java.lang.Process process = Runtime.getRuntime().exec(finalCommand, envVars.toStringArray(), workingDir != null ? workingDir : imageFs.getRootDir());
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
