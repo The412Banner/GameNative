@@ -128,6 +128,8 @@ abstract class BaseAppScreen {
                     compatibilityMessage = null
                     compatibilityColor = null
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 Timber.tag("BaseAppScreen").e(e, "Failed to get compatibility from cache")
                 compatibilityMessage = null

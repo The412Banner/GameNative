@@ -745,14 +745,23 @@ object ContainerUtils {
             }
         }
 
-        // Check for cached best config (only for Steam games, only if no custom config provided)
+        // Check for cached best config (store-backed games only, only if no custom config provided)
         var bestConfigMap: Map<String, Any?>? = null
-        if (gameSource == GameSource.STEAM && customConfig == null && PrefManager.autoApplyKnownConfig) {
+        val supportsKnownConfigAutoApply = when (gameSource) {
+            GameSource.STEAM,
+            GameSource.GOG,
+            GameSource.EPIC,
+            GameSource.AMAZON,
+            -> true
+
+            GameSource.CUSTOM_GAME,
+            -> false
+        }
+
+        if (supportsKnownConfigAutoApply && customConfig == null && PrefManager.autoApplyKnownConfig) {
             try {
-                val gameId = extractGameIdFromContainerId(appId)
-                val appInfo = SteamService.getAppInfoOf(gameId)
-                if (appInfo != null) {
-                    val gameName = appInfo.name
+                val gameName = resolveGameName(appId)
+                if (gameName != "Unknown" && gameName.isNotBlank()) {
                     val gpuName = GPUInformation.getRenderer(context)
 
                     // Check cache first (synchronous, fast)
