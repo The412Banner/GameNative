@@ -3623,15 +3623,23 @@ class SteamService : Service(), IChallengeUrlChanged {
 
                             // TODO maybe apps with -1 for the ownerAccountId can be stripped with necessities and name.
 
-                            if (app.changeNumber != appFromDb?.lastChangeNumber ||
-                                (appFromDb != null && appFromDb.ufsParseVersion < CURRENT_UFS_PARSE_VERSION)) {
-                                app.keyValues.generateSteamApp().copy(
+                            val ufsParseVersionOutdated = appFromDb != null && appFromDb.ufsParseVersion < CURRENT_UFS_PARSE_VERSION
+
+                            if (app.changeNumber != appFromDb?.lastChangeNumber || ufsParseVersionOutdated) {
+                                val newApp = app.keyValues.generateSteamApp().copy(
                                     packageId = packageId,
                                     ownerAccountId = ownerAccountId,
                                     receivedPICS = true,
                                     lastChangeNumber = app.changeNumber,
                                     licenseFlags = packageFromDb?.licenseFlags ?: EnumSet.noneOf(ELicenseFlags::class.java),
                                 )
+                                if (ufsParseVersionOutdated && newApp.ufs.saveFilePatterns.any { it.uploadRoot != it.root || it.uploadPath != it.path }) {
+                                    // UFS path logic changed and this app has rootoverrides — clear
+                                    // the file cache so the next sync detects the mismatch and
+                                    // prompts the user to choose between local and cloud saves.
+                                    fileChangeListsDao.deleteByAppId(app.id)
+                                }
+                                newApp
                             } else {
                                 null
                             }

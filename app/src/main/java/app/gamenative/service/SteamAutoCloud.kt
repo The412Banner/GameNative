@@ -809,6 +809,14 @@ object SteamAutoCloud {
 
                     /*TODO: hasLocalChanges should be true if the user plays offline for the first time without ever pulling cloud saves
                        If that happens, the next time they go online, their change number is -1, and saves are always overwritten by cloud*/
+
+                    // If cache is absent but local files exist and a prior sync was recorded,
+                    // the cache was cleared on upgrade due to a UFS path fix — treat as conflict
+                    // so the user can choose which save to keep rather than silently overwriting.
+                    if (cacheIsAbsentOrEmpty && allLocalUserFiles.isNotEmpty() && localAppChangeNumber >= 0) {
+                        hasLocalChanges = true
+                    }
+
                     if (!hasLocalChanges) {
                         // we can safely download the new changes since no changes have been
                         // made locally
