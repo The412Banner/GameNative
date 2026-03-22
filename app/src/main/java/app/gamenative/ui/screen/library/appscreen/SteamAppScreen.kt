@@ -34,9 +34,7 @@ import app.gamenative.ui.data.AppMenuOption
 import app.gamenative.ui.data.GameDisplayInfo
 import app.gamenative.ui.enums.AppOptionMenuType
 import app.gamenative.ui.enums.DialogType
-import app.gamenative.utils.BestConfigService
 import app.gamenative.utils.ContainerUtils
-import app.gamenative.utils.ManifestInstaller
 import app.gamenative.utils.MarkerUtils
 import app.gamenative.utils.SteamUtils
 import app.gamenative.utils.StorageUtils
@@ -44,13 +42,11 @@ import com.google.android.play.core.splitcompat.SplitCompat
 import com.posthog.PostHog
 import com.winlator.container.ContainerData
 import com.winlator.container.ContainerManager
-import com.winlator.core.GPUInformation
 import com.winlator.fexcore.FEXCoreManager
 import com.winlator.xenvironment.ImageFsInstaller
 import java.nio.file.Paths
 import kotlin.io.path.pathString
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -71,132 +67,6 @@ private data class InstallSizeInfo(
     val installBytes: Long,
     val availableBytes: Long,
 )
-
-data class KnownConfigInstallState(
-    val visible: Boolean,
-    val progress: Float,
-    val label: String,
-)
-
-private suspend fun installMissingComponentsForConfig(
-    context: Context,
-    gameId: Int,
-    configJson: kotlinx.serialization.json.JsonObject,
-    matchType: String,
-    uiScope: CoroutineScope,
-): Boolean {
-    val missingRequests = BestConfigService.resolveMissingManifestInstallRequests(
-        context,
-        configJson,
-        matchType,
-    )
-    if (missingRequests.isEmpty()) return true
-
-    uiScope.launch(Dispatchers.Main.immediate) {
-        SteamAppScreen.showKnownConfigInstallState(
-            gameId,
-            KnownConfigInstallState(
-                visible = true,
-                progress = -1f,
-                label = missingRequests.first().entry.name,
-            ),
-        )
-    }
-
-    for (request in missingRequests) {
-        val label = request.entry.id
-        uiScope.launch(Dispatchers.Main.immediate) {
-            SteamAppScreen.showKnownConfigInstallState(
-                gameId,
-                KnownConfigInstallState(
-                    visible = true,
-                    progress = -1f,
-                    label = label,
-                ),
-            )
-        }
-        val result = ManifestInstaller.installManifestEntry(
-            context = context,
-            entry = request.entry,
-            isDriver = request.isDriver,
-            contentType = request.contentType,
-            onProgress = { progress ->
-                val clamped = progress.coerceIn(0f, 1f)
-                uiScope.launch(Dispatchers.Main.immediate) {
-                    SteamAppScreen.showKnownConfigInstallState(
-                        gameId,
-                        KnownConfigInstallState(
-                            visible = true,
-                            progress = clamped,
-                            label = label,
-                        ),
-                    )
-                }
-            },
-        )
-        SnackbarManager.show(result.message)
-        if (!result.success) {
-            uiScope.launch(Dispatchers.Main.immediate) { SteamAppScreen.hideKnownConfigInstallState(gameId) }
-            return false
-        }
-    }
-
-    uiScope.launch(Dispatchers.Main.immediate) { SteamAppScreen.hideKnownConfigInstallState(gameId) }
-    return true
-}
-
-private suspend fun applyConfigForContainer(
-    context: Context,
-    gameId: Int,
-    appId: String,
-    configJson: kotlinx.serialization.json.JsonObject,
-    matchType: String,
-    uiScope: CoroutineScope,
-): Boolean {
-    return try {
-        val installsOk = installMissingComponentsForConfig(
-            context,
-            gameId,
-            configJson,
-            matchType,
-            uiScope,
-        )
-        if (!installsOk) return false
-
-        val container = ContainerUtils.getOrCreateContainer(context, appId)
-        val containerData = ContainerUtils.toContainerData(container)
-        val parsedConfig = BestConfigService.parseConfigToContainerData(
-            context,
-            configJson,
-            matchType,
-            true,
-        )
-        val missingContentDescription = BestConfigService.consumeLastMissingContentDescription()
-        if (parsedConfig != null && parsedConfig.isNotEmpty()) {
-            val updatedContainerData = ContainerUtils.applyBestConfigMapToContainerData(
-                containerData,
-                parsedConfig,
-            )
-            ContainerUtils.applyToContainer(context, container, updatedContainerData)
-            SnackbarManager.show(context.getString(R.string.best_config_applied_successfully))
-        } else {
-            val message = if (missingContentDescription != null) {
-                context.getString(R.string.best_config_missing_content, missingContentDescription)
-            } else {
-                context.getString(R.string.best_config_known_config_invalid)
-            }
-            SnackbarManager.show(message)
-        }
-        true
-    } catch (e: Exception) {
-        Timber.w(e, "Failed to apply config: ${e.message}")
-        withContext(Dispatchers.Main) {
-            SteamAppScreen.hideKnownConfigInstallState(gameId)
-        }
-        SnackbarManager.show(context.getString(R.string.best_config_apply_failed, e.message ?: "Unknown error"))
-        false
-    }
-}
 
 private fun buildInstallPromptState(context: Context, info: InstallSizeInfo): MessageDialogState {
     val message = context.getString(
@@ -265,20 +135,6 @@ class SteamAppScreen : BaseAppScreen() {
 
         fun getInstallDialogState(gameId: Int): MessageDialogState? {
             return installDialogStates[gameId]
-        }
-
-        private val knownConfigInstallStates = mutableStateMapOf<Int, KnownConfigInstallState>()
-
-        fun showKnownConfigInstallState(gameId: Int, state: KnownConfigInstallState) {
-            knownConfigInstallStates[gameId] = state
-        }
-
-        fun hideKnownConfigInstallState(gameId: Int) {
-            knownConfigInstallStates.remove(gameId)
-        }
-
-        fun getKnownConfigInstallState(gameId: Int): KnownConfigInstallState? {
-            return knownConfigInstallStates[gameId]
         }
 
         private val gameManagerDialogStates = mutableStateMapOf<Int, GameManagerDialogState>()
@@ -885,57 +741,6 @@ class SteamAppScreen : BaseAppScreen() {
     }
 
     override fun supportsContainerConfig(): Boolean = true
-    override suspend fun applyKnownConfigForLibraryItem(
-        context: Context,
-        libraryItem: LibraryItem,
-    ) {
-        val gameId = libraryItem.gameId
-        val appId = libraryItem.appId
-        val appInfo = SteamService.getAppInfoOf(gameId)
-
-        if (appInfo == null) {
-            SnackbarManager.show(context.getString(R.string.best_config_fetch_failed))
-            return
-        }
-
-        try {
-            val gameName = appInfo.name
-            val gpuName = GPUInformation.getRenderer(context)
-            val uiScope = CoroutineScope(Dispatchers.Main.immediate)
-
-            val bestConfig = BestConfigService.fetchBestConfig(gameName, gpuName)
-            if (bestConfig == null) {
-                SnackbarManager.show(context.getString(R.string.best_config_fetch_failed))
-                return
-            }
-            if (bestConfig.matchType == "no_match") {
-                SnackbarManager.show(context.getString(R.string.best_config_no_config_available))
-                return
-            }
-
-            applyConfigForContainer(
-                context = context,
-                gameId = gameId,
-                appId = appId,
-                configJson = bestConfig.bestConfig,
-                matchType = bestConfig.matchType,
-                uiScope = uiScope,
-            )
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Timber.w(e, "Failed to apply known config: ${e.message}")
-            withContext(Dispatchers.Main) {
-                hideKnownConfigInstallState(gameId)
-            }
-            SnackbarManager.show(
-                context.getString(
-                    R.string.best_config_apply_failed,
-                    e.message ?: "Unknown error",
-                ),
-            )
-        }
-    }
 
     override fun getExportFileExtension(): String = ".steam"
 
@@ -971,17 +776,6 @@ class SteamAppScreen : BaseAppScreen() {
             snapshotFlow { getInstallDialogState(gameId) }
                 .collect { state ->
                     installDialogState = state ?: MessageDialogState(false)
-                }
-        }
-
-        var knownConfigInstallState by remember(gameId) {
-            mutableStateOf(getKnownConfigInstallState(gameId) ?: KnownConfigInstallState(false, -1f, ""))
-        }
-
-        LaunchedEffect(gameId) {
-            snapshotFlow { getKnownConfigInstallState(gameId) }
-                .collect { state ->
-                    knownConfigInstallState = state ?: KnownConfigInstallState(false, -1f, "")
                 }
         }
 
@@ -1121,16 +915,6 @@ class SteamAppScreen : BaseAppScreen() {
                 )
             }
         }
-
-        LoadingDialog(
-            visible = knownConfigInstallState.visible,
-            progress = knownConfigInstallState.progress,
-            message = if (knownConfigInstallState.label.isNotEmpty()) {
-                context.getString(R.string.manifest_downloading_item, knownConfigInstallState.label)
-            } else {
-                context.getString(R.string.working)
-            },
-        )
 
         // Install dialog (INSTALL_APP, NOT_ENOUGH_SPACE, CANCEL_APP_DOWNLOAD)
         if (installDialogState.visible) {

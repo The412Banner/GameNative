@@ -33,11 +33,13 @@ import app.gamenative.ui.data.GameDisplayInfo
 import app.gamenative.ui.enums.AppOptionMenuType
 import app.gamenative.ui.util.ContainerConfigTransfer
 import app.gamenative.ui.util.SnackbarManager
+import app.gamenative.ui.component.dialog.LoadingDialog
 import app.gamenative.utils.BestConfigService
 import app.gamenative.utils.ContainerUtils
 import app.gamenative.utils.GameCompatibilityCache
 import app.gamenative.utils.GameCompatibilityService
 import app.gamenative.utils.GameMetadataManager
+import app.gamenative.utils.ManifestInstaller
 import app.gamenative.utils.SteamGridDB
 import app.gamenative.utils.createPinnedShortcut
 import kotlinx.coroutines.CancellationException
@@ -56,12 +58,85 @@ import timber.log.Timber
  * Abstract base class for AppScreen implementations.
  * This defines the contract that all game source-specific screens must implement.
  */
+data class KnownConfigInstallState(
+    val visible: Boolean,
+    val progress: Float,
+    val label: String,
+)
+
+internal suspend fun installMissingComponentsForConfig(
+    context: Context,
+    gameId: Int,
+    configJson: kotlinx.serialization.json.JsonObject,
+    matchType: String,
+    uiScope: CoroutineScope,
+): Boolean {
+    val missingRequests = BestConfigService.resolveMissingManifestInstallRequests(
+        context,
+        configJson,
+        matchType,
+    )
+    if (missingRequests.isEmpty()) return true
+
+    uiScope.launch(Dispatchers.Main.immediate) {
+        BaseAppScreen.showKnownConfigInstallState(
+            gameId,
+            KnownConfigInstallState(
+                visible = true,
+                progress = -1f,
+                label = missingRequests.first().entry.name,
+            ),
+        )
+    }
+
+    for (request in missingRequests) {
+        val label = request.entry.id
+        uiScope.launch(Dispatchers.Main.immediate) {
+            BaseAppScreen.showKnownConfigInstallState(
+                gameId,
+                KnownConfigInstallState(
+                    visible = true,
+                    progress = -1f,
+                    label = label,
+                ),
+            )
+        }
+        val result = ManifestInstaller.installManifestEntry(
+            context = context,
+            entry = request.entry,
+            isDriver = request.isDriver,
+            contentType = request.contentType,
+            onProgress = { progress ->
+                val clamped = progress.coerceIn(0f, 1f)
+                uiScope.launch(Dispatchers.Main.immediate) {
+                    BaseAppScreen.showKnownConfigInstallState(
+                        gameId,
+                        KnownConfigInstallState(
+                            visible = true,
+                            progress = clamped,
+                            label = label,
+                        ),
+                    )
+                }
+            },
+        )
+        SnackbarManager.show(result.message)
+        if (!result.success) {
+            uiScope.launch(Dispatchers.Main.immediate) { BaseAppScreen.hideKnownConfigInstallState(gameId) }
+            return false
+        }
+    }
+
+    uiScope.launch(Dispatchers.Main.immediate) { BaseAppScreen.hideKnownConfigInstallState(gameId) }
+    return true
+}
+
 abstract class BaseAppScreen {
-    // Shared state for install dialog - map of appId (String) to MessageDialogState
     companion object {
         private val installDialogStates = mutableStateMapOf<String, app.gamenative.ui.component.dialog.state.MessageDialogState>()
         private val exportConfigRequests = mutableStateMapOf<String, Boolean>()
         private val importConfigRequests = mutableStateMapOf<String, Boolean>()
+        private val knownConfigInstallStates = mutableStateMapOf<Int, KnownConfigInstallState>()
 
         fun showInstallDialog(appId: String, state: app.gamenative.ui.component.dialog.state.MessageDialogState) {
             installDialogStates[appId] = state
@@ -97,6 +172,18 @@ abstract class BaseAppScreen {
 
         fun shouldImportConfig(appId: String): Boolean {
             return importConfigRequests[appId] == true
+        }
+
+        fun showKnownConfigInstallState(gameId: Int, state: KnownConfigInstallState) {
+            knownConfigInstallStates[gameId] = state
+        }
+
+        fun hideKnownConfigInstallState(gameId: Int) {
+            knownConfigInstallStates.remove(gameId)
+        }
+
+        fun getKnownConfigInstallState(gameId: Int): KnownConfigInstallState? {
+            return knownConfigInstallStates[gameId]
         }
     }
 
@@ -520,14 +607,16 @@ abstract class BaseAppScreen {
 
     /**
      * Shared helper to fetch and apply a "known config" for a given game/library item.
-     * This is a generic implementation used by all non-Custom sources by default.
+     * Installs any missing manifest components before applying the config.
      */
     protected open suspend fun applyKnownConfigForLibraryItem(
         context: Context,
         libraryItem: LibraryItem,
     ) {
+        val gameId = libraryItem.gameId
+        val uiScope = CoroutineScope(Dispatchers.Main.immediate)
         try {
-            val gameName = libraryItem.name.ifBlank { libraryItem.appId }
+            val gameName = ContainerUtils.resolveGameName(libraryItem.appId)
             val gpuName = GPUInformation.getRenderer(context)
 
             val bestConfig = BestConfigService.fetchBestConfig(gameName, gpuName)
@@ -539,6 +628,15 @@ abstract class BaseAppScreen {
                 SnackbarManager.show(context.getString(R.string.best_config_no_config_available))
                 return
             }
+
+            val installsOk = installMissingComponentsForConfig(
+                context = context,
+                gameId = gameId,
+                configJson = bestConfig.bestConfig,
+                matchType = bestConfig.matchType,
+                uiScope = uiScope,
+            )
+            if (!installsOk) return
 
             val parsedConfig = BestConfigService.parseConfigToContainerData(
                 context = context,
@@ -569,6 +667,9 @@ abstract class BaseAppScreen {
             throw e
         } catch (e: Exception) {
             Timber.w(e, "Failed to apply known config for ${libraryItem.appId}: ${e.message}")
+            withContext(Dispatchers.Main) {
+                hideKnownConfigInstallState(gameId)
+            }
             SnackbarManager.show(
                 context.getString(
                     R.string.best_config_apply_failed,
@@ -916,6 +1017,28 @@ abstract class BaseAppScreen {
                 },
             )
         }
+
+        val gameId = libraryItem.gameId
+        var knownConfigInstallState by remember(gameId) {
+            mutableStateOf(getKnownConfigInstallState(gameId) ?: KnownConfigInstallState(false, -1f, ""))
+        }
+
+        LaunchedEffect(gameId) {
+            snapshotFlow { getKnownConfigInstallState(gameId) }
+                .collect { state ->
+                    knownConfigInstallState = state ?: KnownConfigInstallState(false, -1f, "")
+                }
+        }
+
+        LoadingDialog(
+            visible = knownConfigInstallState.visible,
+            progress = knownConfigInstallState.progress,
+            message = if (knownConfigInstallState.label.isNotEmpty()) {
+                context.getString(R.string.manifest_downloading_item, knownConfigInstallState.label)
+            } else {
+                context.getString(R.string.working)
+            },
+        )
 
         // Render any additional dialogs
         AdditionalDialogs(libraryItem, onDismiss = {}, onEditContainer = onEditContainer, onBack = onBack)

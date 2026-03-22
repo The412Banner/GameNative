@@ -1500,7 +1500,7 @@ fun preLaunchApp(
         }
 
         // download any manifest components (wine/proton, dxvk, etc.) missing from config
-        if (gameSource == GameSource.STEAM) {
+        if (ContainerUtils.supportsKnownConfigAutoApply(gameSource)) {
             try {
                 val configJson = Json.parseToJsonElement(container.containerJson).jsonObject
                 val missingRequests = BestConfigService.resolveMissingManifestInstallRequests(
