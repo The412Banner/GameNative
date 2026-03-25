@@ -921,6 +921,22 @@ abstract class BaseAppScreen {
                             context = context,
                             appId = appId,
                             uri = uri,
+                            onInstallStateChange = { visible, progress, label ->
+                                uiScope.launch(Dispatchers.Main.immediate) {
+                                    if (visible) {
+                                        showKnownConfigInstallState(
+                                            libraryItem.gameId,
+                                            KnownConfigInstallState(
+                                                visible = true,
+                                                progress = progress,
+                                                label = label,
+                                            ),
+                                        )
+                                    } else {
+                                        hideKnownConfigInstallState(libraryItem.gameId)
+                                    }
+                                }
+                            },
                         )
                     } finally {
                         clearImportConfigRequest(appId)
