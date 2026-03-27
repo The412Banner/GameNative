@@ -83,6 +83,9 @@ class DownloadsViewModel @Inject constructor(
     private val recentFailureMessages = ConcurrentHashMap<String, String>()
 
     @Volatile
+    private var refreshPending = false
+
+    @Volatile
     private var lastTrackedDownloads: Map<String, DownloadItemState> = emptyMap()
 
     private val onDownloadStatusChanged: (AndroidEvent.DownloadStatusChanged) -> Unit = {
@@ -437,7 +440,20 @@ class DownloadsViewModel @Inject constructor(
     }
 
     private suspend fun refreshDownloadsSnapshot() {
+        refreshPending = true
         if (!refreshMutex.tryLock()) return
+
+        try {
+            while (refreshPending) {
+                refreshPending = false
+                refreshDownloadsSnapshotLocked()
+            }
+        } finally {
+            refreshMutex.unlock()
+        }
+    }
+
+    private suspend fun refreshDownloadsSnapshotLocked() {
         try {
             val liveDownloads = LinkedHashMap<String, DownloadItemState>()
             val activeBindings = LinkedHashMap<String, ActiveDownloadBinding>()
@@ -550,8 +566,6 @@ class DownloadsViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             Timber.tag("DownloadsViewModel").e(e, "Error refreshing downloads")
-        } finally {
-            refreshMutex.unlock()
         }
     }
 

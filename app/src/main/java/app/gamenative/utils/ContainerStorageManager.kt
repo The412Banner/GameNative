@@ -131,7 +131,7 @@ object ContainerStorageManager {
 
         val installedOnlyEntries = installedGames.values
             .filterNot { coveredInstalledIds.contains(it.appId) }
-            .map { installedGame -> buildInstalledOnlyEntry(installedGame, pathSizeCache) }
+            .map { installedGame -> buildInstalledOnlyEntry(context, installedGame, pathSizeCache) }
 
         val entries = (containerEntries + installedOnlyEntries)
             .sortedWith(compareByDescending<Entry> { it.combinedSizeBytes ?: 0L }.thenBy { it.displayName.lowercase() })
@@ -588,7 +588,13 @@ object ContainerStorageManager {
                 appId = installedGame?.appId ?: normalizedContainerId.takeIf { gameSource != null },
                 iconUrl = installedGame?.iconUrl.orEmpty(),
                 containerSizeBytes = containerSizeBytes,
-                gameInstallSizeBytes = installedGame?.installSizeBytes,
+                gameInstallSizeBytes = resolveInstallSizeBytes(
+                    context = context,
+                    gameSource = gameSource,
+                    installPath = installedGame?.installPath,
+                    persistedSize = installedGame?.installSizeBytes,
+                    pathSizeCache = pathSizeCache,
+                ),
                 status = Status.UNREADABLE,
                 installPath = installedGame?.installPath,
                 canUninstallGame = installedGame != null && installedGame.gameSource != GameSource.CUSTOM_GAME,
@@ -619,10 +625,16 @@ object ContainerStorageManager {
             else -> Status.READY
         }
 
-        val gameInstallSizeBytes = when {
-            status != Status.READY -> null
-            installedGame?.installSizeBytes != null -> installedGame.installSizeBytes
-            else -> null
+        val gameInstallSizeBytes = if (status == Status.READY) {
+            resolveInstallSizeBytes(
+                context = context,
+                gameSource = gameSource,
+                installPath = installPath,
+                persistedSize = installedGame?.installSizeBytes,
+                pathSizeCache = pathSizeCache,
+            )
+        } else {
+            null
         }
 
         return Entry(
@@ -641,6 +653,7 @@ object ContainerStorageManager {
     }
 
     private fun buildInstalledOnlyEntry(
+        context: Context,
         installedGame: InstalledGame,
         pathSizeCache: MutableMap<String, Long>,
     ): Entry {
@@ -651,7 +664,13 @@ object ContainerStorageManager {
             appId = installedGame.appId,
             iconUrl = installedGame.iconUrl,
             containerSizeBytes = 0L,
-            gameInstallSizeBytes = installedGame.installSizeBytes,
+            gameInstallSizeBytes = resolveInstallSizeBytes(
+                context = context,
+                gameSource = installedGame.gameSource,
+                installPath = installedGame.installPath,
+                persistedSize = installedGame.installSizeBytes,
+                pathSizeCache = pathSizeCache,
+            ),
             status = Status.NO_CONTAINER,
             installPath = installedGame.installPath,
             canUninstallGame = installedGame.gameSource != GameSource.CUSTOM_GAME,
@@ -781,6 +800,24 @@ object ContainerStorageManager {
         iconUrl = iconUrl,
         known = true,
     )
+
+    private fun resolveInstallSizeBytes(
+        context: Context,
+        gameSource: GameSource?,
+        installPath: String?,
+        persistedSize: Long?,
+        pathSizeCache: MutableMap<String, Long>,
+    ): Long? {
+        if (persistedSize != null && persistedSize > 0L) return persistedSize
+        if (gameSource == null || installPath.isNullOrBlank()) return null
+
+        return when (getStorageLocation(context, gameSource, installPath)) {
+            StorageLocation.INTERNAL -> getPathSize(installPath, pathSizeCache)
+            StorageLocation.EXTERNAL,
+            StorageLocation.UNKNOWN,
+            -> null
+        }
+    }
 
     private fun getPathSize(path: String, pathSizeCache: MutableMap<String, Long>): Long {
         return pathSizeCache.getOrPut(path) { getContainerDirectorySize(File(path).toPath()) }

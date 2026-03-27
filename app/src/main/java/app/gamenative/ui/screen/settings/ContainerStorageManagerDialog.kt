@@ -77,6 +77,7 @@ import app.gamenative.ui.theme.PluviaTheme
 import app.gamenative.ui.util.SnackbarManager
 import app.gamenative.utils.ContainerStorageManager
 import app.gamenative.utils.StorageUtils
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -244,6 +245,8 @@ class ContainerStorageManagerUiState internal constructor(
                         moveTotalFiles = totalFiles
                     },
                 )
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 Result.failure(error)
             } finally {
