@@ -463,7 +463,8 @@ fun XServerScreen(
     var isPerformanceHudEnabled by remember { mutableStateOf(PrefManager.showFps) }
     val shouldTrackDisplayedFrames = remember { AtomicBoolean(false) }
     var detectedMaxRefreshRateHz by remember { mutableIntStateOf(detectMaxRefreshRateHz(context, null)) }
-    var fpsLimiterValue by rememberSaveable { mutableIntStateOf(0) }
+    var fpsLimiterEnabled by rememberSaveable { mutableStateOf(false) }
+    var fpsLimiterTarget by rememberSaveable { mutableIntStateOf(30) }
 
     fun loadPerformanceHudConfig(): PerformanceHudConfig {
         return PerformanceHudConfig(
@@ -532,28 +533,38 @@ fun XServerScreen(
         }
     }
 
-    fun applyFpsLimiter(limit: Int) {
-        val sanitizedLimit = if (limit <= 0) 0 else limit.coerceAtMost(detectedMaxRefreshRateHz)
-        fpsLimiterValue = sanitizedLimit
-        xServerView?.setFrameRateLimit(sanitizedLimit)
-        // Also throttle the X Present extension so the game's own render loop
-        // receives back-pressure and actually reduces CPU/GPU usage.
+    fun applyFpsLimiterToEngines(limit: Int) {
+        xServerView?.setFrameRateLimit(limit)
         xServerView?.getxServer()
             ?.getExtension<PresentExtension>(PresentExtension.MAJOR_OPCODE.toInt())
-            ?.setFrameRateLimit(sanitizedLimit)
+            ?.setFrameRateLimit(limit)
+    }
+
+    fun applyFpsLimiterEnabled(enabled: Boolean) {
+        fpsLimiterEnabled = enabled
+        applyFpsLimiterToEngines(if (enabled) fpsLimiterTarget else 0)
+    }
+
+    fun applyFpsLimiterTarget(target: Int) {
+        val sanitized = target.coerceAtLeast(5).coerceAtMost(detectedMaxRefreshRateHz)
+        fpsLimiterTarget = sanitized
+        if (fpsLimiterEnabled) {
+            applyFpsLimiterToEngines(sanitized)
+        }
     }
 
     LaunchedEffect(xServerView) {
         val detectedMax = detectMaxRefreshRateHz(context, xServerView)
         detectedMaxRefreshRateHz = detectedMax
-        val clampedLimit = if (fpsLimiterValue <= 0) 0 else fpsLimiterValue.coerceAtMost(detectedMax)
-        if (clampedLimit != fpsLimiterValue) {
-            fpsLimiterValue = clampedLimit
+        val clampedTarget = fpsLimiterTarget.coerceAtMost(detectedMax).coerceAtLeast(5)
+        if (clampedTarget != fpsLimiterTarget) {
+            fpsLimiterTarget = clampedTarget
         }
-        xServerView?.setFrameRateLimit(clampedLimit)
+        val appliedLimit = if (fpsLimiterEnabled) clampedTarget else 0
+        xServerView?.setFrameRateLimit(appliedLimit)
         xServerView?.getxServer()
             ?.getExtension<PresentExtension>(PresentExtension.MAJOR_OPCODE.toInt())
-            ?.setFrameRateLimit(clampedLimit)
+            ?.setFrameRateLimit(appliedLimit)
     }
 
     fun restorePerformanceHudPosition() {
@@ -1574,7 +1585,7 @@ fun XServerScreen(
                 xServerToUse,
             ).apply {
                 xServerView = this
-                setFrameRateLimit(fpsLimiterValue)
+                setFrameRateLimit(if (fpsLimiterEnabled) fpsLimiterTarget else 0)
                 val renderer = this.renderer
                 renderer.isCursorVisible = false
                 renderer.setOnFrameRenderedListener {
@@ -2342,10 +2353,12 @@ fun XServerScreen(
             onToolsVisibilityChanged = { quickMenuToolsVisible = it },
             isPerformanceHudEnabled = isPerformanceHudEnabled,
             performanceHudConfig = performanceHudConfig,
-            fpsLimiterValue = fpsLimiterValue,
+            fpsLimiterEnabled = fpsLimiterEnabled,
+            fpsLimiterTarget = fpsLimiterTarget,
             fpsLimiterMax = detectedMaxRefreshRateHz,
             onPerformanceHudConfigChanged = ::applyPerformanceHudConfig,
-            onFpsLimiterChanged = ::applyFpsLimiter,
+            onFpsLimiterEnabledChanged = ::applyFpsLimiterEnabled,
+            onFpsLimiterChanged = ::applyFpsLimiterTarget,
             hasPhysicalController = hasPhysicalController,
             isTouchscreenModeActive = isTouchscreenModeActive,
             onTouchGestureSettingsClick = { showTouchGestureDialog = true },
