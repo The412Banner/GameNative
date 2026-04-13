@@ -944,6 +944,20 @@ class EpicDownloadManager @Inject constructor(
             Timber.tag("Epic").d("Progress: ${downloadedChunkIds.size}/$totalChunks chunks, $nextFileToAssemble/$totalFiles files assembled")
         }
 
+        // final assembly pass for zero-chunk files that the chunk loop never reaches
+        while (nextFileToAssemble < totalFiles) {
+            val file = files[nextFileToAssemble]
+            if (!file.chunkParts.all { it.guidStr in downloadedChunkIds }) break
+
+            val assembleResult = assembleFile(file, chunkCacheDir, installDir)
+            if (assembleResult.isFailure) {
+                return@withContext Result.failure(
+                    assembleResult.exceptionOrNull() ?: Exception("Failed to assemble file"),
+                )
+            }
+            nextFileToAssemble++
+        }
+
         if (nextFileToAssemble != totalFiles) {
             return@withContext Result.failure(
                 Exception("Assembly incomplete: only $nextFileToAssemble of $totalFiles files assembled")
