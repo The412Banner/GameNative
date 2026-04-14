@@ -11,6 +11,7 @@ import app.gamenative.service.gog.api.GOGManifestMeta
 import app.gamenative.service.gog.api.GOGManifestParser
 import app.gamenative.service.gog.api.V1DepotFile
 import app.gamenative.enums.Marker
+import app.gamenative.utils.CdnRankingUtils
 import app.gamenative.utils.MarkerUtils
 import app.gamenative.utils.Net
 import org.json.JSONArray
@@ -375,9 +376,10 @@ class GOGDownloadManager @Inject constructor(
                     generation = selectedBuild.generation,
                 )
                 if (linksResult.isSuccess) {
-                    val urls = rankBaseUrlsByProbe(
+                    val urls = CdnRankingUtils.rankBaseUrlsByHeadProbe(
                         linksResult.getOrThrow().urls,
-                        "product-$productId",
+                        Net.http,
+                        "GOG Galaxy",
                     )
                     productUrlMap[productId] = urls
                 } else {
@@ -1074,9 +1076,10 @@ class GOGDownloadManager @Inject constructor(
 
                 // Extract chunk hashes and build URLs
                 val depotChunkHashes = parser.extractChunkHashes(filesToAssemble)
-                val rankedDependencyUrls = rankBaseUrlsByProbe(
+                val rankedDependencyUrls = CdnRankingUtils.rankBaseUrlsByHeadProbe(
                     dependencyBaseUrls,
-                    "dependency-${depot.dependencyId}",
+                    Net.http,
+                    "GOG Galaxy",
                 )
                 val chunkUrlCandidates = buildChunkUrlCandidates(depotChunkHashes, rankedDependencyUrls)
 
@@ -1176,9 +1179,10 @@ class GOGDownloadManager @Inject constructor(
                     generation = context.generation,
                 )
                 if (linksResult.isSuccess) {
-                    productUrlMap[productId] = rankBaseUrlsByProbe(
+                    productUrlMap[productId] = CdnRankingUtils.rankBaseUrlsByHeadProbe(
                         linksResult.getOrThrow().urls,
-                        "refresh-product-$productId",
+                        Net.http,
+                        "GOG Galaxy",
                     )
                 } else {
                     return@withContext Result.failure(
@@ -1241,35 +1245,6 @@ class GOGDownloadManager @Inject constructor(
 
         Timber.tag("GOG").e(lastException, "Failed to download chunk $chunkMd5 after $MAX_CHUNK_RETRIES attempts")
         Result.failure(lastException ?: Exception("Failed to download chunk $chunkMd5"))
-    }
-
-    private suspend fun rankBaseUrlsByProbe(baseUrls: List<String>, label: String): List<String> = withContext(Dispatchers.IO) {
-        val urls = baseUrls.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
-        if (urls.size <= 1) return@withContext urls
-
-        val scored = urls.map { url ->
-            val start = System.nanoTime()
-            val success = try {
-                val request = Request.Builder()
-                    .url(url)
-                    .head()
-                    .header("User-Agent", "GOG Galaxy")
-                    .build()
-                Net.http.newCall(request).execute().use { response ->
-                    response.code in 200..499
-                }
-            } catch (_: Exception) {
-                false
-            }
-            val elapsedMs = (System.nanoTime() - start) / 1_000_000
-            Triple(url, success, elapsedMs)
-        }
-
-        val ranked = scored
-            .sortedWith(compareByDescending<Triple<String, Boolean, Long>> { it.second }.thenBy { it.third })
-            .map { it.first }
-
-        ranked
     }
 
     /**

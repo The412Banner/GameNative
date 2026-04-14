@@ -2659,6 +2659,9 @@ private fun setupXEnvironment(
         guestProgramLauncherComponent.setSteamType(container.getSteamType())
 
         envVars.putAll(container.envVars)
+        if (gameSource == GameSource.EPIC) {
+            ensureEpicEosDllOverrides(envVars)
+        }
         if (!envVars.has("WINEESYNC")) envVars.put("WINEESYNC", "1")
         val graphicsDriverConfig = KeyValueSet(container.getGraphicsDriverConfig())
         if (graphicsDriverConfig.get("version").lowercase(Locale.getDefault()).contains("gen8")) {
@@ -3341,6 +3344,41 @@ private fun getSteamlessTarget(
         'D'
     }
     return "$drive:\\${executablePath}"
+}
+
+private fun ensureEpicEosDllOverrides(envVars: EnvVars) {
+    // EOS-enabled games often ship stub DLLs and expect native-first loading.
+    val requiredOverrides = listOf(
+        "EOSSDK-Win64-Shipping=n,b",
+        "EOSSDK-Win32-Shipping=n,b",
+        "EOSOVH-Win64-Shipping=n,b",
+        "EOSOVH-Win32-Shipping=n,b",
+    )
+    val existingEntries = envVars.get("WINEDLLOVERRIDES")
+        .split(";")
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+    val existingDllNames = existingEntries
+        .mapNotNull { entry ->
+            entry.substringBefore("=")
+                .trim()
+                .takeIf { it.isNotEmpty() }
+                ?.lowercase(Locale.ROOT)
+        }
+        .toMutableSet()
+    val merged = existingEntries.toMutableList()
+
+    requiredOverrides.forEach { overrideEntry ->
+        val dllName = overrideEntry.substringBefore("=").trim().lowercase(Locale.ROOT)
+        if (dllName !in existingDllNames) {
+            merged += overrideEntry
+            existingDllNames += dllName
+        }
+    }
+
+    if (merged.isNotEmpty()) {
+        envVars.put("WINEDLLOVERRIDES", merged.joinToString(";"))
+    }
 }
 
 private fun exit(
