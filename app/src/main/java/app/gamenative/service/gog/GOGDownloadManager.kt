@@ -876,8 +876,19 @@ class GOGDownloadManager @Inject constructor(
                     val exception = result.exceptionOrNull()
                     exception is HttpStatusException && exception.statusCode in listOf(401, 403, 404)
                 }
+                val expiredChunkIds = expiredLinkFailures.map { (_, chunkMd5) -> chunkMd5 }.toSet()
+                val nonExpiredFailures = results.zip(chunkBatch).filter { (result, chunkMd5) ->
+                    result.isFailure && chunkMd5 !in expiredChunkIds
+                }
 
                 if (expiredLinkFailures.isNotEmpty() && secureLinkContext != null) {
+                    nonExpiredFailures.firstOrNull()?.first?.let { failedResult ->
+                        return@withContext Result.failure(
+                            failedResult.exceptionOrNull()
+                                ?: Exception("Failed to download chunk with non-expired error"),
+                        )
+                    }
+
                     Timber.tag("GOG").w("Detected ${expiredLinkFailures.size} expired secure link(s), refreshing...")
 
                     expiredLinkFailures.forEach { (result, chunkMd5) ->
@@ -888,7 +899,7 @@ class GOGDownloadManager @Inject constructor(
                     val refreshResult = refreshSecureLinks(secureLinkContext, chunkHashes)
                     if (refreshResult.isSuccess) {
                         currentChunkUrlCandidates = refreshResult.getOrThrow()
-                        val failedChunkIds = expiredLinkFailures.map { (_, chunkMd5) -> chunkMd5 }
+                        val failedChunkIds = expiredChunkIds.toList()
                         Timber.tag("GOG").i("Secure links refreshed, retrying ${failedChunkIds.size} failed chunk(s)")
 
                         val retryResults = failedChunkIds.map { chunkMd5 ->
