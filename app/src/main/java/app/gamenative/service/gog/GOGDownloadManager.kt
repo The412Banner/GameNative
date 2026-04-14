@@ -904,6 +904,17 @@ class GOGDownloadManager @Inject constructor(
                                 failedResult.exceptionOrNull() ?: Exception("Failed to download chunk after link refresh"),
                             )
                         }
+
+                        // After a successful refresh+retry pass, ensure all chunks in this batch
+                        // are reflected in assembly/progress state.
+                        chunkBatch.forEach { downloadedChunkIds.add(it) }
+                        assembleReady().onFailure { return@withContext Result.failure(it) }
+
+                        val progress = downloadedChunkIds.size.toFloat() / totalChunks
+                        downloadInfo.setProgress(progress)
+                        downloadInfo.updateStatusMessage(
+                            "Downloading (${downloadedChunkIds.size}/$totalChunks chunks, $nextFileToAssemble/$totalFiles files)",
+                        )
                     } else {
                         return@withContext Result.failure(
                             refreshResult.exceptionOrNull() ?: Exception("Failed to refresh secure links"),
