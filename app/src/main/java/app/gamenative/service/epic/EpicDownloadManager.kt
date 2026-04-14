@@ -118,8 +118,10 @@ class EpicDownloadManager @Inject constructor(
             val manifestData = manifestResult.getOrNull()!!
 
             // ! Avoiding Cloudflare as it causes issues with some downloads and is inconsistent.
+            val preferredCdnUrls = manifestData.cdnUrls
+                .filter { !it.baseUrl.startsWith("https://cloudflare.epicgamescdn.com") }
             val cdnUrls = rankCdnUrlsByProbe(
-                manifestData.cdnUrls.filter { !it.baseUrl.startsWith("https://cloudflare.epicgamescdn.com") },
+                preferredCdnUrls.ifEmpty { manifestData.cdnUrls },
             )
 
             Timber.tag("Epic").d("Manifest fetched with ${cdnUrls.size} CDN URLs, parsing...")
@@ -341,8 +343,10 @@ class EpicDownloadManager @Inject constructor(
             Timber.tag("Epic").i("Starting download for ${game.title} using pre-fetched manifest")
 
             // Parse manifest
+            val preferredCdnUrls = manifestData.cdnUrls
+                .filter { !it.baseUrl.startsWith("https://cloudflare.epicgamescdn.com") }
             val cdnUrls = rankCdnUrlsByProbe(
-                manifestData.cdnUrls.filter { !it.baseUrl.startsWith("https://cloudflare.epicgamescdn.com") },
+                preferredCdnUrls.ifEmpty { manifestData.cdnUrls },
             )
             val manifest = EpicManifest.readAll(manifestData.manifestBytes)
 

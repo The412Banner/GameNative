@@ -344,6 +344,7 @@ class EpicAppScreen : BaseAppScreen() {
             Timber.tag(TAG).i("Cancelling Epic download for: $gameId")
             downloadInfo?.cancel()
             CoroutineScope(Dispatchers.IO).launch {
+                downloadInfo?.awaitCompletion()
                 EpicService.cleanupDownload(context, gameId)
             }
         } else if (installed) {
@@ -351,14 +352,11 @@ class EpicAppScreen : BaseAppScreen() {
             Timber.tag(TAG).i("Epic game already installed, launching: $gameId")
             onClickPlay(false)
         } else if (hasPartial) {
-            // Match GOG flow: resume partial downloads immediately.
-            Timber.tag(TAG).i("Resuming partial Epic download for: ${libraryItem.appId}")
-            performDownload(
-                scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-                context = context,
-                libraryItem = libraryItem,
-                selectedGameIds = listOf(libraryItem.gameId),
-                onClickPlay = onClickPlay,
+            // Partial resume should go through DLC manager so selection is explicit and restart-safe.
+            Timber.tag(TAG).i("Showing game manager for partial Epic resume: ${libraryItem.appId}")
+            showGameManagerDialog(
+                gameId,
+                app.gamenative.ui.component.dialog.state.GameManagerDialogState(visible = true),
             )
         } else {
             // Show game manager dialog with DLC selection
@@ -435,16 +433,14 @@ class EpicAppScreen : BaseAppScreen() {
             Timber.tag(TAG).i("Pausing Epic download: $gameId")
             downloadInfo?.cancel()
             CoroutineScope(Dispatchers.IO).launch {
+                downloadInfo?.awaitCompletion()
                 EpicService.cleanupDownload(context, gameId)
             }
         } else if (hasPartial) {
-            Timber.tag(TAG).i("Resuming partial Epic download via pause/resume: $gameId")
-            performDownload(
-                scope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
-                context = context,
-                libraryItem = libraryItem,
-                selectedGameIds = listOf(libraryItem.gameId),
-                onClickPlay = {},
+            Timber.tag(TAG).i("Showing game manager for partial Epic resume via pause/resume: $gameId")
+            showGameManagerDialog(
+                gameId,
+                app.gamenative.ui.component.dialog.state.GameManagerDialogState(visible = true),
             )
         } else {
             // Fresh start: show DLC manager/install selection dialog.
