@@ -200,7 +200,7 @@ private data class XServerViewReleaseBinding(
     val windowModificationListener: WindowManager.OnWindowModificationListener,
 )
 
-private val CORE_WINE_PROCESSES = setOf(
+val CORE_WINE_PROCESSES = setOf(
     "wineserver",
     "services",
     "start",

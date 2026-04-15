@@ -24,9 +24,12 @@ import app.gamenative.ui.enums.ConnectionState
 import app.gamenative.ui.screen.PluviaScreen
 import app.gamenative.utils.ContainerUtils
 import app.gamenative.utils.IntentLaunchManager
+import app.gamenative.ui.screen.xserver.CORE_WINE_PROCESSES
 import app.gamenative.utils.SteamUtils
 import app.gamenative.utils.UpdateInfo
 import com.materialkolor.PaletteStyle
+import com.winlator.winhandler.OnGetProcessInfoListener
+import com.winlator.winhandler.ProcessInfo
 import com.winlator.xserver.Window
 import dagger.hilt.android.lifecycle.HiltViewModel
 import `in`.dragonbra.javasteam.steam.handlers.steamapps.AppProcessInfo
@@ -34,6 +37,7 @@ import java.nio.file.Paths
 import javax.inject.Inject
 import kotlin.io.path.name
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -45,6 +49,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import timber.log.Timber
 
 @HiltViewModel
@@ -55,6 +61,55 @@ class MainViewModel @Inject constructor(
 
     companion object {
         private const val KEY_CURRENT_SCREEN_ROUTE = "current_screen_route"
+        private const val PROCESS_LIST_TIMEOUT_MS = 2000L
+    }
+
+    private var hasSentPlayingNotification = false
+
+    private suspend fun isLaunchExeRunning(launchExeNames: List<String>): Boolean {
+        if (launchExeNames.isEmpty()) return false
+        val winHandler = PluviaApp.xServerView?.getxServer()?.winHandler ?: return false
+        val targets = launchExeNames.toSet()
+
+        return withContext(Dispatchers.IO) {
+            val previousListener = winHandler.getOnGetProcessInfoListener()
+            val snapshotDeferred = CompletableDeferred<List<ProcessInfo>>()
+            val lock = Any()
+            val currentList = mutableListOf<ProcessInfo>()
+            var expectedCount = -1
+
+            val listener = OnGetProcessInfoListener { index, count, processInfo ->
+                previousListener?.onGetProcessInfo(index, count, processInfo)
+                synchronized(lock) {
+                    if (count == 0 && processInfo == null) {
+                        if (!snapshotDeferred.isCompleted) snapshotDeferred.complete(emptyList())
+                        return@synchronized
+                    }
+                    if (index == 0) {
+                        currentList.clear()
+                        expectedCount = count
+                    }
+                    if (processInfo != null) {
+                        currentList.add(processInfo)
+                    }
+                    if (expectedCount >= 0 && currentList.size >= expectedCount && !snapshotDeferred.isCompleted) {
+                        snapshotDeferred.complete(currentList.toList())
+                    }
+                }
+            }
+
+            winHandler.setOnGetProcessInfoListener(listener)
+            try {
+                winHandler.listProcesses()
+                val snapshot = withTimeoutOrNull(PROCESS_LIST_TIMEOUT_MS) {
+                    snapshotDeferred.await()
+                } ?: return@withContext false
+
+                snapshot.any { it.name.lowercase() in targets }
+            } finally {
+                winHandler.setOnGetProcessInfoListener(previousListener)
+            }
+        }
     }
 
     sealed class MainUiEvent {
@@ -488,6 +543,7 @@ class MainViewModel @Inject constructor(
 
                 val gameId = ContainerUtils.extractGameIdFromContainerId(appId)
                 Timber.tag("Exit").i("Got game id: $gameId")
+                hasSentPlayingNotification = false
                 SteamService.notifyRunningProcesses()
                 handleExitCloudSync(context, appId, gameId)
 
@@ -614,7 +670,8 @@ class MainViewModel @Inject constructor(
                     gameExe == windowExe
                 }
 
-                if (launchConfig != null) {
+                if (launchConfig != null && !hasSentPlayingNotification) {
+                    hasSentPlayingNotification = true
                     val steamProcessId = Process.myPid()
                     val processes = mutableListOf<AppProcessInfo>()
                     var currentWindow: Window = window
@@ -650,6 +707,34 @@ class MainViewModel @Inject constructor(
                             SteamService.notifyRunningProcesses(it)
                         } else {
                             Timber.tag("MainViewModel").i("Skipping Steam process notification - real Steam will handle this")
+                        }
+                    }
+                } else if (!hasSentPlayingNotification) {
+                    val windowBase = window.className.substringAfterLast('\\')
+                        .substringAfterLast('/').lowercase().removeSuffix(".exe")
+                    if (windowBase in CORE_WINE_PROCESSES) return@let
+
+                    val launchExeNames = SteamService.getWindowsLaunchInfos(gameId)
+                        .map { Paths.get(it.executable.replace('\\', '/')).name.lowercase() }
+                    if (isLaunchExeRunning(launchExeNames)) {
+                        val shouldLaunchRealSteam = try {
+                            val container = ContainerUtils.getContainer(context, appId)
+                            container.isLaunchRealSteam()
+                        } catch (e: Exception) {
+                            false
+                        }
+                        if (!shouldLaunchRealSteam) {
+                            hasSentPlayingNotification = true
+                            val installedBranch = SteamService.getInstalledApp(gameId)?.branch ?: "public"
+                            val processInfo = GameProcessInfo(
+                                appId = gameId,
+                                branch = installedBranch,
+                                processes = listOf(AppProcessInfo(Process.myPid(), Process.myPid(), true)),
+                            )
+                            Timber.tag("MainViewModel").i(
+                                "Sending playing notification via process-list fallback for appId=%d", gameId,
+                            )
+                            SteamService.notifyRunningProcesses(processInfo)
                         }
                     }
                 }
