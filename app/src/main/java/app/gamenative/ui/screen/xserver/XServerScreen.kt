@@ -184,9 +184,9 @@ import kotlin.io.path.name
 import kotlin.text.lowercase
 import com.winlator.PrefManager as WinlatorPrefManager
 
-// Always re-extract drivers and DXVK on every launch to handle cases of container corruption
-// where games randomly stop working. Set to false once corruption issues are resolved.
-private const val ALWAYS_REEXTRACT = true
+// Re-extract only when the driver/wrapper selection actually changes.
+//This can be set to true temporarily if widespread container corruption is observed.
+private const val ALWAYS_REEXTRACT = false
 
 // Guard to prevent duplicate game_exited events when multiple exit triggers fire simultaneously
 private val isExiting = AtomicBoolean(false)
@@ -3835,6 +3835,25 @@ private fun applyGeneralPatches(
     Timber.i("Applying general patches")
     val rootDir = imageFs.getRootDir()
     val contentsManager = ContentsManager(context)
+
+    // ── Back up the entire user.reg before the prefix is wiped ───────────────
+    // user.reg holds Wine-tab settings (VideoMemorySize, renderer, CSMT, etc.)
+    // plus any other registry tweaks from game fixes or manual edits.
+    // Instead of snapshotting individual keys (which risks missing new ones),
+    // we copy the whole file to a temp location and restore it after extraction.
+    val userRegFile = File(container.rootDir, ".wine/user.reg")
+    val userRegBackup = File(container.rootDir, ".wine/user.reg.bak")
+    val userRegSaved = try {
+        if (userRegFile.exists()) {
+            userRegFile.copyTo(userRegBackup, overwrite = true)
+            Timber.i("applyGeneralPatches: backed up user.reg (%d bytes)", userRegFile.length())
+            true
+        } else false
+    } catch (e: Exception) {
+        Timber.w(e, "applyGeneralPatches: failed to back up user.reg; Wine-tab settings may reset to defaults")
+        false
+    }
+
     if (container.containerVariant.equals(Container.GLIBC)) {
         FileUtils.delete(File(rootDir, "/opt/apps"))
         val downloaded = File(imageFs.getFilesDir(), "imagefs_patches_gamenative.tzst")
@@ -3862,8 +3881,45 @@ private fun applyGeneralPatches(
     }
     containerManager.extractContainerPatternFile(container.getWineVersion(), contentsManager, container.rootDir, null)
     WineUtils.applySystemTweaks(context, wineInfo)
+
+    // ── Restore user.reg after the prefix was reset ────────────────────────
+    // This preserves all Wine-tab settings, game fixes, and any manual registry
+    // tweaks — no matter how many keys exist — without needing to enumerate them.
+    if (userRegSaved && userRegBackup.exists()) {
+        try {
+            if (userRegFile.exists()) {
+                userRegBackup.copyTo(userRegFile, overwrite = true)
+                Timber.i("applyGeneralPatches: restored user.reg from backup")
+            } else {
+                Timber.w("applyGeneralPatches: user.reg missing after extraction; backup not restored")
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "applyGeneralPatches: failed to restore user.reg from backup")
+        } finally {
+            userRegBackup.delete()
+        }
+    }
+
+    // ── Reset pre-install step markers so runtimes re-run against the fresh prefix ──
+    // The Wine prefix was just wiped (VC Redist, DirectX, OpenAL registry entries gone),
+    // but markers live in the game directory and would otherwise say "already done".
+    // Must happen after extraction but before clearing extras below.
+    PreInstallSteps.resetAllMarkers(container)
+
+    // ── Clear all extraction-tracking extras so subsystems re-extract on next launch ──
+    // The prefix wipe deleted files these extras were tracking. Without clearing them,
+    // the extraction guards would see matching cache keys and skip re-extraction,
+    // leaving the user with a broken prefix (missing DXVK/VKD3D DLLs, Win components, etc.).
     container.putExtra("graphicsDriver", null)
     container.putExtra("desktopTheme", null)
+    container.putExtra("dxwrapper", null)
+    container.putExtra("wincomponents", null)
+    container.putExtra("openal_dlls", null)
+    container.putExtra("lastInstalledMainWrapper", null)
+    // FEXCore and WoW64 Box64 DLLs live inside the Wine prefix (system32).
+    // The prefix was just wiped, so clear these extras so they re-extract on next launch.
+    container.putExtra("fexcoreVersion", null)
+    container.putExtra("box64Version", null)
     WinlatorPrefManager.init(context)
     WinlatorPrefManager.putString("current_box64_version", "")
 }
@@ -4153,7 +4209,13 @@ private fun extractGraphicsDriverFiles(
 
         val imageFs = ImageFs.find(context)
         val configDir = imageFs.configDir
-        val sentinel = File(configDir, ".current_graphics_driver")   // lives in shared tree
+        // .current_graphics_driver is a shared sentinel file (lives in ImageFs config, not
+        // per-container) that tracks which driver libraries are physically on disk.
+        // We need this because the driver .so files are shared across containers — the
+        // per-container "graphicsDriver" extra alone can't detect when another container's
+        // repair or a manual deletion removed them. repairContainerFiles() deletes this
+        // sentinel so the next launch always re-extracts the driver libraries.
+        val sentinel = File(configDir, ".current_graphics_driver")
         val onDiskId = sentinel.takeIf { it.exists() }?.readText() ?: ""
         val changed = ALWAYS_REEXTRACT || cacheId != container.getExtra("graphicsDriver") || cacheId != onDiskId
         Timber.i("Changed is " + changed + " will re-extract drivers accordingly.")

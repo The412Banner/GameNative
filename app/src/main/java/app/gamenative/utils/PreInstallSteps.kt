@@ -88,6 +88,16 @@ object PreInstallSteps {
         }
     }
 
+    /**
+     * Removes all pre-install step markers for [container].
+     * Call this whenever the Wine prefix is wiped (e.g. after general patches are applied)
+     * so that VC Redist, OpenAL, PhysX etc. re-run against the fresh prefix.
+     */
+    fun resetAllMarkers(container: Container) {
+        val gameDir = getGameDir(container) ?: return
+        resetMarkers(gameDir.absolutePath)
+    }
+
     fun markStepDone(container: Container, marker: Marker) {
         val gameDir = getGameDir(container) ?: return
         val gameDirPath = gameDir.absolutePath

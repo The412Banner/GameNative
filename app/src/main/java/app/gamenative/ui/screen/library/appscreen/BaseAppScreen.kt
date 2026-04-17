@@ -37,6 +37,8 @@ import app.gamenative.ui.component.dialog.LoadingDialog
 import app.gamenative.utils.BestConfigService
 import app.gamenative.utils.ContainerUtils
 import app.gamenative.utils.GameCompatibilityCache
+import app.gamenative.utils.PreInstallSteps
+import com.winlator.xenvironment.ImageFs
 import app.gamenative.utils.GameCompatibilityService
 import app.gamenative.utils.ManifestInstaller
 import app.gamenative.utils.createPinnedShortcut
@@ -604,6 +606,106 @@ abstract class BaseAppScreen {
     }
 
     /**
+     * Container Reset Button
+     * Forces a full re-extraction of all container files on the next launch by clearing all
+     * extraction-tracking extras (the same state that ALWAYS_REEXTRACT = true bypasses).
+     * Equivalent to what the dev flag ALWAYS_REEXTRACT = true (from xserver) would do, but as a targeted,
+     * one-time recovery action. User Container Settings are not changed.
+     *
+     * NOTE: Steam files (steam.exe etc.) live inside drive_c and are re-extracted automatically
+     * because extractSteamFiles() checks for the on-disk file, not an extra — no clearing needed.
+     */
+    protected fun repairContainerFiles(context: Context, libraryItem: LibraryItem) {
+        val container = ContainerUtils.getOrCreateContainer(context, libraryItem.appId)
+
+        // Clear all extraction-tracking extras so each subsystem re-extracts next launch.
+        // These must stay in sync with the extras cleared in applyGeneralPatches().
+        container.putExtra("dxwrapper", null)
+        container.putExtra("wincomponents", null)
+        container.putExtra("graphicsDriver", null)
+        container.putExtra("graphicsDriverAdreno", null)
+        container.putExtra("lastInstalledMainWrapper", null)
+        container.putExtra("openal_dlls", null)
+        container.putExtra("appVersion", null)
+        container.putExtra("imgVersion", null)
+        container.putExtra("desktopTheme", null)
+        // FEXCore and WoW64 Box64 DLLs live inside the Wine prefix (system32, wowbox64).
+        // Clear these so they re-extract on the next launch (important after a prefix wipe).
+        container.putExtra("fexcoreVersion", null)
+        container.putExtra("box64Version", null)
+        container.saveData()
+
+        // Delete the shared .current_graphics_driver sentinel file.
+        // extractGraphicsDriverFiles() uses this on-disk file as a secondary cache check
+        // (independent of the per-container "graphicsDriver" extra) because the driver
+        // libraries live in the shared ImageFs tree, not inside the container.
+        // If we only cleared the extra but left the sentinel, the extraction would see
+        // a matching on-disk ID and skip re-extraction — leaving the user with stale drivers.
+        try {
+            val sentinel = File(ImageFs.find(context).configDir, ".current_graphics_driver")
+            if (sentinel.exists()) sentinel.delete()
+        } catch (_: Exception) { }
+
+        // Reset pre-install step markers (VC Redist, PhysX, OpenAL, GOG script etc.)
+        // so runtimes re-run against the repaired prefix on next launch.
+        PreInstallSteps.resetAllMarkers(container)
+
+        Timber.i("repairContainerFiles: cleared all extraction-tracking extras for container ${libraryItem.appId}")
+        SnackbarManager.show(context.getString(R.string.repair_container_success))
+    }
+
+    @Composable
+    protected fun RepairConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+        val context = LocalContext.current
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(context.getString(R.string.repair_container_title)) },
+            text = { Text(context.getString(R.string.repair_container_message)) },
+            confirmButton = {
+                TextButton(onClick = onConfirm) {
+                    Text(
+                        text = context.getString(R.string.repair_container_confirm),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(context.getString(R.string.cancel))
+                }
+            },
+        )
+    }
+
+    /**
+     * Returns a "Repair container" menu option that forces re-extraction of all container files
+     * on the next launch without changing any settings.
+     * Subclasses may override to return null if not applicable.
+     */
+    @Composable
+    protected open fun getRepairContainerOption(
+        context: Context,
+        libraryItem: LibraryItem,
+    ): AppMenuOption? {
+        var showRepairConfirmDialog by remember { mutableStateOf(false) }
+
+        if (showRepairConfirmDialog) {
+            RepairConfirmDialog(
+                onConfirm = {
+                    showRepairConfirmDialog = false
+                    repairContainerFiles(context, libraryItem)
+                },
+                onDismiss = { showRepairConfirmDialog = false },
+            )
+        }
+
+        return AppMenuOption(
+            AppOptionMenuType.RepairContainer,
+            onClick = { showRepairConfirmDialog = true },
+        )
+    }
+
+    /**
      * Shared helper to fetch and apply a "known config" for a given game/library item.
      * Installs any missing manifest components before applying the config.
      */
@@ -734,6 +836,7 @@ abstract class BaseAppScreen {
             getRunContainerOption(context, libraryItem, onClickPlay)?.let { menuOptions.add(it) }
             getTestGraphicsOption(context, libraryItem, onTestGraphics)?.let { menuOptions.add(it) }
             getResetContainerOption(context, libraryItem)?.let { menuOptions.add(it) }
+            getRepairContainerOption(context, libraryItem)?.let { menuOptions.add(it) }
             getCreateShortcutOption(context, libraryItem)?.let { menuOptions.add(it) }
             getExportContainerOption(context, libraryItem, exportFrontendLauncher)?.let { menuOptions.add(it) }
         }
