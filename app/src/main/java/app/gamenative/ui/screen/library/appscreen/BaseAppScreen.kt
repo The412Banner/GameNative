@@ -606,7 +606,7 @@ abstract class BaseAppScreen {
     }
 
     /**
-     * Container Reset Button
+     * Repair Container Button
      * Forces a full re-extraction of all container files on the next launch by clearing all
      * extraction-tracking extras (the same state that ALWAYS_REEXTRACT = true bypasses).
      * Equivalent to what the dev flag ALWAYS_REEXTRACT = true (from xserver) would do, but as a targeted,
