@@ -626,8 +626,8 @@ abstract class BaseAppScreen {
         container.putExtra("graphicsDriverAdreno", null)
         container.putExtra("lastInstalledMainWrapper", null)
         container.putExtra("openal_dlls", null)
-        container.putExtra("appVersion", null)
         container.putExtra("imgVersion", null)
+        container.putExtra("containerPatchVersion", null)
         container.putExtra("desktopTheme", null)
         // FEXCore and WoW64 Box64 DLLs live inside the Wine prefix (system32, wowbox64).
         // Clear these so they re-extract on the next launch (important after a prefix wipe).

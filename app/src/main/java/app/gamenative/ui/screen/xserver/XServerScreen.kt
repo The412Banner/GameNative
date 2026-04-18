@@ -43,6 +43,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import app.gamenative.BuildConfig
 import app.gamenative.MainActivity
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
@@ -106,7 +107,7 @@ import com.winlator.container.ContainerManager
 import com.winlator.contents.AdrenotoolsManager
 import com.winlator.contents.ContentProfile
 import com.winlator.contents.ContentsManager
-import com.winlator.core.AppUtils
+
 import com.winlator.core.Callback
 import com.winlator.core.DXVKHelper
 import com.winlator.core.DefaultVersion
@@ -1546,7 +1547,7 @@ fun XServerScreen(
                             taskAffinityMaskWoW64 = ProcessHelper.getAffinityMask(container.getCPUListWoW64(true)).toShort().toInt()
                             win32AppWorkarounds?.setTaskAffinityMasks(taskAffinityMask, taskAffinityMaskWoW64)
                             containerVariantChanged = container.containerVariant != imageFs.variant
-                            firstTimeBoot = container.getExtra("appVersion").isEmpty() || containerVariantChanged
+                            firstTimeBoot = container.getExtra("containerPatchVersion").isEmpty() || containerVariantChanged
                             needsUnpacking = container.isNeedsUnpacking
                             Timber.i("First time boot: $firstTimeBoot")
 
@@ -3722,17 +3723,18 @@ private fun setupWineSystemFiles(
     onExtractFileListener: OnExtractFileListener?,
 ) {
     val imageFs = ImageFs.find(context)
-    val appVersion = AppUtils.getVersionCode(context).toString()
     val imgVersion = imageFs.getVersion().toString()
     val wineVersion = imageFs.getArch()
     val variant = imageFs.getVariant()
+    val containerPatchVersion = BuildConfig.CONTAINER_PATCH_VERSION
     var containerDataChanged = false
 
-    if (!container.getExtra("appVersion").equals(appVersion) || !container.getExtra("imgVersion").equals(imgVersion) ||
+    if (!container.getExtra("imgVersion").equals(imgVersion) ||
+        container.getExtra("containerPatchVersion") != containerPatchVersion ||
         container.containerVariant != variant || (container.containerVariant == variant && container.wineVersion != wineVersion)) {
         applyGeneralPatches(context, container, imageFs, xServerState.value.wineInfo, containerManager, onExtractFileListener)
-        container.putExtra("appVersion", appVersion)
         container.putExtra("imgVersion", imgVersion)
+        container.putExtra("containerPatchVersion", containerPatchVersion)
         containerDataChanged = true
     }
 

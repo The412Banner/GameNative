@@ -63,6 +63,12 @@ android {
         buildConfigField("String", "POSTHOG_HOST",  "\"${secret("POSTHOG_HOST")}\"")
         buildConfigField("String", "STEAMGRIDDB_API_KEY", "\"${secret("STEAMGRIDDB_API_KEY")}\"")
         buildConfigField("String", "CLOUD_PROJECT_NUMBER", "\"${secret("CLOUD_PROJECT_NUMBER")}\"")
+
+        // ── Container patch version ────────────────────────────────────────
+        // Bump this ONLY when .tzst compressed files or DLL layout changes.
+        // App version updates alone will NOT trigger wine prefix re-extraction,
+        // not forcing all users to re-extract every new app version when no file changes.
+        buildConfigField("String", "CONTAINER_PATCH_VERSION", "\"1\"")
         val iconValue = "@mipmap/ic_launcher"
         val iconRoundValue = "@mipmap/ic_launcher_round"
         manifestPlaceholders.putAll(
