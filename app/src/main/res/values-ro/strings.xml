@@ -25,6 +25,11 @@
     <string name="steam_reset_container_message">Aceasta va reseta containerul la configurația implicită.</string>
     <string name="base_app_reset_container_title">Resetezi containerul?</string>
     <string name="base_app_reset_container_confirm">Resetează</string>
+    <string name="repair_container">Repară containerul</string>
+    <string name="repair_container_title">Repari containerul?</string>
+    <string name="repair_container_message">Aceasta va reinstala fișierele interne ale containerului (drivere grafice, DirectX și biblioteci de rulare instalate anterior) la următoarea lansare. Instalatorii de rulare de pe unitatea A:, dacă există, vor rula din nou.\n\nFișierele de joc, datele salvate, setările containerului și programele instalate manual nu vor fi eliminate.\n\nFolosește această opțiune dacă un joc a încetat brusc să funcționeze sau nu pornește.</string>
+    <string name="repair_container_confirm">Repară</string>
+    <string name="repair_container_success">Containerul va reextrage toate fișierele la următoarea lansare</string>
     <string name="steam_verify_files_title">Verificare fișiere</string>
     <string name="steam_verify_files_message">Asigură-te că salvările sunt încărcate în cloud sau copiate în altă parte înainte de verificare, deoarece pot fi suprascrise.</string>
     <string name="steam_update_title">Actualizare</string>

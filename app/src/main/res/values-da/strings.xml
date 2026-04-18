@@ -1078,6 +1078,11 @@
     <string name="steam_imagefs_install_message">Ubuntu-billedet skal installeres før konfigurationen kan redigeres. Denne operation kan tage nogle minutter. Vil du fortsætte?</string>
     <string name="steam_reset_container_title">Nulstil container</string>
     <string name="steam_reset_container_message">Dette vil nulstille din container til standardkonfigurationen.</string>
+    <string name="repair_container">Reparer container</string>
+    <string name="repair_container_title">Reparer container?</string>
+    <string name="repair_container_message">Dette geninstallerer containerens interne filer (grafikdrivere, DirectX og tidligere installerede køretidsbiblioteker) ved næste opstart. Eksisterende køretidsinstallationer på A:-drevet, hvis nogen, køres igen.\n\nDine spilfiler, gemte data, containerindstillinger og manuelt installerede programmer fjernes ikke.\n\nBrug dette, hvis et spil pludselig holder op med at virke eller ikke starter.</string>
+    <string name="repair_container_confirm">Reparer</string>
+    <string name="repair_container_success">Containeren udpakker alle filer igen ved næste opstart</string>
     <string name="steam_verify_files_title">Verificér filer</string>
     <string name="steam_verify_files_message">Sørg venligst for, at dine gemfiler er uploadet til skyen eller sikkerhedskopieret før verificering, da de ellers kan blive overskrevet.</string>
     <string name="steam_update_title">Opdatering</string>

@@ -25,6 +25,11 @@
     <string name="steam_reset_container_message">컨테이너를 기본 구성으로 초기화합니다.</string>
     <string name="base_app_reset_container_title">컨테이너를 초기화하시겠습니까?</string>
     <string name="base_app_reset_container_confirm">초기화</string>
+    <string name="repair_container">컨테이너 복구</string>
+    <string name="repair_container_title">컨테이너를 복구할까요?</string>
+    <string name="repair_container_message">다음 실행 시 컨테이너의 내부 파일(그래픽 드라이버, DirectX 및 이전에 설치된 런타임 라이브러리)이 재설치됩니다. A: 드라이브에 런타임 설치 프로그램이 있는 경우 다시 실행됩니다.\n\n게임 파일, 저장 데이터, 컨테이너 설정 및 수동으로 설치한 프로그램은 삭제되지 않습니다.\n\n게임이 갑자기 작동을 멈추거나 시작에 실패할 경우 사용하세요.</string>
+    <string name="repair_container_confirm">복구</string>
+    <string name="repair_container_success">컨테이너가 다음 실행 시 모든 파일을 다시 추출합니다</string>
     <string name="steam_verify_files_title">파일 검증</string>
     <string name="steam_verify_files_message">검증하기 전에 저장 파일이 클라우드에 업로드되었거나 백업되었는지 확인하세요. 그렇지 않으면 덮어쓰기될 수 있습니다.</string>
     <string name="steam_update_title">업데이트</string>

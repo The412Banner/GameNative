@@ -1078,6 +1078,11 @@
     <string name="steam_imagefs_install_message">A imagem do Ubuntu precisa ser instalada antes de poder editar a configuração. Esta operação pode levar alguns minutos. Deseja continuar?</string>
     <string name="steam_reset_container_title">Redefinir contêiner</string>
     <string name="steam_reset_container_message">Isso redefinirá seu contêiner para a configuração padrão.</string>
+    <string name="repair_container">Reparar contêiner</string>
+    <string name="repair_container_title">Reparar contêiner?</string>
+    <string name="repair_container_message">Isso reinstalará os arquivos internos do contêiner (drivers gráficos, DirectX e bibliotecas de tempo de execução instaladas anteriormente) no próximo início. Os instaladores de tempo de execução na unidade A:, se houver, serão executados novamente.\n\nSeus arquivos de jogo, dados salvos, configurações do contêiner e programas instalados manualmente não serão removidos.\n\nUse isso se um jogo parar de funcionar repentinamente ou falhar ao iniciar.</string>
+    <string name="repair_container_confirm">Reparar</string>
+    <string name="repair_container_success">O contêiner reextrai todos os arquivos no próximo início</string>
     <string name="steam_verify_files_title">Verificar arquivos</string>
     <string name="steam_verify_files_message">Certifique-se de que seus saves foram enviados para a nuvem ou foram feitos backups antes de verificar, caso contrário, eles podem ser sobrescritos.</string>
     <string name="steam_update_title">Atualização</string>

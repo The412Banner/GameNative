@@ -25,6 +25,11 @@
     <string name="steam_reset_container_message">Це скине налаштування Вашого контейнера до стандартної конфігурації.</string>
     <string name="base_app_reset_container_title">Скинути контейнер?</string>
     <string name="base_app_reset_container_confirm">Скинути</string>
+    <string name="repair_container">Відновити контейнер</string>
+    <string name="repair_container_title">Відновити контейнер?</string>
+    <string name="repair_container_message">Це призведе до повторної установки внутрішніх файлів контейнера (графічні драйвери, DirectX і раніше встановлені бібліотеки) при наступному запуску. Встановлювачі середовища виконання на диску A:, якщо такі є, будуть запущені знову.\n\nФайли гри, збережені дані, налаштування контейнера та вручну встановлені програми видалені не будуть.\n\nВикористовуйте цю функцію, якщо гра раптово перестала працювати або не запускається.</string>
+    <string name="repair_container_confirm">Відновити</string>
+    <string name="repair_container_success">Контейнер повторно витягне всі файли при наступному запуску</string>
     <string name="steam_verify_files_title">Перевірити файли</string>
     <string name="steam_verify_files_message">Будь ласка, переконайтеся, що ваші збереження завантажено у хмару або створено їхню резервну копію перед перевіркою, оскільки інакше вони можуть бути перезаписані.</string>
     <string name="steam_update_title">Оновити</string>

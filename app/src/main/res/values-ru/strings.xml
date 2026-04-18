@@ -98,6 +98,11 @@
     <string name="base_app_images_fetch_failed">Ошибка загрузки изображений: %s</string>
     <string name="base_app_images_fetched">Изображения успешно загружены</string>
     <string name="base_app_reset_container_confirm">Сброс</string>
+    <string name="repair_container">Восстановить контейнер</string>
+    <string name="repair_container_title">Восстановить контейнер?</string>
+    <string name="repair_container_message">При следующем запуске будут переустановлены внутренние файлы контейнера (графические драйверы, DirectX и ранее установленные библиотеки). Установщики среды выполнения на диске A:, если таковые имеются, будут запущены снова.\n\nФайлы игры, сохранения, настройки контейнера и вручную установленные программы удалены не будут.\n\nИспользуйте эту функцию, если игра внезапно перестала работать или не запускается.</string>
+    <string name="repair_container_confirm">Восстановить</string>
+    <string name="repair_container_success">Контейнер повторно извлечёт все файлы при следующем запуске</string>
     <string name="base_app_reset_container_title">Сбросить контейнер?</string>
     <string name="base_app_shortcut_created">Ярлык создан</string>
     <string name="base_app_shortcut_failed">Ошибка создания ярлыка: %s</string>
@@ -646,9 +651,9 @@ Ubuntu RootFs - releases.ubuntu.com/focal</string>
     <string name="m3c_dropdown_menu_toggle">Переключить выпадающее меню</string>
     <string name="m3c_snackbar_dismiss">Закрыть</string>
     <string name="magnifier">Лупа</string>
-    <string name="main_app_running_message">Вы уже вошли на другом устройстве и играете в %s. 
+    <string name="main_app_running_message">Вы уже вошли на другом устройстве и играете в %s.
 Вы всё ещё можете играть в эту игру, но это отключит другой сеанс от Steam.</string>
-    <string name="main_app_running_other_device">Вы уже вошли на другом устройстве (%1$s) и играете в %2$s (%3$s), и это сохранение ещё не в облаке. 
+    <string name="main_app_running_other_device">Вы уже вошли на другом устройстве (%1$s) и играете в %2$s (%3$s), и это сохранение ещё не в облаке.
 Вы всё ещё можете играть в эту игру, но это отключит другой сеанс от Steam и может создать конфликт сохранений, когда прогресс того сеанса синхронизируется</string>
     <string name="main_app_running_title">Приложение запущено</string>
     <string name="main_app_session_suspended">Сеанс приложения приостановлен. Пожалуйста, перезапустите приложение.</string>

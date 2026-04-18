@@ -25,6 +25,11 @@
     <string name="steam_reset_container_message">Spowoduje to zresetowanie kontenera do konfiguracji domyślnej.</string>
     <string name="base_app_reset_container_title">Zresetować kontener?</string>
     <string name="base_app_reset_container_confirm">Resetuj</string>
+    <string name="repair_container">Napraw kontener</string>
+    <string name="repair_container_title">Naprawić kontener?</string>
+    <string name="repair_container_message">Spowoduje to ponowną instalację wewnętrznych plików kontenera (sterowniki graficzne, DirectX i wcześniej zainstalowane biblioteki uruchomieniowe) przy następnym uruchomieniu. Instalatory środowiska uruchomieniowego na dysku A:, jeśli istnieją, zostaną uruchomione ponownie.\n\nPliki gry, dane zapisu, ustawienia kontenera i ręcznie zainstalowane programy nie zostaną usunięte.\n\nUżyj tej opcji, jeśli gra nagle przestała działać lub nie uruchamia się.</string>
+    <string name="repair_container_confirm">Napraw</string>
+    <string name="repair_container_success">Kontener ponownie wyodrębni wszystkie pliki przy następnym uruchomieniu</string>
     <string name="steam_verify_files_title">Zweryfikuj pliki</string>
     <string name="steam_verify_files_message">Upewnij się, że Twoje zapisy są przesłane do chmury lub utworzono ich kopię zapasową przed weryfikacją, w przeciwnym razie mogą zostać nadpisane.</string>
     <string name="steam_update_title">Aktualizuj</string>
@@ -832,7 +837,7 @@
     <string name="driver_manager">Menedżer sterowników</string>
     <string name="select_a_driver">Wybierz sterownik</string>
     <string name="import_zip_from_device">Importuj ZIP z urządzenia</string>
-    
+
     <!-- Contents Manager -->
     <string name="contents_manager">Menedżer zawartości</string>
     <string name="import_wcp_from_device">Importuj .wcp z urządzenia</string>

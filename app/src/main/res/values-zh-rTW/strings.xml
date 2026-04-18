@@ -25,6 +25,11 @@
     <string name="steam_reset_container_message">這將把容器重置為預設配置</string>
     <string name="base_app_reset_container_title">重置容器?</string>
     <string name="base_app_reset_container_confirm">重置</string>
+    <string name="repair_container">修復容器</string>
+    <string name="repair_container_title">修復容器？</string>
+    <string name="repair_container_message">這將在下次啟動時重新安裝容器的內部檔案（顯示卡驅動程式、DirectX 及之前安裝的執行時期函式庫）。A: 磁碟機中已有的執行時期安裝程式（如果有）將再次執行。\n\n您的遊戲檔案、存檔資料、容器設定以及手動安裝的程式不會被刪除。\n\n若遊戲突然停止運作或無法啟動，請使用此選項。</string>
+    <string name="repair_container_confirm">修復</string>
+    <string name="repair_container_success">容器將在下次啟動時重新解壓縮所有檔案</string>
     <string name="steam_verify_files_title">驗證檔案</string>
     <string name="steam_verify_files_message">請確保您的存檔已上傳至雲端或已備份, 然後再進行驗證, 否則存檔可能會被覆蓋</string>
     <string name="steam_update_title">更新</string>
