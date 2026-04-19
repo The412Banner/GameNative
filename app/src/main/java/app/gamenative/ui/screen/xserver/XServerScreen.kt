@@ -3887,19 +3887,26 @@ private fun applyGeneralPatches(
     // ── Restore user.reg after the prefix was reset ────────────────────────
     // This preserves all Wine-tab settings, game fixes, and any manual registry
     // tweaks — no matter how many keys exist — without needing to enumerate them.
+    // The backup is always cleaned up: subsequent launches would overwrite it anyway
+    // (the newer user.reg always wins), so there's no value in keeping a stale .bak.
     if (userRegSaved && userRegBackup.exists()) {
-        try {
-            if (userRegFile.exists()) {
+        var restored = false
+        for (attempt in 1..2) {
+            try {
                 userRegBackup.copyTo(userRegFile, overwrite = true)
-                Timber.i("applyGeneralPatches: restored user.reg from backup")
-            } else {
-                Timber.w("applyGeneralPatches: user.reg missing after extraction; backup not restored")
+                if (userRegFile.exists() && userRegFile.length() > 0) {
+                    restored = true
+                    Timber.i("applyGeneralPatches: restored user.reg from backup (%d bytes, attempt %d)", userRegFile.length(), attempt)
+                    break
+                }
+            } catch (e: Exception) {
+                Timber.w(e, "applyGeneralPatches: restore attempt %d failed", attempt)
             }
-        } catch (e: Exception) {
-            Timber.w(e, "applyGeneralPatches: failed to restore user.reg from backup")
-        } finally {
-            userRegBackup.delete()
         }
+        if (!restored) {
+            Timber.w("applyGeneralPatches: could not restore user.reg after 2 attempts; Wine-tab settings may reset to defaults")
+        }
+        userRegBackup.delete()
     }
 
     // ── Reset pre-install step markers so runtimes re-run against the fresh prefix ──
@@ -3921,7 +3928,9 @@ private fun applyGeneralPatches(
     // FEXCore and WoW64 Box64 DLLs live inside the Wine prefix (system32).
     // The prefix was just wiped, so clear these extras so they re-extract on next launch.
     container.putExtra("fexcoreVersion", null)
-    container.putExtra("box64Version", null)
+    container.putExtra("wowbox64Version", null)    // arm64ec wowbox64 DLL sentinel
+    container.putExtra("box64BionicVersion", null) // x86_64 box64 bionic binary sentinel
+    container.putExtra("box64Version", null)       // legacy key — clear for migration
     WinlatorPrefManager.init(context)
     WinlatorPrefManager.putString("current_box64_version", "")
 }

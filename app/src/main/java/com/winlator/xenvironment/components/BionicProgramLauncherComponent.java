@@ -380,7 +380,9 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         }
 
         // Update the metadata so the container knows which version is installed.
-        container.putExtra("box64Version", box64Version);
+        // NOTE: uses "box64BionicVersion" — separate from "wowbox64Version" used by extractEmulatorsDlls()
+        // so that switching wine variants doesn't accidentally suppress the other extraction.
+        container.putExtra("box64BionicVersion", box64Version);
         container.saveData();
 
         // Set execute permissions.
@@ -407,19 +409,22 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         // To tackle unnecessary resets, Only re-extract WoW64 Box64 DLLs if the version has changed.
         // These DLLs live in system32 (inside the Wine prefix); the extra is cleared
         // by applyGeneralPatches / repairContainerFiles when the prefix is wiped.
-        String installedBox64Version = container.getExtra("box64Version");
-        if (!wowbox64Version.equals(installedBox64Version)) {
+        // NOTE: uses "wowbox64Version" — a separate key from "box64BionicVersion" used by
+        // extractBox64Files() — so that switching between arm64ec and x86_64 wine variants
+        // cannot suppress each other's extraction via a false version-match.
+        String installedWowBox64Version = container.getExtra("wowbox64Version");
+        if (!wowbox64Version.equals(installedWowBox64Version)) {
             ContentProfile wowboxprofile = contentsManager.getProfileByEntryName("wowbox64-" + wowbox64Version);
             if (wowboxprofile != null) {
                 contentsManager.applyContent(wowboxprofile);
             } else {
-                Log.d("Extraction", "Extracting box64Version: " + wowbox64Version);
+                Log.d("Extraction", "Extracting wowbox64Version: " + wowbox64Version);
                 TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, environment.getContext(), "wowbox64/wowbox64-" + wowbox64Version + ".tzst", system32dir);
             }
-            container.putExtra("box64Version", wowbox64Version);
+            container.putExtra("wowbox64Version", wowbox64Version);
             containerDataChanged = true;
         } else {
-            Log.d("Extraction", "Skipping WoW64 box64 extraction: already at version " + wowbox64Version);
+            Log.d("Extraction", "Skipping wowbox64 extraction: already at version " + wowbox64Version);
         }
 
         // Only re-extract FEXCore DLLs if the version has changed (same rationale).

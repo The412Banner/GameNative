@@ -632,7 +632,9 @@ abstract class BaseAppScreen {
         // FEXCore and WoW64 Box64 DLLs live inside the Wine prefix (system32, wowbox64).
         // Clear these so they re-extract on the next launch (important after a prefix wipe).
         container.putExtra("fexcoreVersion", null)
-        container.putExtra("box64Version", null)
+        container.putExtra("wowbox64Version", null)   // arm64ec wowbox64 DLL sentinel
+        container.putExtra("box64BionicVersion", null) // x86_64 box64 bionic binary sentinel
+        container.putExtra("box64Version", null)       // legacy key — clear for migration
         container.saveData()
 
         // Delete the shared .current_graphics_driver sentinel file.
