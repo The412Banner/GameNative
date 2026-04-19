@@ -253,6 +253,9 @@ dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.bundles.compose)
     implementation(libs.landscapist.coil)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.exoplayer.hls)
+    implementation(libs.media3.ui)
     debugImplementation(libs.androidx.ui.tooling)
 
     // Support

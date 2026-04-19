@@ -799,7 +799,7 @@ fun XServerScreen(
                 anchor.post {
                     if (anchor.windowToken == null) return@post
                     val show = {
-                        PostHog.capture(event = "onscreen_keyboard_enabled")
+                        if (PrefManager.usageAnalyticsEnabled) PostHog.capture(event = "onscreen_keyboard_enabled")
                         val isExternalDisplaySession =
                             (anchor.display?.displayId ?: Display.DEFAULT_DISPLAY) != Display.DEFAULT_DISPLAY
 
@@ -820,10 +820,10 @@ fun XServerScreen(
 
             QuickMenuAction.INPUT_CONTROLS -> {
                 if (areControlsVisible) {
-                    PostHog.capture(event = "onscreen_controller_disabled")
+                    if (PrefManager.usageAnalyticsEnabled) PostHog.capture(event = "onscreen_controller_disabled")
                     hideInputControls()
                 } else {
-                    PostHog.capture(event = "onscreen_controller_enabled")
+                    if (PrefManager.usageAnalyticsEnabled) PostHog.capture(event = "onscreen_controller_enabled")
                     val manager = PluviaApp.inputControlsManager
                     val profiles = manager?.getProfiles(false) ?: listOf()
                     if (profiles.isNotEmpty()) {
@@ -844,7 +844,7 @@ fun XServerScreen(
             }
 
             QuickMenuAction.EDIT_CONTROLS -> {
-                PostHog.capture(event = "edit_controls_in_game")
+                if (PrefManager.usageAnalyticsEnabled) PostHog.capture(event = "edit_controls_in_game")
                 keepPausedForEditor = true
 
                 // Get or create profile for this container
@@ -920,7 +920,7 @@ fun XServerScreen(
             }
 
             QuickMenuAction.EDIT_PHYSICAL_CONTROLLER -> {
-                PostHog.capture(event = "edit_physical_controller_from_menu")
+                if (PrefManager.usageAnalyticsEnabled) PostHog.capture(event = "edit_physical_controller_from_menu")
                 keepPausedForEditor = true
                 showPhysicalControllerDialog = true
                 true
@@ -931,10 +931,12 @@ fun XServerScreen(
                 isPerformanceHudEnabled = enabled
                 PrefManager.showFps = enabled
                 updatePerformanceHud(enabled)
-                PostHog.capture(
-                    event = "performance_hud_toggled",
-                    properties = mapOf("enabled" to enabled),
-                )
+                if (PrefManager.usageAnalyticsEnabled) {
+                    PostHog.capture(
+                        event = "performance_hud_toggled",
+                        properties = mapOf("enabled" to enabled),
+                    )
+                }
                 false
             }
 
@@ -962,7 +964,7 @@ fun XServerScreen(
             ?.isVisible(WindowInsetsCompat.Type.ime()) == true
 
         if (imeVisible) {
-            PostHog.capture(event = "onscreen_keyboard_disabled")
+            if (PrefManager.usageAnalyticsEnabled) PostHog.capture(event = "onscreen_keyboard_disabled")
             imeInputReceiver?.hideKeyboard()
             view.post {
                 if (Build.VERSION.SDK_INT >= 30) {
