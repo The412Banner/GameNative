@@ -111,6 +111,7 @@ public abstract class TarCompressorUtils {
             return extract(type, assetManager.open(assetFile), destination, onExtractFileListener);
         }
         catch (IOException e) {
+            Log.e("TarCompressorUtils", "Failed to open asset for extraction: " + assetFile, e);
             return false;
         }
     }
@@ -124,6 +125,7 @@ public abstract class TarCompressorUtils {
             return extract(type, context.getAssets().open(assetFile), destination, onExtractFileListener);
         }
         catch (IOException e) {
+            Log.e("TarCompressorUtils", "Failed to open asset for extraction: " + assetFile, e);
             return false;
         }
     }

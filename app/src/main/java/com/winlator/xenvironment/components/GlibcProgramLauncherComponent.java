@@ -252,7 +252,8 @@ public class GlibcProgramLauncherComponent extends GuestProgramLauncherComponent
         }
         else {
             Log.d("Extraction", "exctracting box64 with box64Version " + box64Version);
-            TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, context.getAssets(), "box86_64/box64-" + box64Version + ".tzst", rootDir);
+            boolean success = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, context.getAssets(), "box86_64/box64-" + box64Version + ".tzst", rootDir);
+            if (!success) Log.e("Extraction", "FAILED to extract box64 (glibc) version: " + box64Version);
         }
         PrefManager.putString("current_box64_version", box64Version);
     }

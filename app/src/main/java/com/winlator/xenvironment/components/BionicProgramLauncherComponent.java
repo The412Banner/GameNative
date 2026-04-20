@@ -376,7 +376,8 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         if (profile != null) {
             contentsManager.applyContent(profile);
         } else {
-            TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, context.getAssets(), "box86_64/box64-" + box64Version + "-bionic.tzst", rootDir);
+            boolean box64Success = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, context.getAssets(), "box86_64/box64-" + box64Version + "-bionic.tzst", rootDir);
+            if (!box64Success) Log.e("Extraction", "FAILED to extract box64 version: " + box64Version);
         }
 
         // Update the metadata so the container knows which version is installed.
@@ -406,20 +407,21 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         Log.d("Extraction", "box64Version in use: " + wowbox64Version);
         Log.d("Extraction", "fexcoreVersion in use: " + fexcoreVersion);
 
-        // To tackle unnecessary resets, Only re-extract WoW64 Box64 DLLs if the version has changed.
+        // Always re-extract to prevent silent corruption over time
         // These DLLs live in system32 (inside the Wine prefix); the extra is cleared
         // by applyGeneralPatches / repairContainerFiles when the prefix is wiped.
         // NOTE: uses "wowbox64Version" — a separate key from "box64BionicVersion" used by
         // extractBox64Files() — so that switching between arm64ec and x86_64 wine variants
         // cannot suppress each other's extraction via a false version-match.
         String installedWowBox64Version = container.getExtra("wowbox64Version");
-        if (!wowbox64Version.equals(installedWowBox64Version)) {
+        if (true) {
             ContentProfile wowboxprofile = contentsManager.getProfileByEntryName("wowbox64-" + wowbox64Version);
             if (wowboxprofile != null) {
                 contentsManager.applyContent(wowboxprofile);
             } else {
                 Log.d("Extraction", "Extracting wowbox64Version: " + wowbox64Version);
-                TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, environment.getContext(), "wowbox64/wowbox64-" + wowbox64Version + ".tzst", system32dir);
+                boolean wowSuccess = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, environment.getContext(), "wowbox64/wowbox64-" + wowbox64Version + ".tzst", system32dir);
+                if (!wowSuccess) Log.e("Extraction", "FAILED to extract wowbox64 version: " + wowbox64Version);
             }
             container.putExtra("wowbox64Version", wowbox64Version);
             containerDataChanged = true;
@@ -427,15 +429,16 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
             Log.d("Extraction", "Skipping wowbox64 extraction: already at version " + wowbox64Version);
         }
 
-        // Only re-extract FEXCore DLLs if the version has changed (same rationale).
+        // Always re-extract to prevent silent corruption over time
         String installedFexcoreVersion = container.getExtra("fexcoreVersion");
-        if (!fexcoreVersion.equals(installedFexcoreVersion)) {
+        if (true) {
             ContentProfile fexprofile = contentsManager.getProfileByEntryName("fexcore-" + fexcoreVersion);
             if (fexprofile != null) {
                 contentsManager.applyContent(fexprofile);
             } else {
                 Log.d("Extraction", "Extracting fexcoreVersion: " + fexcoreVersion);
-                TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, environment.getContext(), "fexcore/fexcore-" + fexcoreVersion + ".tzst", system32dir);
+                boolean fexSuccess = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, environment.getContext(), "fexcore/fexcore-" + fexcoreVersion + ".tzst", system32dir);
+                if (!fexSuccess) Log.e("Extraction", "FAILED to extract fexcore version: " + fexcoreVersion);
             }
             container.putExtra("fexcoreVersion", fexcoreVersion);
             containerDataChanged = true;

@@ -185,9 +185,10 @@ import kotlin.io.path.name
 import kotlin.text.lowercase
 import com.winlator.PrefManager as WinlatorPrefManager
 
-// Re-extract only when the driver/wrapper selection actually changes.
-//This can be set to true temporarily if widespread container corruption is observed.
-private const val ALWAYS_REEXTRACT = false
+// When true, forces re-extraction of Drivers, Wrapper, DXVK, VKD3D, cnc-ddraw, and Fex
+// on every boot for all containers. Set to false in order to use normal cache-based checks.
+// and only extract when user changes version in settings
+private const val ALWAYS_REEXTRACT = true
 
 // Guard to prevent duplicate game_exited events when multiple exit triggers fire simultaneously
 private val isExiting = AtomicBoolean(false)
@@ -4414,6 +4415,8 @@ private fun extractGraphicsDriverFiles(
                     // After success, save the new version so we don't re-extract next time.
                     container.putExtra("lastInstalledMainWrapper", mainWrapperSelection)
                     container.saveData()
+                } else {
+                    Timber.e("FAILED to extract wrapper: %s", assetPath)
                 }
                 Log.d("XServerDisplayActivity", "First time container boot, extracting extra_libs.tzst")
                 TarCompressorUtils.extract(
