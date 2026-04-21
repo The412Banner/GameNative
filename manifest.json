@@ -4,6 +4,24 @@
   "items": {
     "driver": [
       {
+        "id": "A8XX MR v25.1",
+        "name": "a8xx-gen8-V25.1",
+        "url": "https://downloads.gamenative.app/drivers/a8xx-gen8-V25.1.zip",
+        "variant": "bionic"
+      },
+      {
+        "id": "Turnip v26.2.0 R1",
+        "name": "Turnip_v26.2.0_R1",
+        "url": "https://downloads.gamenative.app/drivers/Turnip_v26.2.0_R1.zip",
+        "variant": "bionic"
+      },
+      {
+        "id": "Turnip Gen8 V28",
+        "name": "Turnip_Gen8_V28",
+        "url": "https://downloads.gamenative.app/drivers/Turnip_Gen8_V28.zip",
+        "variant": "bionic"
+      },
+      {
         "id": "Turnip_Gen8_V23",
         "name": "Turnip_Gen8_V23",
         "url": "https://downloads.gamenative.app/drivers/Turnip_Gen8_V23.zip",
