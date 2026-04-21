@@ -368,26 +368,38 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         Context context = environment.getContext();
         String box64Version = container.getBox64Version();
 
-        Log.i("Extraction", "Extracting required box64 version: " + box64Version);
+        Log.i("Extraction", "Checking box64 bionic version: " + box64Version);
         File rootDir = imageFs.getRootDir();
+        File box64File = new File(rootDir, "usr/bin/box64");
 
-        // No more version check, just extract directly.
         ContentProfile profile = contentsManager.getProfileByEntryName("box64-" + box64Version);
         if (profile != null) {
             contentsManager.applyContent(profile);
-        } else {
-            boolean box64Success = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, context.getAssets(), "box86_64/box64-" + box64Version + "-bionic.tzst", rootDir);
-            if (!box64Success) Log.e("Extraction", "FAILED to extract box64 version: " + box64Version);
+            container.putExtra("box64BionicVersion", box64Version);
+            container.saveData();
+            if (box64File.exists()) FileUtils.chmod(box64File, 0755);
+            return;
         }
 
-        // Update the metadata so the container knows which version is installed.
-        // NOTE: uses "box64BionicVersion" — separate from "wowbox64Version" used by extractEmulatorsDlls()
-        // so that switching wine variants doesn't accidentally suppress the other extraction.
-        container.putExtra("box64BionicVersion", box64Version);
+        // Skip re-extraction if the same version is already installed on disk.
+        String currentBox64Version = container.getExtra("box64BionicVersion", "");
+        if (box64Version.equals(currentBox64Version) && box64File.isFile()) {
+            if (box64File.exists()) FileUtils.chmod(box64File, 0755);
+            return; // already installed
+        }
+
+        boolean box64Success = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, context.getAssets(), "box86_64/box64-" + box64Version + "-bionic.tzst", rootDir);
+        if (box64Success) {
+            // NOTE: uses "box64BionicVersion" — separate from "wowbox64Version" used by extractEmulatorsDlls()
+            // so that switching wine variants doesn't accidentally suppress the other extraction.
+            container.putExtra("box64BionicVersion", box64Version);
+        } else {
+            Log.e("Extraction", "FAILED to extract box64 version: " + box64Version);
+            container.putExtra("box64BionicVersion", ""); // invalidate so next launch retries
+        }
         container.saveData();
 
         // Set execute permissions.
-        File box64File = new File(rootDir, "usr/bin/box64");
         if (box64File.exists()) {
             FileUtils.chmod(box64File, 0755);
         }

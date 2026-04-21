@@ -3758,9 +3758,16 @@ private fun setupWineSystemFiles(
         )
     }
 
-    val needReextract = ALWAYS_REEXTRACT || xServerState.value.dxwrapper != container.getExtra("dxwrapper") || container.wineVersion != wineVersion
+    // Re-extract DX wrapper files when wrapper/version (dxwrapper extra) or wine version changes.
+    // Apply ALWAYS_REEXTRACT only to arm64ec; for x86_64, skip idle boot re-extracts to avoid
+    // rewriting prefix DLLs when nothing changed. Users can force a rebuild via Repair Container.
+    val isArm64EcContainer = container.wineVersion?.contains("arm64ec") == true
+    val dxwrapperOrVersionChanged = xServerState.value.dxwrapper != container.getExtra("dxwrapper") ||
+            container.wineVersion != wineVersion
+    val needReextract = dxwrapperOrVersionChanged || (ALWAYS_REEXTRACT && isArm64EcContainer)
 
     Timber.i("needReextract is " + needReextract)
+    Timber.i("isArm64EcContainer=" + isArm64EcContainer + " dxwrapperOrVersionChanged=" + dxwrapperOrVersionChanged)
     Timber.i("xServerState.value.dxwrapper is " + xServerState.value.dxwrapper)
     Timber.i("container.getExtra(\"dxwrapper\") is " + container.getExtra("dxwrapper"))
 
@@ -4581,3 +4588,4 @@ private fun setImagefsContainerVariant(context: Context, container: Container) {
     imageFs.createVariantFile(containerVariant)
     imageFs.createArchFile(container.wineVersion)
 }
+
