@@ -158,9 +158,23 @@ data class TouchGestureConfig(
         private const val KEY_SHOW_GESTURE_DEBUG_OVERLAY = "showGestureDebugOverlay"
         private const val KEY_GESTURE_THRESHOLD = "gestureThreshold"
 
-        /** Parse from a JSON string. Returns defaults when the string is null, blank or invalid. */
+        /**
+         * Compatibility-safe defaults for existing (pre-overhaul) configs.
+         *
+         * When a container has no saved gesture JSON, or its JSON is corrupt,
+         * or the JSON simply predates the new two-/three-finger gestures, we
+         * don't want the new gestures silently enabled on upgrade. Return a
+         * config with only the legacy gestures on.
+         */
+        fun compatibilityDefaults(): TouchGestureConfig = TouchGestureConfig(
+            twoFingerHoldEnabled = false,
+            threeFingerTapEnabled = false,
+            threeFingerHoldEnabled = false,
+        )
+
+        /** Parse from a JSON string. Returns compatibility-safe defaults when the string is null, blank or invalid. */
         fun fromJson(json: String?): TouchGestureConfig {
-            if (json.isNullOrBlank()) return TouchGestureConfig()
+            if (json.isNullOrBlank()) return compatibilityDefaults()
             return try {
                 val obj = JSONObject(json)
                 TouchGestureConfig(
@@ -194,7 +208,7 @@ data class TouchGestureConfig(
                     gestureThreshold = obj.optInt(KEY_GESTURE_THRESHOLD, DEFAULT_GESTURE_THRESHOLD),
                 )
             } catch (_: Exception) {
-                TouchGestureConfig()
+                compatibilityDefaults()
             }
         }
 

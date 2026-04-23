@@ -772,7 +772,15 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
 
     // ── Second+ finger down ──────────────────────────────────────────
     private void handleTsPointerDown(MotionEvent event) {
-        // Cancel any single-finger long-press
+        // Cancel any single-finger long-press.  cancelLongPressTimer only
+        // clears the pending runnable; if the long-press has already fired
+        // we must also release the held action before we transition into a
+        // multi-finger gesture, otherwise the long-press button/key stays
+        // down for the rest of the touch sequence.
+        if (longPressTriggered) {
+            injectRelease(gestureConfig.getLongPressAction());
+            longPressTriggered = false;
+        }
         cancelLongPressTimer();
         cancelDrag();
 
@@ -843,10 +851,16 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
             dragButtonPressed = true;
             singleFingerLastRawX = event.getX(pointerIndex);
             singleFingerLastRawY = event.getY(pointerIndex);
+            // Send the configured drag press immediately so that a short
+            // move followed straight by UP still produces a press+release
+            // pair.  A zero-delta performPanAction just presses the button
+            // (or is a no-op for the key-pan variants, which press per
+            // direction on their next move frame).
+            performPanAction(0f, 0f, gestureConfig.getDragAction());
             notifyGesture("Drag", true);
-            // Don't move cursor this frame — button was pressed at touch-down point.
-            // Next frame will smoothly move from touch-down, so the drag starts
-            // exactly where the finger first touched.
+            // Don't move cursor further this frame — the drag should start
+            // exactly where the finger first touched.  Subsequent MOVE
+            // frames will drive performPanAction with real deltas.
             return;
         }
 
@@ -1112,6 +1126,15 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
         cancelTwoFingerHoldTimer();
         cancelThreeFingerHoldTimer();
         stopGestureRefresh();
+        // A tap's release is normally scheduled via delayedPress so we can
+        // fold a rapid re-tap into a single down-up pair.  If we cancel
+        // before that runnable fires, the previously-injected tap press
+        // would leak.  Flush it synchronously.
+        if (delayedPress != null) {
+            removeCallbacks(delayedPress);
+            delayedPress = null;
+            injectRelease(gestureConfig.getTapAction());
+        }
         if (dragButtonPressed) {
             releasePanKeys();
             releaseAllDragButtons();
