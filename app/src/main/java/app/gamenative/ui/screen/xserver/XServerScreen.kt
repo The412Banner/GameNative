@@ -2,7 +2,6 @@ package app.gamenative.ui.screen.xserver
 
 import android.app.Activity
 import android.content.Context
-import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Build
 import android.util.Log
@@ -53,7 +52,6 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerInteropFilter
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -85,7 +83,6 @@ import app.gamenative.externaldisplay.ExternalDisplaySwapController
 import app.gamenative.externaldisplay.SwapInputOverlayView
 import app.gamenative.service.AchievementWatcher
 import app.gamenative.service.SteamService
-import app.gamenative.service.amazon.AmazonService
 import app.gamenative.service.epic.EpicService
 import app.gamenative.service.gog.GOGService
 import app.gamenative.ui.component.QuickMenu
@@ -196,6 +193,7 @@ private val isExiting = AtomicBoolean(false)
 private const val EXIT_PROCESS_TIMEOUT_MS = 30_000L
 private const val EXIT_PROCESS_POLL_INTERVAL_MS = 1_000L
 private const val EXIT_PROCESS_RESPONSE_TIMEOUT_MS = 2_000L
+private const val QUICK_MENU_PROCESS_POLL_INTERVAL_MS = 2_000L
 
 private data class XServerViewReleaseBinding(
     val xServerView: XServerView,
@@ -241,6 +239,48 @@ private fun buildEssentialProcessAllowlist(): Set<String> {
     val essentialServices = WineUtils.getEssentialServiceNames()
         .map { normalizeProcessName(it) }
     return (essentialServices + CORE_WINE_PROCESSES).toSet()
+}
+
+private suspend fun requestWineProcessSnapshot(winHandler: WinHandler): List<ProcessInfo>? {
+    val previousListener = winHandler.getOnGetProcessInfoListener()
+    val lock = Any()
+    var currentList = mutableListOf<ProcessInfo>()
+    var expectedCount = 0
+    val deferred = CompletableDeferred<List<ProcessInfo>?>()
+
+    val listener = OnGetProcessInfoListener { index, count, processInfo ->
+        previousListener?.onGetProcessInfo(index, count, processInfo)
+        synchronized(lock) {
+            if (count == 0 && processInfo == null) {
+                if (!deferred.isCompleted) deferred.complete(emptyList())
+                return@synchronized
+            }
+            if (index == 0) {
+                currentList = mutableListOf()
+                expectedCount = count
+                if (count == 0 && !deferred.isCompleted) {
+                    deferred.complete(emptyList())
+                    return@synchronized
+                }
+            }
+            if (processInfo != null) {
+                currentList.add(processInfo)
+            }
+            if (currentList.size >= expectedCount && !deferred.isCompleted) {
+                deferred.complete(currentList.toList())
+            }
+        }
+    }
+
+    return try {
+        winHandler.setOnGetProcessInfoListener(listener)
+        winHandler.listProcesses()
+        withTimeoutOrNull(EXIT_PROCESS_RESPONSE_TIMEOUT_MS) {
+            deferred.await()
+        }
+    } finally {
+        winHandler.setOnGetProcessInfoListener(previousListener)
+    }
 }
 
 // TODO logs in composables are 'unstable' which can cause recomposition (performance issues)
@@ -372,8 +412,16 @@ fun XServerScreen(
     var showElementEditor by remember { mutableStateOf(false) }
     var elementToEdit by remember { mutableStateOf<com.winlator.inputcontrols.ControlElement?>(null) }
     var showPhysicalControllerDialog by remember { mutableStateOf(false) }
+    var showTouchGestureDialog by remember { mutableStateOf(false) }
+    var isTouchscreenModeActive by remember { mutableStateOf(container.isTouchscreenMode) }
+    var currentGestureConfig by remember {
+        mutableStateOf(app.gamenative.data.TouchGestureConfig.fromJson(container.getGestureConfig()))
+    }
     var keyboardRequestedFromOverlay by remember { mutableStateOf(false) }
     var showQuickMenu by remember { mutableStateOf(false) }
+    var quickMenuToolsVisible by remember { mutableStateOf(false) }
+    var quickMenuWineProcesses by remember { mutableStateOf<List<ProcessInfo>>(emptyList()) }
+    var quickMenuWineProcessesLoading by remember { mutableStateOf(false) }
     var hasPhysicalController by remember { mutableStateOf(false) }
     var keepPausedForEditor by remember { mutableStateOf(false) }
     var hasPhysicalKeyboard by remember { mutableStateOf(false) }
@@ -789,6 +837,37 @@ fun XServerScreen(
         showQuickMenu = false
     }
 
+    LaunchedEffect(showQuickMenu, quickMenuToolsVisible, xServerView) {
+        if (!showQuickMenu || !quickMenuToolsVisible) {
+            quickMenuWineProcesses = emptyList()
+            quickMenuWineProcessesLoading = false
+            return@LaunchedEffect
+        }
+
+        val winHandler = xServerView?.getxServer()?.winHandler
+        if (winHandler == null) {
+            quickMenuWineProcesses = emptyList()
+            quickMenuWineProcessesLoading = false
+            return@LaunchedEffect
+        }
+
+        quickMenuWineProcessesLoading = true
+        while (showQuickMenu && quickMenuToolsVisible) {
+            val snapshot = withContext(Dispatchers.IO) {
+                requestWineProcessSnapshot(winHandler)
+                    ?.sortedWith(
+                        compareByDescending<ProcessInfo> { normalizeProcessName(it.name) !in buildEssentialProcessAllowlist() }
+                            .thenByDescending { it.memoryUsage },
+                    )
+            }
+            if (snapshot != null) {
+                quickMenuWineProcesses = snapshot
+            }
+            quickMenuWineProcessesLoading = false
+            delay(QUICK_MENU_PROCESS_POLL_INTERVAL_MS)
+        }
+    }
+
     val onQuickMenuItemSelected: (Int) -> Boolean = { itemId ->
         when (itemId) {
             QuickMenuAction.KEYBOARD -> {
@@ -918,6 +997,55 @@ fun XServerScreen(
                     }
                 }
                 true
+            }
+
+            QuickMenuAction.TOUCHSCREEN_MODE -> {
+                val newMode = !container.isTouchscreenMode
+                container.setTouchscreenMode(newMode)
+                container.saveData()
+                isTouchscreenModeActive = newMode
+
+                // Notify TouchpadView of the mode change
+                PluviaApp.touchpadView?.setTouchscreenMode(newMode)
+
+                if (newMode) {
+                    // Apply gesture config when enabling
+                    PluviaApp.touchpadView?.setGestureConfig(currentGestureConfig)
+
+                    // Hide on-screen controls (mirrors startup priority logic)
+                    if (areControlsVisible) {
+                        hideInputControls()
+                        areControlsVisible = false
+                    }
+
+                    // Hide cursor in touchscreen mode
+                    xServerView?.renderer?.setCursorVisible(false)
+                } else {
+                    // Restore cursor if mouse input is allowed
+                    if (!container.isDisableMouseInput) {
+                        xServerView?.renderer?.setCursorVisible(true)
+                    }
+
+                    // Re-evaluate whether to show on-screen controls
+                    // (same logic as scanForExternalDevices startup path)
+                    if (!hasPhysicalController && !hasPhysicalKeyboard &&
+                        !hasPhysicalMouse && !hasInternalTouchpad) {
+                        val manager = PluviaApp.inputControlsManager
+                        val profiles = manager?.getProfiles(false) ?: listOf()
+                        if (profiles.isNotEmpty() && !areControlsVisible) {
+                            val profileIdStr = container.getExtra("profileId", "0")
+                            val profileId = profileIdStr.toIntOrNull() ?: 0
+                            val targetProfile = if (profileId != 0) {
+                                manager?.getProfile(profileId)
+                            } else {
+                                null
+                            } ?: manager?.getProfile(0) ?: profiles.getOrNull(2) ?: profiles.first()
+                            showInputControls(targetProfile, xServerView!!.getxServer().winHandler, container)
+                            areControlsVisible = true
+                        }
+                    }
+                }
+                false
             }
 
             QuickMenuAction.EDIT_PHYSICAL_CONTROLLER -> {
@@ -2024,12 +2152,19 @@ fun XServerScreen(
             onDismiss = dismissOverlayMenu,
             onItemSelected = onQuickMenuItemSelected,
             renderer = xServerView?.renderer,
+            winHandler = xServerView?.getxServer()?.winHandler,
+            wineProcesses = quickMenuWineProcesses,
+            isWineProcessesLoading = quickMenuWineProcessesLoading,
+            onToolsVisibilityChanged = { quickMenuToolsVisible = it },
             isPerformanceHudEnabled = isPerformanceHudEnabled,
             performanceHudConfig = performanceHudConfig,
             onPerformanceHudConfigChanged = ::applyPerformanceHudConfig,
             hasPhysicalController = hasPhysicalController,
+            isTouchscreenModeActive = isTouchscreenModeActive,
+            onTouchGestureSettingsClick = { showTouchGestureDialog = true },
             activeToggleIds = buildSet {
                 if (areControlsVisible) add(QuickMenuAction.INPUT_CONTROLS)
+                if (isTouchscreenModeActive) add(QuickMenuAction.TOUCHSCREEN_MODE)
             },
         )
 
@@ -2078,6 +2213,21 @@ fun XServerScreen(
                 showElementEditor = false
                 // Keep edit mode active so user can edit other elements
             }
+        )
+    }
+
+    // Touch Gesture Settings Dialog
+    if (showTouchGestureDialog) {
+        app.gamenative.ui.component.dialog.TouchGestureSettingsDialog(
+            gestureConfig = currentGestureConfig,
+            onDismiss = { showTouchGestureDialog = false },
+            onSave = { newConfig ->
+                currentGestureConfig = newConfig
+                container.setGestureConfig(newConfig.toJson())
+                container.saveData()
+                PluviaApp.touchpadView?.setGestureConfig(newConfig)
+                showTouchGestureDialog = false
+            },
         )
     }
 
@@ -2521,6 +2671,7 @@ private fun shiftXEnvironmentToContext(
 
     return environment
 }
+
 private fun setupXEnvironment(
     context: Context,
     appId: String,
@@ -2538,6 +2689,8 @@ private fun setupXEnvironment(
     onGameLaunchError: ((String) -> Unit)? = null,
     navigateBack: () -> Unit,
 ): XEnvironment {
+    ProcessHelper.hardKillStaleWineProcesses()
+
     val gameSource = ContainerUtils.extractGameSourceFromContainerId(appId)
     val lc_all = container!!.lC_ALL
     val imageFs = ImageFs.find(context)
@@ -2865,6 +3018,15 @@ private fun setupXEnvironment(
             } catch (e: Exception) {
                 Timber.e(e, "Error requesting encrypted app ticket for app $gameIdForTicket")
             }
+        }
+    }
+
+    if (container.wineVersion.lowercase().contains("proton-10")) {
+        try {
+            // Only proton 10 can apply this fix
+            XAudioUtils.replaceXAudioDllsFromRedistributable(context, guestProgramLauncherComponent, appId)
+        } catch (e: Exception) {
+            Timber.tag("replaceXAudioDllsFromRedistributable").w(e, "Failed to replace XAudio DLLs; continuing launch")
         }
     }
 

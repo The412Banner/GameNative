@@ -305,7 +305,7 @@ private fun OptionItem(
         )
 
         Text(
-            text = option.optionType.text,
+            text = stringResource(option.optionType.title),
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = if (isFocused) FontWeight.Medium else FontWeight.Normal,
             color = when {
@@ -342,6 +342,8 @@ private fun getIconForOption(type: AppOptionMenuType): ImageVector {
         AppOptionMenuType.TestGraphics -> Icons.Default.Build
         AppOptionMenuType.ImportConfig -> Icons.Default.ArrowDownward
         AppOptionMenuType.ExportConfig -> Icons.Default.ArrowUpward
+        AppOptionMenuType.ImportSaves -> Icons.Default.ArrowDownward
+        AppOptionMenuType.ExportSaves -> Icons.Default.ArrowUpward
         AppOptionMenuType.ManageGameContent -> Icons.Default.Apps
         AppOptionMenuType.ManageWorkshop -> Icons.Default.Build
         AppOptionMenuType.ChangeBranch -> Icons.AutoMirrored.Filled.CallSplit
@@ -381,6 +383,8 @@ private fun groupOptions(options: List<AppMenuOption>): Map<OptionCategory, List
             AppOptionMenuType.UseKnownConfig,
             AppOptionMenuType.ImportConfig,
             AppOptionMenuType.ExportConfig,
+            AppOptionMenuType.ImportSaves,
+            AppOptionMenuType.ExportSaves,
             -> containerSettings.add(option)
 
             // Cloud Saves

@@ -2,6 +2,7 @@ package app.gamenative.ui
 
 import android.content.Context
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
@@ -1096,6 +1097,10 @@ fun PluviaMain(
         }
     }
 
+    BackHandler(enabled = state.loadingDialogVisible && !SteamService.keepAlive) {
+        // TODO: Make prelaunch/loading operations cancellable so Back can exit safely.
+    }
+
     PluviaTheme(
         isDark = when (state.appTheme) {
             AppTheme.AUTO -> isSystemInDarkTheme()
@@ -1565,7 +1570,7 @@ fun preLaunchApp(
                         title = context.getString(R.string.game_executable_not_found_title),
                         message = context.getString(R.string.game_executable_not_found),
                         dismissBtnText = context.getString(R.string.ok),
-                        actionBtnText = AppOptionMenuType.EditContainer.text,
+                        actionBtnText = context.getString(AppOptionMenuType.EditContainer.title),
                     ),
                 )
                 return@launch
