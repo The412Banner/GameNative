@@ -38,6 +38,8 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -56,6 +58,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import app.gamenative.R
 import app.gamenative.ui.util.SnackbarManager
@@ -415,6 +418,9 @@ fun XServerScreen(
     var currentGestureConfig by remember {
         mutableStateOf(app.gamenative.data.TouchGestureConfig.fromJson(container.getGestureConfig()))
     }
+    val clickHighlightPoints = remember { mutableStateListOf<app.gamenative.ui.component.HighlightPoint>() }
+    var debugGestureName by remember { mutableStateOf("") }
+    var debugGestureKey by remember { mutableIntStateOf(0) }
     var keyboardRequestedFromOverlay by remember { mutableStateOf(false) }
     var showQuickMenu by remember { mutableStateOf(false) }
     var quickMenuToolsVisible by remember { mutableStateOf(false) }
@@ -1497,6 +1503,38 @@ fun XServerScreen(
                 frameLayout.addView(PluviaApp.touchpadView)
                 PluviaApp.touchpadView?.setMoveCursorToTouchpoint(PrefManager.getBoolean("move_cursor_to_touchpoint", false))
 
+                // Wire keyboard toggle callback for gesture "Show Keyboard" action
+                PluviaApp.touchpadView?.setShowKeyboardCallback {
+                    PluviaApp.touchpadView?.post {
+                        if (PluviaApp.touchpadView?.windowToken == null) return@post
+                        imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
+                    }
+                }
+
+                // Wire click highlight + gesture debug listener
+                PluviaApp.touchpadView?.setClickHighlightListener(object : com.winlator.widget.TouchpadView.ClickHighlightListener {
+                    override fun onClickAt(screenX: Float, screenY: Float) {
+                        PluviaApp.touchpadView?.post {
+                            if (currentGestureConfig.showClickHighlight) {
+                                clickHighlightPoints.add(
+                                    app.gamenative.ui.component.HighlightPoint(
+                                        screenX, screenY,
+                                        androidx.compose.animation.core.Animatable(0.5f),
+                                    ),
+                                )
+                            }
+                        }
+                    }
+                    override fun onGestureTriggered(gestureName: String) {
+                        PluviaApp.touchpadView?.post {
+                            if (currentGestureConfig.showGestureDebugOverlay) {
+                                debugGestureName = gestureName
+                                debugGestureKey++
+                            }
+                        }
+                    }
+                })
+
                 // Add invisible IME receiver to capture system keyboard input when keyboard is on external display
                 val imeDisplayContext = context.display?.let { display ->
                     context.createDisplayContext(display)
@@ -2031,6 +2069,37 @@ fun XServerScreen(
             view.tag = null
         },
     )
+        }
+
+        // Click highlight overlay (gesture overhaul)
+        if (currentGestureConfig.showClickHighlight && clickHighlightPoints.isNotEmpty()) {
+            app.gamenative.ui.component.ClickHighlightOverlay(points = clickHighlightPoints)
+        }
+
+        // Debug gesture name overlay (gesture overhaul)
+        if (currentGestureConfig.showGestureDebugOverlay && debugGestureName.isNotEmpty()) {
+            LaunchedEffect(debugGestureKey) {
+                kotlinx.coroutines.delay(1200)
+                debugGestureName = ""
+            }
+            androidx.compose.foundation.layout.Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 48.dp),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                androidx.compose.material3.Text(
+                    text = debugGestureName,
+                    color = androidx.compose.ui.graphics.Color.White,
+                    fontSize = 18.sp,
+                    modifier = Modifier
+                        .background(
+                            androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+                        )
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                )
+            }
         }
 
         // Floating toolbar for edit mode (always visible in edit mode)

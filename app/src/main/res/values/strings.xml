@@ -730,9 +730,12 @@
     <string name="shooter_mode_toggle_description">Auto-replace stick elements with dynamic joysticks</string>
     <string name="shooter_mode_on">Enable Mouse</string>
     <string name="shooter_mode_off">Enable Sticks</string>
-
     <!-- Gesture Settings Dialog -->
     <string name="gesture_settings_title">Touch Gesture Settings</string>
+    <string name="gesture_section_single_finger">Single Finger</string>
+    <string name="gesture_section_two_finger">Two Finger</string>
+    <string name="gesture_section_three_finger">Three Finger</string>
+    <string name="gesture_section_other">Other</string>
     <string name="gesture_tap">Tap</string>
     <string name="gesture_tap_subtitle">Left Click</string>
     <string name="gesture_drag">Drag Finger</string>
@@ -751,11 +754,26 @@
     <string name="gesture_pan_middle_mouse">Middle Mouse Pan</string>
     <string name="gesture_pan_wasd">WASD</string>
     <string name="gesture_pan_arrow_keys">Arrow Keys</string>
+    <string name="gesture_pan_left_click_drag">Left Click Drag</string>
+    <string name="gesture_pan_right_click_drag">Right Click Drag</string>
     <string name="gesture_zoom_scroll_wheel">Scroll Wheel</string>
     <string name="gesture_zoom_plus_minus">+/- Keys</string>
     <string name="gesture_zoom_page_up_down">Page Up/Down</string>
     <string name="gesture_action_label">Action</string>
+    <string name="gesture_action_show_keyboard">Show Keyboard</string>
     <string name="gesture_delay_label">Delay</string>
+    <string name="gesture_two_finger_hold">Two-Finger Hold</string>
+    <string name="gesture_two_finger_hold_delay">Two-Finger Hold Delay (ms)</string>
+    <string name="gesture_three_finger_tap">Three-Finger Tap</string>
+    <string name="gesture_three_finger_drag">Three-Finger Drag</string>
+    <string name="gesture_three_finger_hold">Three-Finger Hold</string>
+    <string name="gesture_three_finger_hold_delay">Three-Finger Hold Delay (ms)</string>
+    <string name="gesture_threshold">Gesture Threshold (px)</string>
+    <string name="gesture_threshold_subtitle">Movement needed to lock gesture type (lower = more responsive)</string>
+    <string name="gesture_show_click_highlight">Show Click Highlight</string>
+    <string name="gesture_show_click_highlight_subtitle">Show a circle at tap location</string>
+    <string name="gesture_show_debug_overlay">Show Gesture Debug Overlay</string>
+    <string name="gesture_show_debug_overlay_subtitle">Show temporary gesture labels at top center</string>
 
     <string name="external_display_input">External Display Input</string>
     <string name="external_display_input_subtitle">Choose how a connected presentation display should behave</string>
