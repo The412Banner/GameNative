@@ -199,10 +199,11 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
 
     @Override
     protected void onDetachedFromWindow() {
-        // Cancel the continuous-gesture refresh runnable so the view isn't
-        // kept referenced after detach (no ACTION_CANCEL is guaranteed on
-        // detach, so do this defensively here).
-        stopGestureRefresh();
+        // Full cleanup on detach: cancels timers, refresh runnable, releases
+        // any held drag/long-press/2F/3F-hold injections, and resets gesture
+        // state. Avoids leaking pressed buttons/keys when the view is removed
+        // mid-gesture (e.g., game exit while a hold is active).
+        handleTsCancel();
         super.onDetachedFromWindow();
     }
 
@@ -867,6 +868,9 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
     // ── Two-finger move (pan / pinch) ────────────────────────────────
     private void handleTsTwoFingerMove(MotionEvent event) {
         if (multiFingerGestureUsed) return;
+        // If a two-finger hold has already fired, ignore subsequent jitter so
+        // it can't lock into a pan/zoom gesture mid-hold.
+        if (twoFingerHoldTriggered) return;
         if (gestureFingerCount < 2 || gestureOwnedPointerIds.size() < 2) return;
 
         int idx0 = event.findPointerIndex(gestureOwnedPointerIds.get(0));
@@ -1113,6 +1117,10 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
             releaseAllDragButtons();
             dragButtonPressed = false;
         }
+        if (longPressTriggered) {
+            injectRelease(gestureConfig.getLongPressAction());
+            longPressTriggered = false;
+        }
         if (twoFingerHoldTriggered) {
             injectRelease(gestureConfig.getTwoFingerHoldAction());
             twoFingerHoldTriggered = false;
@@ -1144,6 +1152,12 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
         cancelDrag();
         cancelTwoFingerHoldTimer();
         stopGestureRefresh();
+        // If a two-finger hold already injected its action, release it before
+        // transitioning so the held button/key doesn't stay down.
+        if (twoFingerHoldTriggered) {
+            injectRelease(gestureConfig.getTwoFingerHoldAction());
+            twoFingerHoldTriggered = false;
+        }
         // Clean up two-finger state
         releasePanKeys();
         releaseAllDragButtons();
@@ -1191,6 +1205,9 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
     // ── Three-finger move ────────────────────────────────────────────
     private void handleTsThreeFingerMove(MotionEvent event) {
         if (gestureFingerCount < 3 || gestureOwnedPointerIds.size() < 3) return;
+        // If a three-finger hold has already fired, ignore subsequent jitter so
+        // it can't lock into a pan gesture mid-hold.
+        if (threeFingerHoldTriggered) return;
 
         float sumX = 0, sumY = 0;
         int validCount = 0;
@@ -1331,6 +1348,9 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
             xServer.injectKeyPress(keycode);
             return;
         }
+        // Unknown "key_*" actions must not fall through to the default-left-click
+        // button path; actionToKeycode logged a warning, just bail.
+        if (action.startsWith("key_")) return;
         Pointer.Button btn = actionToButton(action);
         if (btn != null) {
             if (xServer.isRelativeMouseMovement()) {
@@ -1351,6 +1371,8 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
             xServer.injectKeyRelease(keycode);
             return;
         }
+        // Mirror injectClick: don't release a button for an unknown key_* action.
+        if (action.startsWith("key_")) return;
         Pointer.Button btn = actionToButton(action);
         if (btn != null) {
             if (xServer.isRelativeMouseMovement()) {

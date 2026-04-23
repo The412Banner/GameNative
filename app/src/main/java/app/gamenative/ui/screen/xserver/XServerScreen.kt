@@ -1504,27 +1504,21 @@ fun XServerScreen(
                 PluviaApp.touchpadView?.setMoveCursorToTouchpoint(PrefManager.getBoolean("move_cursor_to_touchpoint", false))
 
                 // Wire keyboard toggle callback for gesture "Show Keyboard" action.
-                // Mirror the QuickMenuAction.KEYBOARD codepath so external-display
-                // sessions route through imeInputReceiver instead of toggling the
-                // primary-display IME (which can hide an already-visible keyboard).
+                // Mirrors the QuickMenuAction.KEYBOARD external-display routing
+                // (uses imeInputReceiver on external displays) but skips the
+                // 500ms post-delay used by the menu path — a gesture is already
+                // a direct touch interaction and should respond immediately.
                 PluviaApp.touchpadView?.setShowKeyboardCallback {
                     val anchor = PluviaApp.touchpadView ?: return@setShowKeyboardCallback
                     anchor.post {
                         if (anchor.windowToken == null) return@post
-                        val show = {
-                            val isExternalDisplaySession =
-                                (anchor.display?.displayId ?: android.view.Display.DEFAULT_DISPLAY) != android.view.Display.DEFAULT_DISPLAY
-                            if (isExternalDisplaySession) {
-                                imeInputReceiver?.showKeyboard()
-                                    ?: imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
-                            } else {
-                                imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
-                            }
-                        }
-                        if (Build.VERSION.SDK_INT > 29) {
-                            anchor.postDelayed({ show() }, 500) // Pixel/Android-12+ quirk
+                        val isExternalDisplaySession =
+                            (anchor.display?.displayId ?: android.view.Display.DEFAULT_DISPLAY) != android.view.Display.DEFAULT_DISPLAY
+                        if (isExternalDisplaySession) {
+                            imeInputReceiver?.showKeyboard()
+                                ?: imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
                         } else {
-                            show()
+                            imm.toggleSoftInput(InputMethodManager.SHOW_FORCED, 0)
                         }
                     }
                 }
