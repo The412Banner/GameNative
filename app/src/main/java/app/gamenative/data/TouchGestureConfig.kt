@@ -53,7 +53,7 @@ data class TouchGestureConfig(
 
     // 11. Three-Finger Hold — customizable action + delay
     val threeFingerHoldEnabled: Boolean = true,
-    val threeFingerHoldAction: String = "key_ESC",
+    val threeFingerHoldAction: String = ACTION_KEY_ESC,
     val threeFingerHoldDelay: Int = DEFAULT_DELAY_MS,
 
     // 12. Click highlight circle
@@ -114,6 +114,7 @@ data class TouchGestureConfig(
 
         // ── Special actions ──────────────────────────────────────────────
         const val ACTION_SHOW_KEYBOARD = "show_keyboard"
+        const val ACTION_KEY_ESC = "key_ESC"
 
         // ── Action identifiers: two-finger drag (pan) ───────────────────
         const val PAN_WASD = "wasd"
@@ -186,7 +187,7 @@ data class TouchGestureConfig(
                     threeFingerDragEnabled = obj.optBoolean(KEY_THREE_FINGER_DRAG_ENABLED, false),
                     threeFingerDragAction = obj.optString(KEY_THREE_FINGER_DRAG_ACTION, PAN_ARROW_KEYS),
                     threeFingerHoldEnabled = obj.optBoolean(KEY_THREE_FINGER_HOLD_ENABLED, true),
-                    threeFingerHoldAction = obj.optString(KEY_THREE_FINGER_HOLD_ACTION, "key_ESC"),
+                    threeFingerHoldAction = obj.optString(KEY_THREE_FINGER_HOLD_ACTION, ACTION_KEY_ESC),
                     threeFingerHoldDelay = obj.optInt(KEY_THREE_FINGER_HOLD_DELAY, DEFAULT_DELAY_MS),
                     showClickHighlight = obj.optBoolean(KEY_SHOW_CLICK_HIGHLIGHT, false),
                     showGestureDebugOverlay = obj.optBoolean(KEY_SHOW_GESTURE_DEBUG_OVERLAY, false),

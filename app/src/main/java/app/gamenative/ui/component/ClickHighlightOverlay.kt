@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -23,12 +24,17 @@ fun ClickHighlightOverlay(
         onDispose { points.clear() }
     }
 
-    // Animate each point's alpha from 0.5 → 0 over 300ms, then remove
-    for (i in points.indices) {
-        val point = points.getOrNull(i) ?: continue
-        LaunchedEffect(point) {
-            point.alpha.animateTo(0f, animationSpec = tween(300))
-            points.remove(point)
+    // Animate each point's alpha from 0.5 → 0 over 300ms, then remove.
+    // Snapshot to a stable list and key the effect on the unique HighlightPoint
+    // identity so adding/removing items doesn't shift indices and cancel
+    // in-flight animations for surviving points.
+    val snapshot = points.toList()
+    for (point in snapshot) {
+        key(point) {
+            LaunchedEffect(point) {
+                point.alpha.animateTo(0f, animationSpec = tween(300))
+                points.remove(point)
+            }
         }
     }
 

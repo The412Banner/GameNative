@@ -197,6 +197,15 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
         }
     }
 
+    @Override
+    protected void onDetachedFromWindow() {
+        // Cancel the continuous-gesture refresh runnable so the view isn't
+        // kept referenced after detach (no ACTION_CANCEL is guaranteed on
+        // detach, so do this defensively here).
+        stopGestureRefresh();
+        super.onDetachedFromWindow();
+    }
+
     // Left/right click drag tracking
     private boolean leftClickDragButtonDown;
     private boolean rightClickDragButtonDown;
@@ -648,9 +657,12 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
                     if (prevCount == 3 && gestureFingerCount == 2) {
                         // Three-finger gesture ending
                         handleTsThreeFingerUp(event);
-                    } else if (prevCount >= 2 && gestureFingerCount >= 1) {
-                        // Multi-finger gesture ending (e.g. 2→1)
+                    } else if (prevCount == 2 && gestureFingerCount == 1) {
+                        // Two-finger gesture ending (2→1)
                         handleTsPointerUp(event);
+                    } else if (prevCount >= 4) {
+                        // 4→3 (and any higher transition): no-op so the active
+                        // 3-finger gesture is not torn down by two-finger cleanup.
                     } else if (prevCount >= 1 && gestureFingerCount == 0) {
                         // Last gesture finger lifted while controls still hold pointers
                         handleTsUp(event, actionIndex);
@@ -663,8 +675,12 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
                     int prevCount = gestureFingerCount;
                     gestureOwnedPointerIds.remove(Integer.valueOf(pointerId));
                     gestureFingerCount = Math.max(0, gestureFingerCount - 1);
-                    // Clean up multi-finger state if needed
-                    if (prevCount >= 2) {
+                    // Clean up multi-finger state if needed, routing by previous
+                    // gesture mode so a 3-finger gesture isn't ended via the
+                    // two-finger cleanup path.
+                    if (prevCount >= 3) {
+                        handleTsThreeFingerUp(event);
+                    } else if (prevCount == 2) {
                         handleTsPointerUp(event);
                     }
                     handleTsUp(event, actionIndex);
@@ -874,7 +890,7 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
 
         long now = System.currentTimeMillis();
 
-        // #1: Settle window — ignore movement during first 50ms after second finger lands
+        // #1: Settle window — ignore movement during first 120ms after second finger lands
         if (now - twoFingerDownTime < TWO_FINGER_SETTLE_MS) {
             // Still settling — update stored positions but don't accumulate deltas
             twoFingerLastX0 = x0; twoFingerLastY0 = y0;

@@ -478,11 +478,11 @@ private data class ActionCategory(val header: String, val actions: List<Pair<Str
 @Composable
 private fun buildActionCategories(): List<ActionCategory> {
     val special = ActionCategory(
-        header = "Special",
+        header = stringResource(R.string.gesture_header_special),
         actions = listOf(ACTION_SHOW_KEYBOARD to stringResource(R.string.gesture_action_show_keyboard))
     )
     val mouse = ActionCategory(
-        header = "Mouse",
+        header = stringResource(R.string.gesture_header_mouse),
         actions = listOf(
             ACTION_LEFT_CLICK to stringResource(R.string.gesture_action_left_click),
             ACTION_RIGHT_CLICK to stringResource(R.string.gesture_action_right_click),
@@ -490,7 +490,7 @@ private fun buildActionCategories(): List<ActionCategory> {
         )
     )
     val commonGame = ActionCategory(
-        header = "Common Game Keys",
+        header = stringResource(R.string.gesture_header_common_game),
         actions = listOf(
             "key_ESC" to "ESC", "key_SPACE" to "SPACE", "key_E" to "E", "key_Q" to "Q",
             "key_F" to "F", "key_TAB" to "TAB", "key_ENTER" to "ENTER",
@@ -498,15 +498,15 @@ private fun buildActionCategories(): List<ActionCategory> {
         )
     )
     val letters = ActionCategory(
-        header = "Letters A\u2013Z",
+        header = stringResource(R.string.gesture_header_letters),
         actions = ('A'..'Z').map { "key_$it" to it.toString() }
     )
     val numbers = ActionCategory(
-        header = "Numbers 0\u20139",
+        header = stringResource(R.string.gesture_header_numbers),
         actions = (0..9).map { "key_$it" to it.toString() }
     )
     val functionKeys = ActionCategory(
-        header = "Function Keys",
+        header = stringResource(R.string.gesture_header_function_keys),
         actions = (1..12).map { "key_F$it" to "F$it" }
     )
     return listOf(special, mouse, commonGame, letters, numbers, functionKeys)
