@@ -80,6 +80,12 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
     public Container getContainer() { return this.container; }
     public void setContainer(Container container) { this.container = container; }
 
+    /** Numeric Steam appid for the game in this container (e.g. "221380").
+     *  Set from XServerScreen before start(); only consumed in real-Steam mode
+     *  to publish SteamGameId / SteamAppId for the steam_helper handshake. */
+    private String steamAppId;
+    public void setSteamAppId(String steamAppId) { this.steamAppId = steamAppId; }
+
     public BionicProgramLauncherComponent(ContentsManager contentsManager, ContentProfile wineProfile) {
         this.contentsManager = contentsManager;
         this.wineProfile = wineProfile;
@@ -309,6 +315,15 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
 
         //String nativeDir = context.getApplicationInfo().nativeLibraryDir; // e.g. /data/app/…/lib/arm64
 
+        // Real-Steam mode: env vars required by Proton's lsteamclient.dll +
+        // native libsteamclient.so bridge (loader path, IPC endpoint, VDF root).
+        if (container != null && container.isLaunchRealSteam()) {
+            addRealSteamEnvVars(envVars, imageFs);
+            // Boot the native libsteamclient.so inside *this* (Android) process
+            // so Wine-side lsteamclient.dll has something to connect to.
+            bootstrapNativeSteamClient(envVars, imageFs);
+        }
+
         // Merge any additional environment variables from external sources
         if (this.envVars != null) {
             envVars.putAll(this.envVars);
@@ -444,6 +459,140 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         envVars.put("BOX64_RCFILE", box64RCFile.getPath());
     }
 
+    /**
+     * Sets env vars required when launching with the real Steam client
+     * (Proton's steam.exe + lsteamclient.dll talking to the native libsteamclient.so).
+     *
+     * Three groups:
+     *   A. WINESTEAMCLIENTPATH{,64} — where lsteamclient.dll dlopens the native bridge.
+     *   B. _STEAM_SETENV_MANAGER + friends — bootstrap-gate handshake checked by
+     *      libsteamclient.so's init_process_env_manager_from_dll, plus the IPC endpoint
+     *      overrides resolved in its endpoint string parser.
+     *   C. SteamPath / SteamUser / SteamClientLaunch — Wine-side identity expected by
+     *      steam_helper (steam.exe) and Steamworks games inside the prefix.
+     *
+     * STEAM_BASE_FOLDER points the native .so at the Linux-side directory that mirrors
+     * the Windows `C:\Program Files (x86)\Steam` install, so its `<base>/config/config.vdf`
+     * read lands on the file SteamTokenLogin.phase1SteamConfig() writes.
+     */
+    private void addRealSteamEnvVars(EnvVars envVars, ImageFs imageFs) {
+        String steamRootLinux = imageFs.wineprefix + "/drive_c/Program Files (x86)/Steam";
+        String breakpadDir = imageFs.getRootDir().getPath() + "/usr/tmp/breakpad";
+        new File(breakpadDir).mkdirs();
+
+        // A. lsteamclient.dll loader paths -> native Linux client/bridge .so
+        envVars.put("WINESTEAMCLIENTPATH64", steamRootLinux + "/linux64/steamclient.so");
+        envVars.put("WINESTEAMCLIENTPATH",   steamRootLinux + "/linux32/steamclient.so");
+
+        // B. libsteamclient.so bootstrap-gate handshake (all required together)
+        envVars.put("_STEAM_SETENV_MANAGER", "1");
+        envVars.put("BREAKPAD_DUMP_LOCATION", breakpadDir);
+        envVars.put("STEAM_BASE_FOLDER", steamRootLinux);
+        envVars.put("ENABLE_VK_LAYER_VALVE_steam_overlay_1", "0");
+        envVars.put("STEAMVIDEOTOKEN", "1");
+
+        // IPC endpoints; override defaults if the MCP-hosted .so listens elsewhere
+        envVars.put("Steam3Master",       "127.0.0.1:57343");
+        envVars.put("SteamClientService", "127.0.0.1:57344");
+
+        // C. Wine-side Steam identity for steam_helper / games
+        String username = app.gamenative.PrefManager.INSTANCE.getUsername();
+        if (username != null && !username.isEmpty()) {
+            envVars.put("SteamUser", username);
+            // Mirrors what the real Steam client publishes; some Steamworks
+            // games (and steam_helper itself) read SteamAppUser as a fallback.
+            envVars.put("SteamAppUser", username);
+        }
+        envVars.put("SteamClientLaunch", "1");
+        envVars.put("SteamPath", "C:\\Program Files (x86)\\Steam");
+
+        // Override the SteamGameId=0 set above with the actual Steam appid for
+        // this container, and publish the matching SteamAppId. Steamworks games
+        // (and the steam.exe / steam_helper handshake) require both to be set
+        // to the running game's appid for the IPC bridge to attach correctly.
+        if (steamAppId != null && !steamAppId.isEmpty()) {
+            envVars.put("SteamGameId", steamAppId);
+            envVars.put("SteamAppId", steamAppId);
+        }
+        envVars.put("STEAM_LOG_LEVEL", "10");
+        envVars.put("STEAM_DEBUG", "1");
+        envVars.put("IPCLOGGING", "1");
+        envVars.put("STEAMNETWORKINGSOCKETS_LOG_LEVEL", "verbose");
+        envVars.put("NetworkVerbose", "1");
+        envVars.put("SteamNetworkingSockets_Verbose", "4");
+        envVars.put("SteamNetworkingSocketsLib_Verbose", "4");
+        envVars.put("DebugNetworkConnections", "1");
+    }
+
+    /**
+     * Loads libsteamclient.so into the Android process (via JNI -> dlopen) and
+     * brings it up to a connected SteamClient + pipe + global-user state, so
+     * Proton's lsteamclient.dll inside the Wine subprocess we launch next has
+     * a live IPC peer.
+     *
+     * HOME handling: the native init calls setenv("HOME", ...) on the Android
+     * process. The Wine subprocess we spawn afterwards is invoked with an
+     * explicit envp via ProcessHelper.exec(...), which already contains the
+     * project's own HOME (imageFs.home_path) — so the value we set here does
+     * NOT leak into Wine.
+     */
+    private void bootstrapNativeSteamClient(EnvVars envVars, ImageFs imageFs) {
+        // HOME for libsteamclient.so points at the parent of `Steam/`; the .so
+        // resolves <HOME>/Steam/config/config.vdf etc. relative to it.
+        String nativeHome = imageFs.wineprefix + "/drive_c/Program Files (x86)";
+        // The Android-Steam build of libsteamclient.so ships inside our imagefs
+        // (e.g. /data/data/app.gamenative/files/imagefs/usr/lib/libsteamclient.so).
+        String libPath = new File(imageFs.getLibDir(), "libsteamclient.so").getAbsolutePath();
+
+        File libFile = new File(libPath);
+        if (!libFile.exists()) {
+            Log.w("BionicProgramLauncherComponent",
+                  "libsteamclient.so not found at " + libPath + "; skipping native bootstrap");
+            return;
+        }
+
+        java.util.HashMap<String, String> extra = new java.util.HashMap<>();
+        // bootstrap-gate handshake vars libsteamclient.so checks during init
+        String[] passthrough = new String[] {
+                "_STEAM_SETENV_MANAGER",
+                "BREAKPAD_DUMP_LOCATION",
+                "STEAM_BASE_FOLDER",
+                "ENABLE_VK_LAYER_VALVE_steam_overlay_1",
+                "STEAMVIDEOTOKEN",
+                "SteamUser",
+        };
+        for (String key : passthrough) {
+            String val = envVars.get(key);
+            if (val != null && !val.isEmpty()) {
+                extra.put(key, val);
+            }
+        }
+
+        // Credentials for the explicit refresh-token logon path inside the .so.
+        // PrefManager.username is the Steam account login name; refreshToken is
+        // the JWT-style token Steam issued during our app login; steamUserSteamId64
+        // is the 64-bit SteamID. If any are missing we fall back to whatever
+        // cached auto-logon libsteamclient.so can do on its own.
+        String accountName  = app.gamenative.PrefManager.INSTANCE.getUsername();
+        String refreshToken = app.gamenative.PrefManager.INSTANCE.getRefreshToken();
+        long   steamId64    = app.gamenative.PrefManager.INSTANCE.getSteamUserSteamId64();
+
+        try {
+            int rc = app.gamenative.SteamBootstrap.INSTANCE.start(
+                    libPath,
+                    nativeHome,
+                    envVars.get("Steam3Master"),
+                    envVars.get("SteamClientService"),
+                    extra,
+                    accountName,
+                    refreshToken,
+                    steamId64);
+            Log.i("BionicProgramLauncherComponent", "SteamBootstrap.start rc=" + rc);
+        } catch (Throwable t) {
+            Log.e("BionicProgramLauncherComponent", "SteamBootstrap.start threw", t);
+        }
+    }
+
     public String execShellCommand(String command) {
         return execShellCommand(command, true);
     }
@@ -493,23 +642,42 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
             FileUtils.chmod(box64File, 0755);
         }
 
-        // Execute the command and capture its output
+        // Execute the command and capture its output.
+        //
+        // IMPORTANT: stderr MUST be drained concurrently with stdout, even when
+        // includeStderr=false. Wine spits out a flood of fixme:/err: lines on
+        // stderr; if we don't read it, the kernel's pipe buffer (~64 KB) fills,
+        // wine's next write(stderr,...) blocks, and the whole subprocess hangs
+        // forever -- which then deadlocks our stdout read too. SteamTokenLogin
+        // calls this with includeStderr=false, so this used to hang on boot.
         try {
             Log.d("BionicProgramLauncherComponent", "Shell command is " + finalCommand);
             java.lang.Process process = Runtime.getRuntime().exec(finalCommand, envVars.toStringArray(), workingDir != null ? workingDir : imageFs.getRootDir());
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()));
 
+            final StringBuilder stderrBuf = new StringBuilder();
+            Thread stderrPump = new Thread(() -> {
+                try {
+                    String l;
+                    while ((l = errorReader.readLine()) != null) {
+                        if (includeStderr) stderrBuf.append(l).append('\n');
+                        // else: discard, but we MUST still consume the stream
+                    }
+                } catch (IOException ignored) {
+                    // Subprocess closed stderr; fine.
+                }
+            }, "execShellCommand-stderr-pump");
+            stderrPump.setDaemon(true);
+            stderrPump.start();
+
             String line;
             while ((line = reader.readLine()) != null) {
                 output.append(line).append("\n");
             }
-            if (includeStderr) {
-                while ((line = errorReader.readLine()) != null) {
-                    output.append(line).append("\n");
-                }
-            }
             process.waitFor();
+            stderrPump.join();
+            if (includeStderr) output.append(stderrBuf);
         } catch (Exception e) {
             output.append("Error: ").append(e.getMessage());
         }

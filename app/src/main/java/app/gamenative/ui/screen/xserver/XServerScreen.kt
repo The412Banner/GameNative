@@ -2797,6 +2797,15 @@ private fun setupXEnvironment(
         val wow64Mode = container.isWoW64Mode
         guestProgramLauncherComponent.setContainer(container);
         guestProgramLauncherComponent.setWineInfo(xServerState.value.wineInfo);
+        if (guestProgramLauncherComponent is BionicProgramLauncherComponent) {
+            // Real-Steam mode publishes SteamGameId/SteamAppId from this value.
+            // Safe to set unconditionally; non-Steam sources will produce 0 and
+            // are ignored by the launcher unless launchRealSteam is on.
+            val numericAppId = runCatching { ContainerUtils.extractGameIdFromContainerId(appId) }.getOrNull()
+            if (numericAppId != null && numericAppId > 0) {
+                guestProgramLauncherComponent.setSteamAppId(numericAppId.toString())
+            }
+        }
         gameExecutable = "wine explorer /desktop=shell," + xServer.screenInfo + " " +
             getWineStartCommand(context, appId, container, bootToContainer, testGraphics, appLaunchInfo, envVars, guestProgramLauncherComponent, gameSource) +
             (if (container.execArgs.isNotEmpty()) " " + container.execArgs else "")
@@ -3442,9 +3451,20 @@ private fun getWineStartCommand(
         "\"wfm.exe\""
     } else {
         if (container.isLaunchRealSteam) {
-            // Launch Steam with the applaunch parameter to start the game
-            "\"C:\\\\Program Files (x86)\\\\Steam\\\\steam.exe\" -silent -vgui -tcp " +
-                    "-nobigpicture -nofriendsui -nochatui -nointro -applaunch $gameId"
+            // Launch steam.exe with the game's exe path as its argument.
+            // Real-Steam mode expects the binary to live under
+            // C:\Program Files (x86)\Steam\steamapps\common\<GameFolder>\<exe>
+            val appDirPath = SteamService.getAppDirPath(gameId)
+            val gameFolderName = appDirPath.substringAfterLast('/').ifEmpty { gameId.toString() }
+            val exePath = container.executablePath.ifEmpty { SteamService.getInstalledExe(gameId) }
+            val normalizedExe = exePath.replace('/', '\\').trimStart('\\')
+            // Match the other launch flows: cwd to the directory that contains
+            // the game's exe on the Linux side (the same path Wine reads as
+            // C:\Program Files (x86)\Steam\steamapps\common\<GameFolder>\...).
+            val executableDir = appDirPath + "/" + exePath.substringBeforeLast("/", "")
+            guestProgramLauncherComponent.workingDir = File(executableDir)
+            Timber.i("Real-Steam working directory is $executableDir")
+            "\"C:\\\\Program Files (x86)\\\\Steam\\\\steam.exe\" \"C:\\\\Program Files (x86)\\\\Steam\\\\steamapps\\\\common\\\\$gameFolderName\\\\$normalizedExe\""
         } else {
             var executablePath = ""
             if (container.executablePath.isNotEmpty()) {
@@ -4615,6 +4635,19 @@ private fun extractSteamFiles(
     onExtractFileListener: OnExtractFileListener?,
 ) {
     val imageFs = ImageFs.find(context)
+    val steamExe = File(
+        ImageFs.find(context).rootDir.absolutePath,
+        ImageFs.WINEPREFIX + "/drive_c/Program Files (x86)/Steam/steam.exe",
+    )
+    try {
+        steamExe.parentFile?.mkdirs()
+        context.assets.open("steam.exe").use { input ->
+            Files.copy(input, steamExe.toPath(), REPLACE_EXISTING)
+        }
+    } catch (e: IOException) {
+        Timber.e(e, "Failed to copy steam.exe asset")
+    }
+
     if (File(ImageFs.find(context).rootDir.absolutePath, ImageFs.WINEPREFIX + "/drive_c/Program Files (x86)/Steam/steam.exe").exists()) return
     val downloaded = File(imageFs.getFilesDir(), "steam.tzst")
     Timber.i("Extracting steam.tzst")
