@@ -43,6 +43,9 @@ object SteamBootstrap {
         steamId64: Long,
     ): Int
 
+    @JvmStatic
+    private external fun nativeShutdown()
+
     /**
      * Boot the native Steam client. Safe to call multiple times: only the
      * first call performs the dlopen + handshake; subsequent calls are no-ops
@@ -112,5 +115,27 @@ object SteamBootstrap {
             Log.e(TAG, "nativeInit failed with rc=$rc (libPath=$libsteamclientPath)")
         }
         return rc
+    }
+
+    /**
+     * Tear down the native Steam pipe + global user without unloading
+     * libsteamclient.so. Call when a real-Steam game session ends so a
+     * subsequent [start] call gets a fresh pipe / user.
+     *
+     * Safe to call when [start] never ran (or failed): the native side guards
+     * on the cached pipe / user globals.
+     */
+    fun stop() {
+        if (!initialized) {
+            Log.i(TAG, "stop() called but not initialized; skipping")
+            return
+        }
+        try {
+            nativeShutdown()
+        } catch (t: Throwable) {
+            Log.e(TAG, "nativeShutdown threw", t)
+        } finally {
+            initialized = false
+        }
     }
 }

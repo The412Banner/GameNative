@@ -2647,7 +2647,10 @@ class SteamService : Service(), IChallengeUrlChanged {
             EResult.ExpiredLoginAuthCode,
             EResult.RequirePasswordReEntry,
             EResult.ParentalControlRestricted,
-            EResult.CachedCredentialInvalid -> true
+            EResult.CachedCredentialInvalid,
+            EResult.AccessDenied,
+            EResult.Expired,
+            EResult.Revoked -> true
             else -> false
         }
 

@@ -68,6 +68,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import app.gamenative.PluviaApp
 import app.gamenative.PrefManager
+import app.gamenative.SteamBootstrap
 import app.gamenative.data.GameSource
 import app.gamenative.gamefixes.GameFixesRegistry
 import app.gamenative.data.LaunchInfo
@@ -3568,6 +3569,18 @@ private fun exit(
         Timber.e(e, "winHandler.stop() failed during exit")
     }
     PluviaApp.shutdownEnvironment()
+
+    // Real-Steam mode brought up libsteamclient.so inside this Android process
+    // (see BionicProgramLauncherComponent.bootstrapNativeSteamClient). Tear it
+    // down so the next launch can stand up a fresh pipe / user instead of
+    // inheriting the previous session's half-dead state.
+    if (container.isLaunchRealSteam) {
+        try {
+            SteamBootstrap.stop()
+        } catch (e: Exception) {
+            Timber.e(e, "SteamBootstrap.stop() failed during exit")
+        }
+    }
 
     // empty Wine/XDG trash in background after container stops
     CoroutineScope(Dispatchers.IO).launch {
