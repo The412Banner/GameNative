@@ -27,7 +27,7 @@
     <string name="base_app_reset_container_confirm">Reset</string>
     <string name="repair_container">Repair container</string>
     <string name="repair_container_title">Repair Container?</string>
-    <string name="repair_container_message">This will re-install the container\'s internal files (graphics drivers, DirectX, and runtime libraries previously installed) on the next launch. Existing Runtime installers in A: drive, if any, will run again.\n\nYour game files, save data, container settings, and any programs you installed manually will not be removed.\n\nUse this if a game suddenly stops working or fails to start.</string>
+    <string name="repair_container_message">This will re-install the container\'s internal files (C: drive, DirectX, and runtime libraries previously installed) on the next launch. Existing Runtime installers in A: drive, if any, will run again.\n\nYour game files, save data in A: drive and container settings will not be deleted. Backup anything from C: you may need before Repair. \n\nUse this if a game suddenly stops working or fails to start.</string>
     <string name="repair_container_confirm">Repair</string>
     <string name="repair_container_success">Container will re-extract all files on next launch</string>
     <string name="steam_verify_files_title">Verify Files</string>

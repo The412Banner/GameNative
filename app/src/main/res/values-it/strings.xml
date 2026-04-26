@@ -27,7 +27,7 @@
     <string name="base_app_reset_container_confirm">Reimposta</string>
     <string name="repair_container">Ripara contenitore</string>
     <string name="repair_container_title">Ripara contenitore?</string>
-    <string name="repair_container_message">Questo reinstallerà i file interni del contenitore (driver grafici, DirectX e librerie runtime precedentemente installate) al prossimo avvio. Gli installer di runtime nell\'unità A:, se presenti, verranno eseguiti di nuovo.\n\nI file di gioco, i dati di salvataggio, le impostazioni del contenitore e i programmi installati manualmente non verranno rimossi.\n\nUsalo se un gioco smette improvvisamente di funzionare o non si avvia.</string>
+    <string name="repair_container_message">Questo reinstallerà i file interni del contenitore (unità C:, DirectX e librerie runtime precedentemente installate) al prossimo avvio. Gli installer di runtime nell\'unità A:, se presenti, verranno eseguiti di nuovo.\n\nI file di gioco, i dati salvati nell\'unità A: e le impostazioni del contenitore non verranno rimossi. Esegui il backup di tutto dalla unità C: di cui potresti aver bisogno prima della riparazione.\n\nUsalo se un gioco smette improvvisamente di funzionare o non si avvia.</string>
     <string name="repair_container_confirm">Ripara</string>
     <string name="repair_container_success">Il contenitore riestrarrà tutti i file al prossimo avvio</string>
     <string name="steam_verify_files_title">Verifica File</string>

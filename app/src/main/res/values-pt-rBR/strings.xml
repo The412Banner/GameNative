@@ -1087,7 +1087,7 @@
     <string name="steam_reset_container_message">Isso redefinirá seu contêiner para a configuração padrão.</string>
     <string name="repair_container">Reparar contêiner</string>
     <string name="repair_container_title">Reparar contêiner?</string>
-    <string name="repair_container_message">Isso reinstalará os arquivos internos do contêiner (drivers gráficos, DirectX e bibliotecas de tempo de execução instaladas anteriormente) no próximo início. Os instaladores de tempo de execução na unidade A:, se houver, serão executados novamente.\n\nSeus arquivos de jogo, dados salvos, configurações do contêiner e programas instalados manualmente não serão removidos.\n\nUse isso se um jogo parar de funcionar repentinamente ou falhar ao iniciar.</string>
+    <string name="repair_container_message">Isso reinstalará os arquivos internos do contêiner (unidade C:, DirectX e bibliotecas de tempo de execução instaladas anteriormente) no próximo lançamento. Os instaladores de tempo de execução na unidade A:, se houver, serão executados novamente.\n\nSeus arquivos de jogo, dados salvos na unidade A: e configurações do contêiner não serão removidos. Faça backup de qualquer coisa da unidade C: que você possa precisar antes de reparar.\n\nUse isso se um jogo parar de funcionar repentinamente ou falhar ao iniciar.</string>
     <string name="repair_container_confirm">Reparar</string>
     <string name="repair_container_success">O contêiner reextrai todos os arquivos no próximo início</string>
     <string name="steam_verify_files_title">Verificar arquivos</string>

@@ -27,8 +27,8 @@
     <string name="base_app_reset_container_confirm">重置</string>
     <string name="repair_container">修复容器</string>
     <string name="repair_container_title">修复容器？</string>
-    <string name="repair_container_message">这将在下次启动时重新安装容器的内部文件（图形驱动程序、DirectX 以及之前安装的运行时库）。A: 盘中已有的运行时安装程序（如果有）将再次运行。\n\n您的游戏文件、存档数据、容器设置以及手动安装的程序不会被删除。\n\n如果游戏突然停止运行或无法启动，请使用此选项。</string>
-    <string name="repair_container_confirm">修复</string>
+    <string name="repair_container_message">这将在下次启动时重新安装容器的内部文件（C: 盘、DirectX 以及之前安装的运行时库）。A: 盘中已有的运行时安装程序（如果有）将再次运行。\n\n您的游戏文件、A: 盘中的保存数据和容器设置不会被删除。在修复前，备份 C: 盘中您可能需要的任何内容。\n\n如果游戏突然停止运行或无法启动，请使用此选项。</string>
+    <string name="repair_container_confirm">修復</string>
     <string name="repair_container_success">容器将在下次启动时重新解压所有文件</string>
     <string name="steam_verify_files_title">验证文件</string>
     <string name="steam_verify_files_message">验证前请确保存档已上传至云端或已备份，否则存档可能会被覆盖</string>

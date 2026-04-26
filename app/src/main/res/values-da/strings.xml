@@ -1087,7 +1087,7 @@
     <string name="steam_reset_container_message">Dette vil nulstille din container til standardkonfigurationen.</string>
     <string name="repair_container">Reparer container</string>
     <string name="repair_container_title">Reparer container?</string>
-    <string name="repair_container_message">Dette geninstallerer containerens interne filer (grafikdrivere, DirectX og tidligere installerede køretidsbiblioteker) ved næste opstart. Eksisterende køretidsinstallationer på A:-drevet, hvis nogen, køres igen.\n\nDine spilfiler, gemte data, containerindstillinger og manuelt installerede programmer fjernes ikke.\n\nBrug dette, hvis et spil pludselig holder op med at virke eller ikke starter.</string>
+    <string name="repair_container_message">Dette vil geninstallere containerens interne filer (C:-drev, DirectX og runtime-biblioteker tidligere installeret) ved næste start. Eksisterende Runtime-installationsprogrammer på A:-drevet, hvis nogen, vil køre igen.\n\nDine spilfiler, gemte data på A:-drevet og containerindstillinger vil ikke blive slettet. Tag backup af alt fra C:-drevet, som du måtte have brug for før reparation.\n\nBrug dette, hvis et spil pludselig holder op med at virke eller ikke vil starte.</string>
     <string name="repair_container_confirm">Reparer</string>
     <string name="repair_container_success">Containeren udpakker alle filer igen ved næste opstart</string>
     <string name="steam_verify_files_title">Verificér filer</string>

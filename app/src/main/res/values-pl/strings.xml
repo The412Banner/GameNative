@@ -27,7 +27,7 @@
     <string name="base_app_reset_container_confirm">Resetuj</string>
     <string name="repair_container">Napraw kontener</string>
     <string name="repair_container_title">Naprawić kontener?</string>
-    <string name="repair_container_message">Spowoduje to ponowną instalację wewnętrznych plików kontenera (sterowniki graficzne, DirectX i wcześniej zainstalowane biblioteki uruchomieniowe) przy następnym uruchomieniu. Instalatory środowiska uruchomieniowego na dysku A:, jeśli istnieją, zostaną uruchomione ponownie.\n\nPliki gry, dane zapisu, ustawienia kontenera i ręcznie zainstalowane programy nie zostaną usunięte.\n\nUżyj tej opcji, jeśli gra nagle przestała działać lub nie uruchamia się.</string>
+    <string name="repair_container_message">Spowoduje to ponowną instalację wewnętrznych plików kontenera (dysk C:, DirectX i wcześniej zainstalowane biblioteki uruchomieniowe) przy następnym uruchomieniu. Instalatory środowiska uruchomieniowego na dysku A:, jeśli istnieją, zostaną uruchomione ponownie.\n\nPliki gry, dane zapisu na dysku A: i ustawienia kontenera nie zostaną usunięte. Przed naprawą wykonaj kopię zapasową wszystkiego z dysku C:, które możesz potrzebować.\n\nUżyj tej opcji, jeśli gra nagle przestaje działać lub nie uruchamia się.</string>
     <string name="repair_container_confirm">Napraw</string>
     <string name="repair_container_success">Kontener ponownie wyodrębni wszystkie pliki przy następnym uruchomieniu</string>
     <string name="steam_verify_files_title">Zweryfikuj pliki</string>

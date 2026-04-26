@@ -27,7 +27,7 @@
     <string name="base_app_reset_container_confirm">Restablecer</string>
     <string name="repair_container">Reparar contenedor</string>
     <string name="repair_container_title">¿Reparar contenedor?</string>
-    <string name="repair_container_message">Esto reinstalará los archivos internos del contenedor (controladores gráficos, DirectX y bibliotecas de tiempo de ejecución instaladas previamente) en el próximo inicio. Los instaladores de tiempo de ejecución en la unidad A:, si los hay, se ejecutarán de nuevo.\n\nTus archivos de juego, datos guardados, configuración del contenedor y los programas instalados manualmente no serán eliminados.\n\nÚsalo si un juego deja de funcionar repentinamente o no arranca.</string>
+    <string name="repair_container_message">Esto reinstalará los archivos internos del contenedor (unidad C:, DirectX y bibliotecas de tiempo de ejecución instaladas previamente) en el próximo lanzamiento. Los instaladores de tiempo de ejecución en la unidad A:, si los hay, se ejecutarán de nuevo.\n\nTus archivos de juego, datos guardados en la unidad A: y configuración del contenedor no serán eliminados. Realiza una copia de seguridad de cualquier cosa de la unidad C: que puedas necesitar antes de reparar.\n\nÚsalo si un juego deja de funcionar repentinamente o no arranca.</string>
     <string name="repair_container_confirm">Reparar</string>
     <string name="repair_container_success">El contenedor reextrae todos los archivos en el próximo inicio</string>
     <string name="steam_verify_files_title">Verificar archivos</string>

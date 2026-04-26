@@ -26,7 +26,7 @@
     <string name="base_app_reset_container_confirm">Zurücksetzen</string>
     <string name="repair_container">Container reparieren</string>
     <string name="repair_container_title">Container reparieren?</string>
-    <string name="repair_container_message">Dadurch werden beim nächsten Start die internen Dateien des Containers (Grafiktreiber, DirectX und zuvor installierte Laufzeitbibliotheken) neu installiert. Vorhandene Runtime-Installer auf Laufwerk A: werden erneut ausgeführt.\n\nSpieldateien, Speicherstände, Container-Einstellungen und manuell installierte Programme werden nicht entfernt.\n\nVerwende diese Option, wenn ein Spiel plötzlich nicht mehr funktioniert oder startet.</string>
+    <string name="repair_container_message">Dadurch werden beim nächsten Start die internen Dateien des Containers (Laufwerk C:, DirectX und zuvor installierte Laufzeitbibliotheken) neu installiert. Vorhandene Runtime-Installer auf Laufwerk A: werden erneut ausgeführt.\n\nSpieldateien, Speicherstände auf Laufwerk A: und Container-Einstellungen werden nicht entfernt. Sichern Sie alles von Laufwerk C:, das Sie vor der Reparatur benötigen könnten.\n\nVerwenden Sie diese Option, wenn ein Spiel plötzlich nicht mehr funktioniert oder nicht startet.</string>
     <string name="repair_container_confirm">Reparieren</string>
     <string name="repair_container_success">Der Container extrahiert beim nächsten Start alle Dateien erneut</string>
     <string name="steam_verify_files_title">Dateien überprüfen</string>
