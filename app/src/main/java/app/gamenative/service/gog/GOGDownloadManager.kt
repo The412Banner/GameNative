@@ -852,6 +852,10 @@ class GOGDownloadManager @Inject constructor(
                 networkChunkFlow
                     .flatMapMerge<String, Unit>(concurrency = parallelDownloads) { chunkMd5 ->
                         flow<Unit> {
+                            if (!downloadInfo.isActive()) {
+                                return@flow
+                            }
+
                             val result = run {
                                 val urls = currentChunkUrlCandidates[chunkMd5] ?: return@run Result.failure<File>(
                                     Exception("No URL candidates found for chunk $chunkMd5"),
@@ -872,6 +876,10 @@ class GOGDownloadManager @Inject constructor(
                 assembleFlow
                     .flatMapMerge<Pair<String, Result<File>>, Unit>(concurrency = parallelAssemble) { (chunkMd5, result) ->
                         flow<Unit> {
+                            if (!downloadInfo.isActive()) {
+                                return@flow
+                            }
+
                             if (result.isSuccess && assemblyFailure == null) {
                                 // Successful download - add to completed set and try assembly
                                 downloadedChunkIds.add(chunkMd5)
@@ -943,6 +951,10 @@ class GOGDownloadManager @Inject constructor(
                 val chunksAdded = mutableListOf<String>()
 
                 files.forEach { file ->
+                    if (!downloadInfo.isActive()) {
+                        Timber.tag("GOG").w("Download cancelled during file iteration")
+                        return@launch
+                    }
                     Timber.tag("GOG").v("Pre-allocating ${file.path}")
 
                     // Allocating file before download
@@ -975,6 +987,12 @@ class GOGDownloadManager @Inject constructor(
             var currentPendingChunks = lastPendingChunks
             var samePendingChunksAttempts = 0
             while (currentPendingChunks > 0) {
+                if (!downloadInfo.isActive()) {
+                    networkChunkJob.cancel()
+                    assembleJob.cancel()
+                    return@withContext Result.failure(Exception("Download cancelled"))
+                }
+
                 Timber.tag("GOG").d("Waiting for $currentPendingChunks pending chunks to complete")
 
                 if (currentPendingChunks == lastPendingChunks) {
@@ -1008,9 +1026,6 @@ class GOGDownloadManager @Inject constructor(
 
             // Cancel the assemble flow jobs since no more files will be added
             assembleJob.cancel()
-
-            // Remove the cache dir
-            chunkCacheDir.deleteRecursively()
 
             if (assemblyFailure != null) {
                 return@withContext Result.failure(assemblyFailure!!)
@@ -1289,6 +1304,10 @@ class GOGDownloadManager @Inject constructor(
         var lastException: Exception? = null
 
         repeat(MAX_CHUNK_RETRIES) { attempt ->
+            if (!downloadInfo.isActive()) {
+                return@withContext Result.failure(Exception("Download cancelled"))
+            }
+
             val url = urlCandidates[attempt % urlCandidates.size]
             val result = downloadChunk(chunkMd5, url, chunkCacheDir, downloadInfo, httpClient)
 
@@ -1303,8 +1322,11 @@ class GOGDownloadManager @Inject constructor(
 
             if (attempt < MAX_CHUNK_RETRIES - 1) {
                 val delay = RETRY_DELAY_MS * (1 shl attempt) // Exponential backoff: 1s, 2s, 4s
-                Timber.tag("GOG").w("Chunk $chunkMd5 download failed (attempt ${attempt + 1}/$MAX_CHUNK_RETRIES): ${lastException?.message}. Retrying in ${delay}ms...")
-                kotlinx.coroutines.delay(delay)
+                if (downloadInfo.isActive()) {
+                    Timber.tag("GOG")
+                        .w("Chunk $chunkMd5 download failed (attempt ${attempt + 1}/$MAX_CHUNK_RETRIES): ${lastException?.message}. Retrying in ${delay}ms...")
+                    delay(delay)
+                }
             }
         }
 
@@ -1328,6 +1350,10 @@ class GOGDownloadManager @Inject constructor(
         httpClient: OkHttpClient,
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
+            if (!downloadInfo.isActive()) {
+                return@withContext Result.failure(Exception("Download cancelled"))
+            }
+
             val chunkFile = File(chunkCacheDir, "$chunkMd5.chunk")
             val tempChunkFile = File(chunkCacheDir, "$chunkMd5.chunk.part")
 
@@ -1580,6 +1606,7 @@ class GOGDownloadManager @Inject constructor(
     /**
      * Check if file exists and has the expected size. When [expectedMd5] is non-null/non-blank,
      * also verifies content MD5 to reject corrupted files; short-circuits on size mismatch before hashing.
+     * When [expectedMd5] is null/blank, returns false to avoid treating pre-allocated files as complete.
      */
     private fun fileExistsWithCorrectSize(
         outputFile: File,
@@ -1588,7 +1615,8 @@ class GOGDownloadManager @Inject constructor(
     ): Boolean {
         if (!outputFile.exists()) return false
         if (outputFile.length() != expectedSize) return false
-        return expectedMd5.isNullOrBlank() || calculateMd5File(outputFile).equals(expectedMd5, ignoreCase = true)
+        if (expectedMd5.isNullOrBlank()) return false
+        return calculateMd5File(outputFile).equals(expectedMd5, ignoreCase = true)
     }
     /**
      * Calculate MD5 hash of file
