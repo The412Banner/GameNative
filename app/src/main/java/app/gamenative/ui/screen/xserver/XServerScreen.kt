@@ -1726,13 +1726,7 @@ fun XServerScreen(
                             Timber.i("Doing things once")
                             val envVars = EnvVars()
 
-                            // Capture the persisted repair flag for this launch and immediately clear
-                            // it so the next launch is a normal one. The captured local is threaded
-                            // explicitly into setup/extract calls and into the launcher component.
-                            val needsRepair = container.isNeedsRepair
-                            if (needsRepair) {
-                                container.setNeedsRepair(false)
-                                container.saveData()
+                            if (container.isNeedsRepair) {
                                 Timber.i("Container ${container.id} flagged for repair; forcing re-extract this launch")
                             }
 
@@ -1746,7 +1740,6 @@ fun XServerScreen(
                                 envVars,
                                 contentsManager,
                                 onExtractFileListener,
-                                needsRepair,
                             )
                             extractArm64ecInputDLLs(context, container) // REQUIRED: Uses updated xinput1_3 main.c from x86_64 build, prevents crashes with 3+ players, avoids need for input shim dlls.
                             extractx86_64InputDlls(context, container)
@@ -1759,7 +1752,6 @@ fun XServerScreen(
                                 envVars,
                                 firstTimeBoot,
                                 vkbasaltConfig,
-                                needsRepair,
                             )
                             changeWineAudioDriver(xServerState.value.audioDriver, container, ImageFs.find(context))
                             setImagefsContainerVariant(context, container)
@@ -1776,8 +1768,18 @@ fun XServerScreen(
                                 containerVariantChanged,
                                 onGameLaunchError,
                                 navigateBack,
-                                needsRepair,
                             )
+
+                            // Clear the repair flag now that all setup paths that read it have run.
+                            // applyGeneralPatches may have promoted it during setupWineSystemFiles; the
+                            // launcher already captured the value via setForceReextract above. Clearing
+                            // here (rather than at launch start) means a crash mid-setup leaves the flag
+                            // set so the next launch finishes the repair.
+                            if (container.isNeedsRepair) {
+                                container.setNeedsRepair(false)
+                                container.saveData()
+                                Timber.i("Container ${container.id} repair complete; cleared needsRepair flag")
+                            }
                             if (!PluviaApp.isActivityInForeground && !neverSuspend) {
                                 PluviaApp.xEnvironment?.onPause()
                                 if (manualResumeMode) {
@@ -2701,7 +2703,6 @@ private fun setupXEnvironment(
     containerVariantChanged: Boolean,
     onGameLaunchError: ((String) -> Unit)? = null,
     navigateBack: () -> Unit,
-    needsRepair: Boolean = false,
 ): XEnvironment {
     ProcessHelper.hardKillStaleWineProcesses()
 
@@ -2851,9 +2852,9 @@ private fun setupXEnvironment(
         guestProgramLauncherComponent.box64Preset = container.box64Preset
         if (guestProgramLauncherComponent is BionicProgramLauncherComponent) {
             guestProgramLauncherComponent.setFEXCorePreset(container.fexCorePreset)
-            guestProgramLauncherComponent.setForceReextract(needsRepair)
+            guestProgramLauncherComponent.setForceReextract(container.isNeedsRepair)
         } else if (guestProgramLauncherComponent is GlibcProgramLauncherComponent) {
-            guestProgramLauncherComponent.setForceReextract(needsRepair)
+            guestProgramLauncherComponent.setForceReextract(container.isNeedsRepair)
         }
         guestProgramLauncherComponent.setPreUnpack {
             unpackExecutableFile(
@@ -3039,11 +3040,24 @@ private fun setupXEnvironment(
     }
 
     if (container.wineVersion.lowercase().contains("proton-10")) {
-        try {
-            // Only proton 10 can apply this fix
-            XAudioUtils.replaceXAudioDllsFromRedistributable(context, guestProgramLauncherComponent, appId)
-        } catch (e: Exception) {
-            Timber.tag("replaceXAudioDllsFromRedistributable").w(e, "Failed to replace XAudio DLLs; continuing launch")
+        // Run the XAudio redist replacement on first boot or after a repair, mirroring the
+        // gating used for DXVK/VKD3D and the other system32 components: the extracted DLLs
+        // persist in the prefix until something wipes them. applyGeneralPatches sets
+        // needsRepair=true when it runs, so the prefix-wipe path also re-fires this.
+        val xaudioDllsExtracted = container.getExtra("xaudioDlls") == "1"
+        if (!xaudioDllsExtracted || container.isNeedsRepair) {
+            var done = false
+            try {
+                done = XAudioUtils.replaceXAudioDllsFromRedistributable(context, guestProgramLauncherComponent, appId)
+            } catch (e: Exception) {
+                Timber.tag("replaceXAudioDllsFromRedistributable").w(e, "Failed to replace XAudio DLLs; continuing launch")
+            }
+            if (done) {
+                container.putExtra("xaudioDlls", "1")
+                container.saveData()
+            }
+        } else {
+            Timber.tag("XAudioUtils").d("Skipping XAudio DLL extraction; container already has xaudioDlls marker")
         }
     }
 
@@ -3903,7 +3917,6 @@ private fun setupWineSystemFiles(
     envVars: EnvVars,
     contentsManager: ContentsManager,
     onExtractFileListener: OnExtractFileListener?,
-    needsRepair: Boolean = false,
 ) {
     val imageFs = ImageFs.find(context)
     val appVersion = AppUtils.getVersionCode(context).toString()
@@ -3917,7 +3930,10 @@ private fun setupWineSystemFiles(
         containerDataChanged = true
     }
 
-    if (needsRepair ||
+    // Source of truth for "force re-extract everything": container.isNeedsRepair.
+    // applyGeneralPatches promotes the flag itself when it runs (because the prefix wipe
+    // clobbers all extracted components), so per-component guards below pick that up.
+    if (container.isNeedsRepair ||
         !container.getExtra("imgVersion").equals(imgVersion) ||
         container.containerVariant != variant || (container.containerVariant == variant && container.wineVersion != wineVersion)) {
         applyGeneralPatches(context, container, imageFs, xServerState.value.wineInfo, containerManager, onExtractFileListener)
@@ -3948,7 +3964,7 @@ private fun setupWineSystemFiles(
     val isArm64EcContainer = container.wineVersion?.contains("arm64ec") == true
     val dxwrapperOrVersionChanged = xServerState.value.dxwrapper != container.getExtra("dxwrapper") ||
             container.wineVersion != wineVersion
-    val needReextract = dxwrapperOrVersionChanged || needsRepair || (ALWAYS_REEXTRACT && isArm64EcContainer)
+    val needReextract = dxwrapperOrVersionChanged || container.isNeedsRepair || (ALWAYS_REEXTRACT && isArm64EcContainer)
 
     Timber.i("needReextract is " + needReextract)
     Timber.i("isArm64EcContainer=" + isArm64EcContainer + " dxwrapperOrVersionChanged=" + dxwrapperOrVersionChanged)
@@ -3974,7 +3990,7 @@ private fun setupWineSystemFiles(
 
     // val wincomponents = if (shortcut != null) shortcut.getExtra("wincomponents", container.winComponents) else container.winComponents
     val wincomponents = container.winComponents
-    if (needsRepair || !wincomponents.equals(container.getExtra("wincomponents"))) {
+    if (container.isNeedsRepair || !wincomponents.equals(container.getExtra("wincomponents"))) {
         extractWinComponentFiles(context, firstTimeBoot, imageFs, container, containerManager, onExtractFileListener)
         container.putExtra("wincomponents", wincomponents)
         containerDataChanged = true
@@ -3984,7 +4000,7 @@ private fun setupWineSystemFiles(
     val dllOverrides = EnvVars(container.envVars).get("WINEDLLOVERRIDES")
     val needsOpenalDlls = dllOverrides.contains("openal32") || dllOverrides.contains("soft_oal")
     val openalState = if (needsOpenalDlls) "yes" else "no"
-    if (needsRepair || openalState != container.getExtra("openal_dlls") || firstTimeBoot) {
+    if (container.isNeedsRepair || openalState != container.getExtra("openal_dlls") || firstTimeBoot) {
         if (needsOpenalDlls) {
             val windowsDir = File(imageFs.rootDir, ImageFs.WINEPREFIX + "/drive_c/windows")
             TarCompressorUtils.extract(
@@ -4001,7 +4017,7 @@ private fun setupWineSystemFiles(
     }
 
     val desktopTheme = container.desktopTheme
-    if (needsRepair || (desktopTheme + "," + screenInfo) != container.getExtra("desktopTheme")) {
+    if (container.isNeedsRepair || (desktopTheme + "," + screenInfo) != container.getExtra("desktopTheme")) {
         WineThemeManager.apply(context, WineThemeManager.ThemeInfo(desktopTheme), screenInfo)
         container.putExtra("desktopTheme", desktopTheme + "," + screenInfo)
         containerDataChanged = true
@@ -4017,7 +4033,7 @@ private fun setupWineSystemFiles(
         containerDataChanged = true
     }
 
-    if (needsRepair) {
+    if (container.isNeedsRepair) {
         // PreInstall markers (VC Redist, PhysX, OpenAL, GOG script, etc.) live in the game dir,
         // not in container extras — clear them explicitly so they re-run against the repaired prefix.
         PreInstallSteps.resetAllMarkers(container)
@@ -4109,28 +4125,16 @@ private fun applyGeneralPatches(
         userRegBackup.delete()
     }
 
-    // ── Reset pre-install step markers so runtimes re-run against the fresh prefix ──
-    // The Wine prefix was just wiped (VC Redist, DirectX, OpenAL registry entries gone),
-    // but markers live in the game directory and would otherwise say "already done".
-    // Must happen after extraction but before clearing extras below.
-    PreInstallSteps.resetAllMarkers(container)
+    // The prefix wipe just clobbered every extracted component (DXVK/VKD3D, win components,
+    // OpenAL, fexcore, wowbox64, registry templates) with tarball defaults. Promote
+    // needsRepair so every downstream extraction guard in this launch re-fires and reinstalls
+    // those components on top of the fresh prefix. Persisted so a crash mid-setup leaves the
+    // flag set for the next launch to finish the repair; cleared at the end of launch setup.
+    if (!container.isNeedsRepair) {
+        container.setNeedsRepair(true)
+        container.saveData()
+    }
 
-    // ── Clear all extraction-tracking extras so subsystems re-extract on next launch ──
-    // The prefix wipe deleted files these extras were tracking. Without clearing them,
-    // the extraction guards would see matching cache keys and skip re-extraction,
-    // leaving the user with a broken prefix (missing DXVK/VKD3D DLLs, Win components, etc.).
-    container.putExtra("graphicsDriver", null)
-    container.putExtra("desktopTheme", null)
-    container.putExtra("dxwrapper", null)
-    container.putExtra("wincomponents", null)
-    container.putExtra("openal_dlls", null)
-    container.putExtra("lastInstalledMainWrapper", null)
-    // FEXCore and WoW64 Box64 DLLs live inside the Wine prefix (system32).
-    // The prefix was just wiped, so clear these extras so they re-extract on next launch.
-    container.putExtra("fexcoreVersion", null)
-    container.putExtra("wowbox64Version", null)    // arm64ec wowbox64 DLL sentinel
-    container.putExtra("box64BionicVersion", null) // x86_64 box64 bionic binary sentinel
-    container.putExtra("box64Version", null)       // legacy key — clear for migration
     WinlatorPrefManager.init(context)
     WinlatorPrefManager.putString("current_box64_version", "")
 }
@@ -4390,7 +4394,6 @@ private fun extractGraphicsDriverFiles(
     envVars: EnvVars,
     firstTimeBoot: Boolean,
     vkbasaltConfig: String,
-    needsRepair: Boolean = false,
 ) {
     if (container.containerVariant.equals(Container.GLIBC)) {
         // Get the configured driver version or use default
@@ -4429,7 +4432,7 @@ private fun extractGraphicsDriverFiles(
         // sentinel so the next launch always re-extracts the driver libraries.
         val sentinel = File(configDir, ".current_graphics_driver")
         val onDiskId = sentinel.takeIf { it.exists() }?.readText() ?: ""
-        val changed = ALWAYS_REEXTRACT || needsRepair || cacheId != container.getExtra("graphicsDriver") || cacheId != onDiskId
+        val changed = ALWAYS_REEXTRACT || container.isNeedsRepair || cacheId != container.getExtra("graphicsDriver") || cacheId != onDiskId
         Timber.i("Changed is " + changed + " will re-extract drivers accordingly.")
         val rootDir = imageFs.rootDir
         envVars.put("vblank_mode", "0")
@@ -4526,7 +4529,7 @@ private fun extractGraphicsDriverFiles(
 
             // Only (re)extract if changed
             val adrenoCacheId = "${graphicsDriver}-${identifier}"
-            val needsExtract = changed || needsRepair || adrenoCacheId != container.getExtra("graphicsDriverAdreno")
+            val needsExtract = changed || container.isNeedsRepair || adrenoCacheId != container.getExtra("graphicsDriverAdreno")
 
             if (needsExtract) {
                 val destinationDir = File(componentRoot.toString())
@@ -4603,7 +4606,7 @@ private fun extractGraphicsDriverFiles(
         val lastInstalledMainWrapper = container.getExtra("lastInstalledMainWrapper")
 
         // 3. Check if we need to extract a new wrapper file.
-        if (ALWAYS_REEXTRACT || needsRepair || firstTimeBoot || mainWrapperSelection != lastInstalledMainWrapper) {
+        if (ALWAYS_REEXTRACT || container.isNeedsRepair || firstTimeBoot || mainWrapperSelection != lastInstalledMainWrapper) {
             // We only extract if the selection is actually a wrapper file.
             if (mainWrapperSelection.lowercase(Locale.getDefault()).startsWith("wrapper")) {
                 val assetPath = "graphics_driver/" + mainWrapperSelection.lowercase(Locale.getDefault()) + ".tzst"

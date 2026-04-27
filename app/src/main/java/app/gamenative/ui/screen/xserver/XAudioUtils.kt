@@ -22,9 +22,13 @@ object XAudioUtils {
     const val BATCH_SUCCESS_CHECK = "__GN_XAUDIO_EXTRACT_OK__"
 
     /**
-     * Replace DLLs from DirectX Redistributable
+     * Replace DLLs from DirectX Redistributable.
+     *
+     * @return true when the prefix is in a consistent state for XAudio (extraction succeeded
+     *         or there was nothing to extract — e.g., no DirectX redist in the game install);
+     *         false on transient failures that warrant a retry on the next launch.
      */
-    fun replaceXAudioDllsFromRedistributable(context: Context, guestProgramLauncherComponent: GuestProgramLauncherComponent, appId: String) {
+    fun replaceXAudioDllsFromRedistributable(context: Context, guestProgramLauncherComponent: GuestProgramLauncherComponent, appId: String): Boolean {
         val gameSource = ContainerUtils.extractGameSourceFromContainerId(appId)
         val appDirPath = try {
             when (gameSource) {
@@ -48,13 +52,13 @@ object XAudioUtils {
 
         // Not Support Type
         if (appDirPath.isNullOrBlank()) {
-            return
+            return true
         }
 
         val appDir = File(appDirPath)
         if (!appDir.isDirectory) {
             Timber.tag("XAudioUtils").w("Install path is not a directory: %s", appDir.absolutePath)
-            return
+            return false
         }
 
         // Check the common path first, otherwise scan the game dir for DXSETUP.exe
@@ -71,116 +75,123 @@ object XAudioUtils {
             }
         }
 
-        if (directXDir.exists()) {
-            val imageFs = ImageFs.find(context)
-            val rootDir = imageFs.rootDir
-            val windowsDir = File(rootDir, ImageFs.WINEPREFIX + "/drive_c/windows")
-            val cDriveDir = windowsDir.parentFile!!
+        if (!directXDir.exists()) {
+            // No DirectX redist shipped with the game; nothing to extract. Treat as done so
+            // we don't rescan the install on every launch.
+            return true
+        }
 
-            val tempDir = File(windowsDir, "temp")
-            if (!tempDir.exists() && !tempDir.mkdirs()) {
-                Timber.tag("XAudioUtils")
-                    .w("Failed to create temp extraction directory: %s", tempDir.absolutePath)
-                return
+        val imageFs = ImageFs.find(context)
+        val rootDir = imageFs.rootDir
+        val windowsDir = File(rootDir, ImageFs.WINEPREFIX + "/drive_c/windows")
+        val cDriveDir = windowsDir.parentFile!!
+
+        val tempDir = File(windowsDir, "temp")
+        if (!tempDir.exists() && !tempDir.mkdirs()) {
+            Timber.tag("XAudioUtils")
+                .w("Failed to create temp extraction directory: %s", tempDir.absolutePath)
+            return false
+        }
+
+        val tempDirWow64 = File(windowsDir, "temp/syswow64")
+        val tempDirSys32 = File(windowsDir, "temp/system32")
+
+        // Pre-clean to ensure no stale files from interrupted runs remain
+        cleanupDirs(tempDirWow64, tempDirSys32)
+
+        val targetDirWow64 = File(windowsDir, "syswow64")
+        val targetDirSys32 = File(windowsDir, "system32")
+
+        if (!tempDirWow64.exists() && !tempDirWow64.mkdirs()) {
+            Timber.tag("XAudioUtils")
+                .w("Failed to create temp extraction directory: %s", tempDirWow64.absolutePath)
+            return false
+        }
+
+        if (!tempDirSys32.exists() && !tempDirSys32.mkdirs()) {
+            Timber.tag("XAudioUtils")
+                .w("Failed to create temp extraction directory: %s", tempDirSys32.absolutePath)
+            return false
+        }
+
+        val cabFilesWow64 = mutableListOf<File>()
+        val cabFilesSys32 = mutableListOf<File>()
+
+        directXDir.walkTopDown()
+            .filter { file ->
+                val name = file.name.lowercase()
+                val isAudioType =
+                    name.contains("xaudio") ||
+                            name.contains("xact") ||
+                            name.contains("x3daudio")
+
+                isAudioType && file.extension.equals("cab", ignoreCase = true)
             }
+            .forEach { cabFile ->
+                Timber.tag("XAudioUtils").d("Processing cabinet: ${cabFile.name}")
 
-            val tempDirWow64 = File(windowsDir, "temp/syswow64")
-            val tempDirSys32 = File(windowsDir, "temp/system32")
-
-            // Pre-clean to ensure no stale files from interrupted runs remain
-            cleanupDirs(tempDirWow64, tempDirSys32)
-
-            val targetDirWow64 = File(windowsDir, "syswow64")
-            val targetDirSys32 = File(windowsDir, "system32")
-
-            if (!tempDirWow64.exists() && !tempDirWow64.mkdirs()) {
-                Timber.tag("XAudioUtils")
-                    .w("Failed to create temp extraction directory: %s", tempDirWow64.absolutePath)
-                return
-            }
-
-            if (!tempDirSys32.exists() && !tempDirSys32.mkdirs()) {
-                Timber.tag("XAudioUtils")
-                    .w("Failed to create temp extraction directory: %s", tempDirSys32.absolutePath)
-                return
-            }
-
-            val cabFilesWow64 = mutableListOf<File>()
-            val cabFilesSys32 = mutableListOf<File>()
-
-            directXDir.walkTopDown()
-                .filter { file ->
-                    val name = file.name.lowercase()
-                    val isAudioType =
-                        name.contains("xaudio") ||
-                                name.contains("xact") ||
-                                name.contains("x3daudio")
-
-                    isAudioType && file.extension.equals("cab", ignoreCase = true)
+                if (cabFile.name.lowercase().contains("x86")) {
+                    cabFilesWow64.add(cabFile)
+                } else if (cabFile.name.lowercase().contains("x64")) {
+                    cabFilesSys32.add(cabFile)
                 }
-                .forEach { cabFile ->
-                    Timber.tag("XAudioUtils").d("Processing cabinet: ${cabFile.name}")
-
-                    if (cabFile.name.lowercase().contains("x86")) {
-                        cabFilesWow64.add(cabFile)
-                    } else if (cabFile.name.lowercase().contains("x64")) {
-                        cabFilesSys32.add(cabFile)
-                    }
-                }
-
-            if (cabFilesWow64.isEmpty() && cabFilesSys32.isEmpty()) {
-                Timber.tag("XAudioUtils")
-                    .d("No matching DirectX CABs found for XAudio/XACT/X3DAudio under: %s", directXDir.absolutePath)
-                return
             }
 
-            PluviaApp.events.emit(AndroidEvent.SetBootingSplashText("Extracting XAudio DLLs..."))
+        if (cabFilesWow64.isEmpty() && cabFilesSys32.isEmpty()) {
+            Timber.tag("XAudioUtils")
+                .d("No matching DirectX CABs found for XAudio/XACT/X3DAudio under: %s", directXDir.absolutePath)
+            return true
+        }
 
-            val batFile = File(tempDir, "extract_dx_audio_dlls.bat")
-            val batContent = buildCabarcBatchScript(
-                appDir = appDir,
-                cDriveDir = cDriveDir,
-                cabFilesWow64 = cabFilesWow64,
-                cabFilesSys32 = cabFilesSys32,
-                tempDirWow64 = tempDirWow64,
-                tempDirSys32 = tempDirSys32,
-            )
+        PluviaApp.events.emit(AndroidEvent.SetBootingSplashText("Extracting XAudio DLLs..."))
 
+        val batFile = File(tempDir, "extract_dx_audio_dlls.bat")
+        val batContent = buildCabarcBatchScript(
+            appDir = appDir,
+            cDriveDir = cDriveDir,
+            cabFilesWow64 = cabFilesWow64,
+            cabFilesSys32 = cabFilesSys32,
+            tempDirWow64 = tempDirWow64,
+            tempDirSys32 = tempDirSys32,
+        )
+
+        try {
+            batFile.writeText(batContent)
+        } catch (e: Exception) {
+            Timber.tag("XAudioUtils")
+                .w(e, "Failed to write batch file: %s", batFile.absolutePath)
+            return false
+        }
+
+        val batchCommand = "wine cmd /c ${batFile.absolutePath}"
+        val batchResult = guestProgramLauncherComponent.execShellCommand(batchCommand, false)
+
+        val extractionSucceeded = batchResult.contains(BATCH_SUCCESS_CHECK)
+        if (extractionSucceeded) {
             try {
-                batFile.writeText(batContent)
+                if (batFile.exists()) {
+                    val deleted = batFile.delete()
+                    Timber.tag("XAudioUtils")
+                        .d("Deleted batch file: %s (deleted=%s)", batFile.absolutePath, deleted)
+                }
             } catch (e: Exception) {
                 Timber.tag("XAudioUtils")
-                    .w(e, "Failed to write batch file: %s", batFile.absolutePath)
-                return
+                    .w(e, "Failed to delete batch file: %s", batFile.absolutePath)
             }
 
-            val batchCommand = "wine cmd /c ${batFile.absolutePath}"
-            val batchResult = guestProgramLauncherComponent.execShellCommand(batchCommand, false)
-
-            if (batchResult.contains(BATCH_SUCCESS_CHECK)) {
-                try {
-                    if (batFile.exists()) {
-                        val deleted = batFile.delete()
-                        Timber.tag("XAudioUtils")
-                            .d("Deleted batch file: %s (deleted=%s)", batFile.absolutePath, deleted)
-                    }
-                } catch (e: Exception) {
-                    Timber.tag("XAudioUtils")
-                        .w(e, "Failed to delete batch file: %s", batFile.absolutePath)
-                }
-
-                moveDllsFromTempToTarget(tempDirWow64, targetDirWow64)
-                moveDllsFromTempToTarget(tempDirSys32, targetDirSys32)
-            } else {
-                Timber.tag("XAudioUtils")
-                    .w("Batch extraction did not report success. Expected marker: %s", BATCH_SUCCESS_CHECK)
-                Timber.tag("XAudioUtils")
-                    .w("Batch output:\n%s", batchResult)
-            }
-
-            // Cleanup the temp dirs
-            cleanupDirs(tempDirWow64, tempDirSys32)
+            moveDllsFromTempToTarget(tempDirWow64, targetDirWow64)
+            moveDllsFromTempToTarget(tempDirSys32, targetDirSys32)
+        } else {
+            Timber.tag("XAudioUtils")
+                .w("Batch extraction did not report success. Expected marker: %s", BATCH_SUCCESS_CHECK)
+            Timber.tag("XAudioUtils")
+                .w("Batch output:\n%s", batchResult)
         }
+
+        // Cleanup the temp dirs
+        cleanupDirs(tempDirWow64, tempDirSys32)
+
+        return extractionSucceeded
     }
 
     private fun cleanupDirs(tempDirWow64: File, tempDirSys32: File) {
