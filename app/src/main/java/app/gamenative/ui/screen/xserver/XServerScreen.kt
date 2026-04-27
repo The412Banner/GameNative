@@ -3912,12 +3912,15 @@ private fun setupWineSystemFiles(
     val variant = imageFs.getVariant()
     var containerDataChanged = false
 
+    if (!container.getExtra("appVersion").equals(appVersion)){
+        container.putExtra("appVersion", appVersion)
+        containerDataChanged = true
+    }
+
     if (needsRepair ||
-        !container.getExtra("appVersion").equals(appVersion) ||
         !container.getExtra("imgVersion").equals(imgVersion) ||
         container.containerVariant != variant || (container.containerVariant == variant && container.wineVersion != wineVersion)) {
         applyGeneralPatches(context, container, imageFs, xServerState.value.wineInfo, containerManager, onExtractFileListener)
-        container.putExtra("appVersion", appVersion)
         container.putExtra("imgVersion", imgVersion)
         containerDataChanged = true
     }
