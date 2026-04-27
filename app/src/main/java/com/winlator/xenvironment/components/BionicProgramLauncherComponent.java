@@ -69,6 +69,9 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
     private final ContentProfile wineProfile;
     private Container container;
     private File workingDir;
+    // Captured from XServerScreen at launch time when the user requested a Repair Container.
+    // When true, extractBox64Files bypasses its version-match cache for this launch.
+    private boolean forceReextract = false;
 
     public void setWineInfo(WineInfo wineInfo) {
         this.wineInfo = wineInfo;
@@ -167,6 +170,8 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
     }
 
     public void setFEXCorePreset (String fexcorePreset) { this.fexcorePreset = fexcorePreset; }
+
+    public void setForceReextract(boolean force) { this.forceReextract = force; }
 
     public File getWorkingDir() {
         return workingDir;
@@ -382,8 +387,9 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         }
 
         // Skip re-extraction if the same version is already installed on disk.
+        // Repair Container sets forceReextract = true to bypass this cache.
         String currentBox64Version = container.getExtra("box64BionicVersion", "");
-        if (box64Version.equals(currentBox64Version) && box64File.isFile()) {
+        if (!forceReextract && box64Version.equals(currentBox64Version) && box64File.isFile()) {
             if (box64File.exists()) FileUtils.chmod(box64File, 0755);
             return; // already installed
         }
@@ -419,45 +425,26 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         Log.d("Extraction", "box64Version in use: " + wowbox64Version);
         Log.d("Extraction", "fexcoreVersion in use: " + fexcoreVersion);
 
-        // Always re-extract to prevent silent corruption over time
-        // These DLLs live in system32 (inside the Wine prefix); the extra is cleared
-        // by applyGeneralPatches / repairContainerFiles when the prefix is wiped.
-        // NOTE: uses "wowbox64Version" — a separate key from "box64BionicVersion" used by
-        // extractBox64Files() — so that switching between arm64ec and x86_64 wine variants
-        // cannot suppress each other's extraction via a false version-match.
-        String installedWowBox64Version = container.getExtra("wowbox64Version");
-        if (true) {
-            ContentProfile wowboxprofile = contentsManager.getProfileByEntryName("wowbox64-" + wowbox64Version);
-            if (wowboxprofile != null) {
-                contentsManager.applyContent(wowboxprofile);
-            } else {
-                Log.d("Extraction", "Extracting wowbox64Version: " + wowbox64Version);
-                boolean wowSuccess = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, environment.getContext(), "wowbox64/wowbox64-" + wowbox64Version + ".tzst", system32dir);
-                if (!wowSuccess) Log.e("Extraction", "FAILED to extract wowbox64 version: " + wowbox64Version);
-            }
-            container.putExtra("wowbox64Version", wowbox64Version);
-            containerDataChanged = true;
+        ContentProfile wowboxprofile = contentsManager.getProfileByEntryName("wowbox64-" + wowbox64Version);
+        if (wowboxprofile != null) {
+            contentsManager.applyContent(wowboxprofile);
         } else {
-            Log.d("Extraction", "Skipping wowbox64 extraction: already at version " + wowbox64Version);
+            Log.d("Extraction", "Extracting box64Version: " + wowbox64Version);
+            TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, environment.getContext(), "wowbox64/wowbox64-" + wowbox64Version + ".tzst", system32dir);
         }
+        container.putExtra("box64Version", wowbox64Version);
+        containerDataChanged = true;
 
-        // Always re-extract to prevent silent corruption over time
-        String installedFexcoreVersion = container.getExtra("fexcoreVersion");
-        if (true) {
-            ContentProfile fexprofile = contentsManager.getProfileByEntryName("fexcore-" + fexcoreVersion);
-            if (fexprofile != null) {
-                contentsManager.applyContent(fexprofile);
-            } else {
-                Log.d("Extraction", "Extracting fexcoreVersion: " + fexcoreVersion);
-                boolean fexSuccess = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, environment.getContext(), "fexcore/fexcore-" + fexcoreVersion + ".tzst", system32dir);
-                if (!fexSuccess) Log.e("Extraction", "FAILED to extract fexcore version: " + fexcoreVersion);
-            }
-            container.putExtra("fexcoreVersion", fexcoreVersion);
-            containerDataChanged = true;
+        ContentProfile fexprofile = contentsManager.getProfileByEntryName("fexcore-" + fexcoreVersion);
+        if (fexprofile != null) {
+            contentsManager.applyContent(fexprofile);
         } else {
-            Log.d("Extraction", "Skipping FEXCore extraction: already at version " + fexcoreVersion);
+            Log.d("Extraction", "Extracting fexcoreVersion: " + fexcoreVersion);
+            TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, environment.getContext(), "fexcore/fexcore-" + fexcoreVersion + ".tzst", system32dir);
         }
+        container.putExtra("fexcoreVersion", fexcoreVersion);
 
+        containerDataChanged = true;
         if (containerDataChanged) container.saveData();
     }
 

@@ -38,8 +38,6 @@ import app.gamenative.ui.component.dialog.LoadingDialog
 import app.gamenative.utils.BestConfigService
 import app.gamenative.utils.ContainerUtils
 import app.gamenative.utils.GameCompatibilityCache
-import app.gamenative.utils.PreInstallSteps
-import com.winlator.xenvironment.ImageFs
 import app.gamenative.utils.GameCompatibilityService
 import app.gamenative.utils.ManifestInstaller
 import app.gamenative.utils.createPinnedShortcut
@@ -701,52 +699,16 @@ abstract class BaseAppScreen {
 
     /**
      * Repair Container Button
-     * Forces a full re-extraction of all container files on the next launch by clearing all
-     * extraction-tracking extras (the same state that ALWAYS_REEXTRACT = true bypasses).
-     * Equivalent to what the dev flag ALWAYS_REEXTRACT = true (from xserver) would do, but as a targeted,
-     * one-time recovery action. User Container Settings are not changed.
-     *
-     * NOTE: Steam files (steam.exe etc.) live inside drive_c and are re-extracted automatically
-     * because extractSteamFiles() checks for the on-disk file, not an extra — no clearing needed.
+     * Marks the container as needing repair. On the next launch, XServerScreen will treat
+     * the container as if every cached extraction guard had missed: applyGeneralPatches will
+     * run, DXVK/VKD3D, win components, drivers, main wrapper, openal, theme, the box64 binary,
+     * and pre-install markers all get re-extracted/reset. User Container Settings are not changed.
      */
     protected fun repairContainerFiles(context: Context, libraryItem: LibraryItem) {
         val container = ContainerUtils.getOrCreateContainer(context, libraryItem.appId)
-
-        // Clear all extraction-tracking extras so each subsystem re-extracts next launch.
-        // These must stay in sync with the extras cleared in applyGeneralPatches().
-        container.putExtra("dxwrapper", null)
-        container.putExtra("wincomponents", null)
-        container.putExtra("graphicsDriver", null)
-        container.putExtra("graphicsDriverAdreno", null)
-        container.putExtra("lastInstalledMainWrapper", null)
-        container.putExtra("openal_dlls", null)
-        container.putExtra("imgVersion", null)
-        container.putExtra("containerPatchVersion", null)
-        container.putExtra("desktopTheme", null)
-        // FEXCore and WoW64 Box64 DLLs live inside the Wine prefix (system32, wowbox64).
-        // Clear these so they re-extract on the next launch (important after a prefix wipe).
-        container.putExtra("fexcoreVersion", null)
-        container.putExtra("wowbox64Version", null)   // arm64ec wowbox64 DLL sentinel
-        container.putExtra("box64BionicVersion", null) // x86_64 box64 bionic binary sentinel
-        container.putExtra("box64Version", null)       // legacy key — clear for migration
+        container.setNeedsRepair(true)
         container.saveData()
-
-        // Delete the shared .current_graphics_driver sentinel file.
-        // extractGraphicsDriverFiles() uses this on-disk file as a secondary cache check
-        // (independent of the per-container "graphicsDriver" extra) because the driver
-        // libraries live in the shared ImageFs tree, not inside the container.
-        // If we only cleared the extra but left the sentinel, the extraction would see
-        // a matching on-disk ID and skip re-extraction — leaving the user with stale drivers.
-        try {
-            val sentinel = File(ImageFs.find(context).configDir, ".current_graphics_driver")
-            if (sentinel.exists()) sentinel.delete()
-        } catch (_: Exception) { }
-
-        // Reset pre-install step markers (VC Redist, PhysX, OpenAL, GOG script etc.)
-        // so runtimes re-run against the repaired prefix on next launch.
-        PreInstallSteps.resetAllMarkers(container)
-
-        Timber.i("repairContainerFiles: cleared all extraction-tracking extras for container ${libraryItem.appId}")
+        Timber.i("repairContainerFiles: queued repair for container ${libraryItem.appId}")
         SnackbarManager.show(context.getString(R.string.repair_container_success))
     }
 

@@ -53,9 +53,15 @@ public class GlibcProgramLauncherComponent extends GuestProgramLauncherComponent
     private final ContentProfile wineProfile;
     private File workingDir;
     private Container container;
+    // Captured from XServerScreen at launch time when the user requested a Repair Container.
+    // Currently a no-op here because extractBox64Files always re-extracts; kept for symmetry
+    // with BionicProgramLauncherComponent so the wiring is in place if a skip-cache is added.
+    private boolean forceReextract = false;
 
     public Container getContainer() { return this.container; }
     public void setContainer(Container container) { this.container = container; }
+
+    public void setForceReextract(boolean force) { this.forceReextract = force; }
 
     public GlibcProgramLauncherComponent(ContentsManager contentsManager, ContentProfile wineProfile) {
         this.contentsManager = contentsManager;
@@ -252,8 +258,7 @@ public class GlibcProgramLauncherComponent extends GuestProgramLauncherComponent
         }
         else {
             Log.d("Extraction", "exctracting box64 with box64Version " + box64Version);
-            boolean success = TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, context.getAssets(), "box86_64/box64-" + box64Version + ".tzst", rootDir);
-            if (!success) Log.e("Extraction", "FAILED to extract box64 (glibc) version: " + box64Version);
+            TarCompressorUtils.extract(TarCompressorUtils.Type.ZSTD, context.getAssets(), "box86_64/box64-" + box64Version + ".tzst", rootDir);
         }
         PrefManager.putString("current_box64_version", box64Version);
     }
