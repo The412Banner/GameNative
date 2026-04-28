@@ -65,7 +65,7 @@ object LsfgVkManager {
     private const val ENV_PROCESS = "LSFG_PROCESS"
 
     // Current runtime version (bumped when the bundled .so changes)
-    private const val RUNTIME_VERSION = "v1.1.0-android-arm64-v8a-static"
+    private const val RUNTIME_VERSION = "v1.2.0-android-arm64-v8a-tmpdir"
 
     // Asset paths
     private const val ASSET_DIR = "lsfg_vk/android_arm64_v8a"
