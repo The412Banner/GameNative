@@ -102,6 +102,7 @@ import app.gamenative.ui.widget.PerformanceHudView
 import app.gamenative.utils.ContainerUtils
 import app.gamenative.utils.CustomGameScanner
 import app.gamenative.utils.ExecutableSelectionUtils
+import app.gamenative.utils.LsfgVkManager
 import app.gamenative.utils.ManifestComponentHelper
 import app.gamenative.utils.PreInstallSteps
 import app.gamenative.utils.SteamTokenLogin
@@ -482,6 +483,13 @@ fun XServerScreen(
     var fpsLimiterEnabled by rememberSaveable(container.id) { mutableStateOf(initialFpsLimiterEnabled(container)) }
     var fpsLimiterTarget by rememberSaveable(container.id) { mutableIntStateOf(initialFpsLimiterTarget(container)) }
 
+    // LSFG hot-reload state
+    val isLsfgAvailable = LsfgVkManager.isSupported(container) && LsfgVkManager.isDllAvailable()
+    var isLsfgEnabled by rememberSaveable(container.id) { mutableStateOf(LsfgVkManager.isArmed(container)) }
+    var lsfgMultiplier by rememberSaveable(container.id) { mutableIntStateOf(LsfgVkManager.multiplier(container)) }
+    var lsfgFlowScale by rememberSaveable(container.id) { mutableStateOf(LsfgVkManager.flowScale(container)) }
+    var lsfgPerformanceMode by rememberSaveable(container.id) { mutableStateOf(LsfgVkManager.performanceMode(container)) }
+
     fun persistFpsLimiterState() {
         container.putExtra(FPS_LIMITER_ENABLED_EXTRA, fpsLimiterEnabled)
         container.putExtra(FPS_LIMITER_TARGET_EXTRA, fpsLimiterTarget)
@@ -575,6 +583,35 @@ fun XServerScreen(
             applyFpsLimiterToEngines(sanitized)
         }
         persistFpsLimiterState()
+    }
+
+    // ── LSFG hot-reload callbacks ──────────────────────────────────────────
+    fun applyLsfgEnabled(enabled: Boolean) {
+        isLsfgEnabled = enabled
+        container.putExtra(LsfgVkManager.EXTRA_ARMED, enabled.toString())
+        container.saveData()
+        LsfgVkManager.updateConfigAtRuntime(container, enabled, lsfgMultiplier, lsfgFlowScale, lsfgPerformanceMode)
+    }
+
+    fun applyLsfgMultiplier(mult: Int) {
+        lsfgMultiplier = mult.coerceIn(2, 4)
+        container.putExtra(LsfgVkManager.EXTRA_MULTIPLIER, lsfgMultiplier.toString())
+        container.saveData()
+        LsfgVkManager.updateConfigAtRuntime(container, isLsfgEnabled, lsfgMultiplier, lsfgFlowScale, lsfgPerformanceMode)
+    }
+
+    fun applyLsfgFlowScale(scale: Float) {
+        lsfgFlowScale = scale.coerceIn(0.25f, 1.0f)
+        container.putExtra(LsfgVkManager.EXTRA_FLOW_SCALE, String.format(java.util.Locale.US, "%.2f", lsfgFlowScale))
+        container.saveData()
+        LsfgVkManager.updateConfigAtRuntime(container, isLsfgEnabled, lsfgMultiplier, lsfgFlowScale, lsfgPerformanceMode)
+    }
+
+    fun applyLsfgPerformanceMode(enabled: Boolean) {
+        lsfgPerformanceMode = enabled
+        container.putExtra(LsfgVkManager.EXTRA_PERFORMANCE_MODE, enabled.toString())
+        container.saveData()
+        LsfgVkManager.updateConfigAtRuntime(container, isLsfgEnabled, lsfgMultiplier, lsfgFlowScale, lsfgPerformanceMode)
     }
 
     LaunchedEffect(xServerView) {
@@ -2401,6 +2438,16 @@ fun XServerScreen(
                 if (isTouchscreenModeActive) add(QuickMenuAction.TOUCHSCREEN_MODE)
                 if (isDisableMouseInput) add(QuickMenuAction.DISABLE_MOUSE)
             },
+            // LSFG hot-reload
+            isLsfgAvailable = isLsfgAvailable,
+            isLsfgEnabled = isLsfgEnabled,
+            lsfgMultiplier = lsfgMultiplier,
+            lsfgFlowScale = lsfgFlowScale,
+            lsfgPerformanceMode = lsfgPerformanceMode,
+            onLsfgEnabledChanged = ::applyLsfgEnabled,
+            onLsfgMultiplierChanged = ::applyLsfgMultiplier,
+            onLsfgFlowScaleChanged = ::applyLsfgFlowScale,
+            onLsfgPerformanceModeChanged = ::applyLsfgPerformanceMode,
         )
 
         if (manualResumeMode && PluviaApp.isOverlayPaused && !showQuickMenu && !keepPausedForEditor) {

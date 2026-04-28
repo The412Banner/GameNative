@@ -386,4 +386,81 @@ object LsfgVkManager {
 
     private fun formatFlowScale(value: Float): String =
         String.format(Locale.US, "%.2f", value.coerceIn(0.25f, 1.0f))
+    // ---- Runtime hot-reload -----------------------------------------------
+
+    /**
+     * Update the lsfg-vk conf.toml while the container is running.
+     * The layer detects the file timestamp change on the next present call
+     * and returns VK_ERROR_OUT_OF_DATE_KHR, which forces a swapchain recreation
+     * with the new settings.
+     *
+     * @param container The running container
+     * @param enabled Whether frame generation is active (sets multiplier to 1 if false)
+     * @param multiplier Frame generation multiplier (2-4)
+     * @param flowScale Flow scale factor (0.25-1.0)
+     * @param performanceMode Whether performance mode is enabled
+     * @return true if the config was updated successfully
+     */
+    @JvmStatic
+    fun updateConfigAtRuntime(
+        container: Container,
+        enabled: Boolean,
+        multiplier: Int,
+        flowScale: Float,
+        performanceMode: Boolean,
+    ): Boolean {
+        if (!isSupported(container)) return false
+
+        val dllPath = containerDllPath(container)
+        val configFile = File(container.rootDir, CONFIG_RELATIVE_PATH)
+
+        if (!configFile.exists()) {
+            Timber.tag(TAG).w("conf.toml not found, cannot hot-reload")
+            return false
+        }
+
+        return try {
+            val effectiveMultiplier = if (enabled && dllPath != null) {
+                multiplier.coerceIn(2, 4)
+            } else {
+                1 // multiplier <= 1 means pass-through (no framegen)
+            }
+            val effectiveFlowScale = flowScale.coerceIn(0.25f, 1.0f)
+            val effectivePerfMode = performanceMode && enabled
+
+            val configText = buildString {
+                appendLine("version = 1")
+                appendLine()
+                appendLine("[global]")
+                if (!dllPath.isNullOrBlank()) {
+                    appendLine("dll = ${tomlString(dllPath)}")
+                }
+                appendLine("no_fp16 = false")
+                appendLine()
+                appendLine("[[game]]")
+                appendLine("exe = ${tomlString(PROCESS_EXE_IDENTIFIER)}")
+                appendLine("multiplier = $effectiveMultiplier")
+                appendLine("flow_scale = ${formatFlowScale(effectiveFlowScale)}")
+                appendLine("performance_mode = ${if (effectivePerfMode) "true" else "false"}")
+                appendLine("hdr_mode = false")
+                appendLine("experimental_present_mode = ${tomlString("fifo")}")
+            }
+
+            val ok = FileUtils.writeString(configFile, configText)
+            if (ok && configFile.exists()) {
+                FileUtils.chmod(configFile, 0b110100100)
+            }
+            if (ok) {
+                Timber.tag(TAG).i(
+                    "Hot-reloaded conf.toml: enabled=%s, multiplier=%d, flowScale=%.2f, perf=%s",
+                    enabled, effectiveMultiplier, effectiveFlowScale, effectivePerfMode
+                )
+            }
+            ok
+        } catch (t: Throwable) {
+            Timber.tag(TAG).e(t, "Failed to hot-reload conf.toml")
+            false
+        }
+    }
+
 }

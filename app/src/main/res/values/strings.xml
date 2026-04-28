@@ -1486,6 +1486,8 @@
     <string name="lsfg_not_supported">Frame generation requires a Bionic container</string>
     <string name="lsfg_dll_missing">Install Lossless Scaling from your Steam library to enable frame generation</string>
     <string name="lsfg_armed">Frame generation armed (multiplier %1$dx)</string>
+    <string name="lsfg_quick_menu_subtitle">Hot-reload via conf.toml</string>
+    <string name="lsfg_performance_mode_desc">Reduces quality for higher throughput</string>
     <string name="settings_interface_show_recommendations_title">Show game recommendations</string>
     <string name="settings_interface_show_recommendations_subtitle">Show curated indie game picks in your library. Keeping this on helps support indie developers and GameNative.</string>
 </resources>
