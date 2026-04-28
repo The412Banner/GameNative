@@ -255,13 +255,11 @@ fun QuickMenu(
     isTouchscreenModeActive: Boolean = false,
     onTouchGestureSettingsClick: () -> Unit = {},
     activeToggleIds: Set<Int> = emptySet(),
-    // LSFG hot-reload state
+    // LSFG hot-reload state (tab only visible when isLsfgAvailable)
     isLsfgAvailable: Boolean = false,
-    isLsfgEnabled: Boolean = false,
     lsfgMultiplier: Int = 2,
-    lsfgFlowScale: Float = 1.0f,
-    lsfgPerformanceMode: Boolean = false,
-    onLsfgEnabledChanged: (Boolean) -> Unit = {},
+    lsfgFlowScale: Float = 0.80f,
+    lsfgPerformanceMode: Boolean = true,
     onLsfgMultiplierChanged: (Int) -> Unit = {},
     onLsfgFlowScaleChanged: (Float) -> Unit = {},
     onLsfgPerformanceModeChanged: (Boolean) -> Unit = {},
@@ -611,11 +609,9 @@ fun QuickMenu(
 
                                     QuickMenuTab.LSFG -> {
                                         LsfgQuickMenuTab(
-                                            isEnabled = isLsfgEnabled,
                                             multiplier = lsfgMultiplier,
                                             flowScale = lsfgFlowScale,
                                             performanceMode = lsfgPerformanceMode,
-                                            onEnabledChanged = onLsfgEnabledChanged,
                                             onMultiplierChanged = onLsfgMultiplierChanged,
                                             onFlowScaleChanged = onLsfgFlowScaleChanged,
                                             onPerformanceModeChanged = onLsfgPerformanceModeChanged,
@@ -1071,11 +1067,9 @@ private fun PerformanceHudQuickMenuTab(
 
 @Composable
 private fun LsfgQuickMenuTab(
-    isEnabled: Boolean,
     multiplier: Int,
     flowScale: Float,
     performanceMode: Boolean,
-    onEnabledChanged: (Boolean) -> Unit,
     onMultiplierChanged: (Int) -> Unit,
     onFlowScaleChanged: (Float) -> Unit,
     onPerformanceModeChanged: (Boolean) -> Unit,
@@ -1084,6 +1078,7 @@ private fun LsfgQuickMenuTab(
     modifier: Modifier = Modifier,
 ) {
     val accentColor = PluviaTheme.colors.accentPurple
+    val isEnabled = multiplier >= 2
 
     Column(
         modifier = modifier
@@ -1091,15 +1086,25 @@ private fun LsfgQuickMenuTab(
             .focusGroup(),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        // ── Enable Toggle ────────────────────────────────────────────────
-        QuickMenuToggleRow(
+        // ── Multiplier (Off / 2x / 3x / 4x) ───────────────────────────────
+        QuickMenuSectionHeader(
             title = stringResource(R.string.lsfg_frame_generation),
-            subtitle = stringResource(R.string.lsfg_quick_menu_subtitle),
-            enabled = isEnabled,
-            onToggle = { onEnabledChanged(!isEnabled) },
-            accentColor = accentColor,
-            focusRequester = focusRequester,
         )
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            listOf(0, 2, 3, 4).forEach { value ->
+                QuickMenuChoiceChip(
+                    text = if (value == 0) "Off" else "${value}x",
+                    selected = multiplier == value || (value == 0 && multiplier < 2),
+                    accentColor = accentColor,
+                    onClick = { onMultiplierChanged(value) },
+                    modifier = Modifier.width(56.dp),
+                    focusRequester = if (value == 0) focusRequester else null,
+                )
+            }
+        }
 
         AnimatedVisibility(
             visible = isEnabled,
@@ -1107,27 +1112,6 @@ private fun LsfgQuickMenuTab(
             exit = shrinkVertically() + fadeOut(),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Spacer(modifier = Modifier.height(4.dp))
-
-                // ── Multiplier ────────────────────────────────────────────
-                QuickMenuSectionHeader(
-                    title = stringResource(R.string.lsfg_multiplier),
-                )
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    listOf(2, 3, 4).forEach { value ->
-                        QuickMenuChoiceChip(
-                            text = "${value}x",
-                            selected = multiplier == value,
-                            accentColor = accentColor,
-                            onClick = { onMultiplierChanged(value) },
-                            modifier = Modifier.width(56.dp),
-                        )
-                    }
-                }
-
                 Spacer(modifier = Modifier.height(4.dp))
 
                 // ── Flow Scale ────────────────────────────────────────────

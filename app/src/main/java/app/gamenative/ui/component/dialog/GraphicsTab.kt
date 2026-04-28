@@ -458,9 +458,7 @@ private fun LsfgSection(state: ContainerConfigState) {
     val isBionic = config.containerVariant.equals(Container.BIONIC, ignoreCase = true)
     val dllAvailable = LsfgVkManager.isDllAvailable()
 
-    SettingsGroup(
-        title = { Text(text = stringResource(R.string.lsfg_frame_generation)) },
-    ) {
+    SettingsGroup {
         if (!isBionic) {
             Text(
                 text = stringResource(R.string.lsfg_not_supported),
@@ -480,67 +478,12 @@ private fun LsfgSection(state: ContainerConfigState) {
             },
         )
 
-        if (config.lsfgEnabled) {
-            if (!dllAvailable) {
-                // DLL not found - show install prompt
-                Text(
-                    text = stringResource(R.string.lsfg_dll_missing),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    color = Color(0xFFFF9800),
-                )
-            } else {
-                // DLL found - show config options
-
-                // Multiplier (2x, 3x, 4x)
-                val multipliers = listOf(2, 3, 4)
-                val multiplierLabels = multipliers.map { stringResource(R.string.lsfg_multiplier_format, it) }
-                val selectedMultIdx = multipliers.indexOf(config.lsfgMultiplier).coerceAtLeast(0)
-                SettingsListDropdown(
-                    colors = settingsTileColors(),
-                    title = { Text(text = stringResource(R.string.lsfg_multiplier)) },
-                    value = selectedMultIdx,
-                    items = multiplierLabels,
-                    onItemSelected = { idx ->
-                        state.config.value = config.copy(lsfgMultiplier = multipliers[idx])
-                    },
-                )
-
-                // Flow scale slider (0.25 - 1.0)
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    Text(text = stringResource(R.string.lsfg_flow_scale))
-                    val flowScale = config.lsfgFlowScale.toFloatOrNull()?.coerceIn(0.25f, 1.0f) ?: 1.0f
-                    Slider(
-                        value = flowScale,
-                        onValueChange = { newValue ->
-                            val formatted = String.format(java.util.Locale.US, "%.2f", newValue)
-                            state.config.value = config.copy(lsfgFlowScale = formatted)
-                        },
-                        valueRange = 0.25f..1.0f,
-                        steps = 14,
-                    )
-                    Text(
-                        text = String.format(java.util.Locale.US, "%.2f", flowScale),
-                    )
-                }
-
-                // Performance mode
-                SettingsSwitch(
-                    colors = settingsTileColorsAlt(),
-                    title = { Text(text = stringResource(R.string.lsfg_performance_mode)) },
-                    subtitle = { Text(text = stringResource(R.string.lsfg_performance_mode_description)) },
-                    state = config.lsfgPerformanceMode,
-                    onCheckedChange = {
-                        state.config.value = config.copy(lsfgPerformanceMode = it)
-                    },
-                )
-
-                // Armed status indicator
-                Text(
-                    text = stringResource(R.string.lsfg_armed, config.lsfgMultiplier),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    color = Color(0xFF4CAF50),
-                )
-            }
+        if (config.lsfgEnabled && !dllAvailable) {
+            Text(
+                text = stringResource(R.string.lsfg_dll_missing),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                color = Color(0xFFFF9800),
+            )
         }
     }
 }

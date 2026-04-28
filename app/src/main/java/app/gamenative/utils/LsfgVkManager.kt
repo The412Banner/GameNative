@@ -101,13 +101,13 @@ object LsfgVkManager {
     fun multiplier(container: Container): Int =
         container.getExtra(EXTRA_MULTIPLIER, "2").toIntOrNull()?.coerceIn(2, 4) ?: 2
 
-    /** Get the flow scale (0.25-1.0, default 1.0). */
+    /** Get the flow scale (0.25-1.0, default 0.80). */
     fun flowScale(container: Container): Float =
-        container.getExtra(EXTRA_FLOW_SCALE, "1.0").toFloatOrNull()?.coerceIn(0.25f, 1.0f) ?: 1.0f
+        container.getExtra(EXTRA_FLOW_SCALE, "0.80").toFloatOrNull()?.coerceIn(0.25f, 1.0f) ?: 0.80f
 
-    /** Get whether performance mode is enabled. */
+    /** Get whether performance mode is enabled (default true). */
     fun performanceMode(container: Container): Boolean =
-        parseBool(container.getExtra(EXTRA_PERFORMANCE_MODE, "false"))
+        parseBool(container.getExtra(EXTRA_PERFORMANCE_MODE, "true"))
 
     /**
      * Install the layer runtime + DLL into the container's filesystem.

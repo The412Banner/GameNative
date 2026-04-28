@@ -484,8 +484,8 @@ fun XServerScreen(
     var fpsLimiterTarget by rememberSaveable(container.id) { mutableIntStateOf(initialFpsLimiterTarget(container)) }
 
     // LSFG hot-reload state
-    val isLsfgAvailable = LsfgVkManager.isSupported(container) && LsfgVkManager.isDllAvailable()
-    var isLsfgEnabled by rememberSaveable(container.id) { mutableStateOf(LsfgVkManager.isArmed(container)) }
+    // LSFG tab in QuickMenu only visible when enabled in container settings
+    val isLsfgAvailable = LsfgVkManager.isSupported(container) && LsfgVkManager.isArmed(container)
     var lsfgMultiplier by rememberSaveable(container.id) { mutableIntStateOf(LsfgVkManager.multiplier(container)) }
     var lsfgFlowScale by rememberSaveable(container.id) { mutableStateOf(LsfgVkManager.flowScale(container)) }
     var lsfgPerformanceMode by rememberSaveable(container.id) { mutableStateOf(LsfgVkManager.performanceMode(container)) }
@@ -586,32 +586,28 @@ fun XServerScreen(
     }
 
     // ── LSFG hot-reload callbacks ──────────────────────────────────────────
-    fun applyLsfgEnabled(enabled: Boolean) {
-        isLsfgEnabled = enabled
-        container.putExtra(LsfgVkManager.EXTRA_ARMED, enabled.toString())
-        container.saveData()
-        LsfgVkManager.updateConfigAtRuntime(container, enabled, lsfgMultiplier, lsfgFlowScale, lsfgPerformanceMode)
-    }
-
     fun applyLsfgMultiplier(mult: Int) {
-        lsfgMultiplier = mult.coerceIn(2, 4)
-        container.putExtra(LsfgVkManager.EXTRA_MULTIPLIER, lsfgMultiplier.toString())
+        lsfgMultiplier = mult.coerceIn(0, 4)
+        container.putExtra(LsfgVkManager.EXTRA_MULTIPLIER, lsfgMultiplier.coerceIn(2, 4).toString())
         container.saveData()
-        LsfgVkManager.updateConfigAtRuntime(container, isLsfgEnabled, lsfgMultiplier, lsfgFlowScale, lsfgPerformanceMode)
+        val effectiveEnabled = lsfgMultiplier >= 2
+        LsfgVkManager.updateConfigAtRuntime(container, effectiveEnabled, lsfgMultiplier.coerceIn(2, 4), lsfgFlowScale, lsfgPerformanceMode)
     }
 
     fun applyLsfgFlowScale(scale: Float) {
         lsfgFlowScale = scale.coerceIn(0.25f, 1.0f)
         container.putExtra(LsfgVkManager.EXTRA_FLOW_SCALE, String.format(java.util.Locale.US, "%.2f", lsfgFlowScale))
         container.saveData()
-        LsfgVkManager.updateConfigAtRuntime(container, isLsfgEnabled, lsfgMultiplier, lsfgFlowScale, lsfgPerformanceMode)
+        val effectiveEnabled = lsfgMultiplier >= 2
+        LsfgVkManager.updateConfigAtRuntime(container, effectiveEnabled, lsfgMultiplier.coerceIn(2, 4), lsfgFlowScale, lsfgPerformanceMode)
     }
 
     fun applyLsfgPerformanceMode(enabled: Boolean) {
         lsfgPerformanceMode = enabled
         container.putExtra(LsfgVkManager.EXTRA_PERFORMANCE_MODE, enabled.toString())
         container.saveData()
-        LsfgVkManager.updateConfigAtRuntime(container, isLsfgEnabled, lsfgMultiplier, lsfgFlowScale, lsfgPerformanceMode)
+        val effectiveEnabled = lsfgMultiplier >= 2
+        LsfgVkManager.updateConfigAtRuntime(container, effectiveEnabled, lsfgMultiplier.coerceIn(2, 4), lsfgFlowScale, lsfgPerformanceMode)
     }
 
     LaunchedEffect(xServerView) {
@@ -2438,13 +2434,11 @@ fun XServerScreen(
                 if (isTouchscreenModeActive) add(QuickMenuAction.TOUCHSCREEN_MODE)
                 if (isDisableMouseInput) add(QuickMenuAction.DISABLE_MOUSE)
             },
-            // LSFG hot-reload
+            // LSFG hot-reload (tab only visible when enabled in container settings)
             isLsfgAvailable = isLsfgAvailable,
-            isLsfgEnabled = isLsfgEnabled,
             lsfgMultiplier = lsfgMultiplier,
             lsfgFlowScale = lsfgFlowScale,
             lsfgPerformanceMode = lsfgPerformanceMode,
-            onLsfgEnabledChanged = ::applyLsfgEnabled,
             onLsfgMultiplierChanged = ::applyLsfgMultiplier,
             onLsfgFlowScaleChanged = ::applyLsfgFlowScale,
             onLsfgPerformanceModeChanged = ::applyLsfgPerformanceMode,
