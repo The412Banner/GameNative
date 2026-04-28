@@ -65,7 +65,7 @@ object LsfgVkManager {
     private const val ENV_PROCESS = "LSFG_PROCESS"
 
     // Current runtime version (bumped when the bundled .so changes)
-    private const val RUNTIME_VERSION = "v1.0.0-android-arm64-v8a-fb"
+    private const val RUNTIME_VERSION = "v1.1.0-android-arm64-v8a-static"
 
     // Asset paths
     private const val ASSET_DIR = "lsfg_vk/android_arm64_v8a"
@@ -266,6 +266,18 @@ object LsfgVkManager {
 
         envVars.put(ENV_CONFIG, configFile(container).absolutePath)
         envVars.put(ENV_PROCESS, PROCESS_EXE_IDENTIFIER)
+
+        // Add the container's implicit_layer.d to VK_LAYER_PATH so the
+        // Vulkan loader discovers the lsfg-vk layer installed there.
+        // The static VK_LAYER_PATH only covers /usr/share/vulkan/implicit_layer.d,
+        // but we install the layer into the container's ~/.local/share/vulkan/.
+        val containerLayerDir = File(container.rootDir, LAYER_RELATIVE_DIR)
+        val existingLayerPath = envVars["VK_LAYER_PATH"] ?: ""
+        if (existingLayerPath.isNotEmpty()) {
+            envVars.put("VK_LAYER_PATH", "$existingLayerPath:${containerLayerDir.absolutePath}")
+        } else {
+            envVars.put("VK_LAYER_PATH", containerLayerDir.absolutePath)
+        }
 
         Timber.tag(TAG).i(
             "LSFG armed: dll=%s, multiplier=%d, flowScale=%.2f, perf=%s",
