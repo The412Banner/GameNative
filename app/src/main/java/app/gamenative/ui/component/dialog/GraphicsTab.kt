@@ -2,8 +2,11 @@ package app.gamenative.ui.component.dialog
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -210,6 +213,8 @@ fun GraphicsTabContent(state: ContainerConfigState) {
                     Text(text = "${state.sharpnessDenoise.value}%")
                 }
             }
+        }
+
         } else {
             // Non-bionic: existing driver/version UI and Vortek-specific options
             SettingsListDropdown(
@@ -312,6 +317,12 @@ fun GraphicsTabContent(state: ContainerConfigState) {
                 }
             }
         }
+
+        // Frame Generation (LSFG) — hooks the Vulkan swapchain for
+        // transparent frame generation. Only effective on Bionic containers
+        // with a Vortek/Adreno graphics driver.
+        LsfgSection(state)
+
         SettingsSwitch(
             colors = settingsTileColorsAlt(),
             title = { Text(text = stringResource(R.string.use_dri3)) },
@@ -436,6 +447,101 @@ private fun DxWrapperSection(state: ContainerConfigState) {
                     currentConfig.put("vkd3dFeatureLevel", selected)
                     state.config.value = config.copy(dxwrapperConfig = currentConfig.toString())
                 },
+            )
+        }
+    }
+}
+
+@Composable
+private fun LsfgSection(state: ContainerConfigState) {
+    val config = state.config.value
+    val isBionic = config.containerVariant.equals(Container.BIONIC, ignoreCase = true)
+
+    SettingsGroup(
+        title = { Text(text = stringResource(R.string.lsfg_frame_generation)) },
+    ) {
+        if (!isBionic) {
+            Text(
+                text = stringResource(R.string.lsfg_not_supported),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            return@SettingsGroup
+        }
+
+        SettingsSwitch(
+            colors = settingsTileColorsAlt(),
+            title = { Text(text = stringResource(R.string.lsfg_enable)) },
+            subtitle = { Text(text = stringResource(R.string.lsfg_description)) },
+            state = config.lsfgEnabled,
+            onCheckedChange = {
+                state.config.value = config.copy(lsfgEnabled = it)
+            },
+        )
+
+        if (config.lsfgEnabled) {
+            // DLL path
+            OutlinedTextField(
+                value = config.lsfgDllPath,
+                onValueChange = { state.config.value = config.copy(lsfgDllPath = it) },
+                label = { Text(text = stringResource(R.string.lsfg_dll_path)) },
+                placeholder = { Text(text = stringResource(R.string.lsfg_dll_path_hint)) },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                singleLine = true,
+            )
+
+            // Multiplier (2x, 3x, 4x)
+            val multipliers = listOf(2, 3, 4)
+            val multiplierLabels = multipliers.map { stringResource(R.string.lsfg_multiplier_format, it) }
+            val selectedMultIdx = multipliers.indexOf(config.lsfgMultiplier).coerceAtLeast(0)
+            SettingsListDropdown(
+                colors = settingsTileColors(),
+                title = { Text(text = stringResource(R.string.lsfg_multiplier)) },
+                value = selectedMultIdx,
+                items = multiplierLabels,
+                onItemSelected = { idx ->
+                    state.config.value = config.copy(lsfgMultiplier = multipliers[idx])
+                },
+            )
+
+            // Flow scale slider (0.25 - 1.0)
+            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(text = stringResource(R.string.lsfg_flow_scale))
+                val flowScale = config.lsfgFlowScale.toFloatOrNull()?.coerceIn(0.25f, 1.0f) ?: 1.0f
+                Slider(
+                    value = flowScale,
+                    onValueChange = { newValue ->
+                        val formatted = String.format(java.util.Locale.US, "%.2f", newValue)
+                        state.config.value = config.copy(lsfgFlowScale = formatted)
+                    },
+                    valueRange = 0.25f..1.0f,
+                    steps = 14,
+                )
+                Text(
+                    text = String.format(java.util.Locale.US, "%.2f", flowScale),
+                )
+            }
+
+            // Performance mode
+            SettingsSwitch(
+                colors = settingsTileColorsAlt(),
+                title = { Text(text = stringResource(R.string.lsfg_performance_mode)) },
+                subtitle = { Text(text = stringResource(R.string.lsfg_performance_mode_description)) },
+                state = config.lsfgPerformanceMode,
+                onCheckedChange = {
+                    state.config.value = config.copy(lsfgPerformanceMode = it)
+                },
+            )
+
+            // Armed status indicator
+            val dllPath = config.lsfgDllPath.trim()
+            val isArmed = config.lsfgEnabled && dllPath.isNotEmpty()
+            Text(
+                text = if (isArmed) stringResource(R.string.lsfg_armed, config.lsfgMultiplier)
+                       else stringResource(R.string.lsfg_dll_missing),
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                color = if (isArmed) Color(0xFF4CAF50)
+                       else Color(0xFFFF9800),
             )
         }
     }
