@@ -1475,7 +1475,7 @@
     <string name="review_overwhelmingly_negative">Overwhelmingly Negative</string>
     <!-- LSFG Frame Generation -->
     <string name="lsfg_frame_generation">Frame Generation</string>
-    <string name="lsfg_description">Generate intermediate frames using Lossless Scaling's Vulkan layer. Hooks the game's swapchain directly — no overlay needed.</string>
+    <string name="lsfg_description">Generate intermediate frames using Lossless Scaling\'s Vulkan layer. Hooks the game\'s swapchain directly - no overlay needed.</string>
     <string name="lsfg_enable">Enable frame generation</string>
     <string name="lsfg_dll_path">Lossless.dll path</string>
     <string name="lsfg_dll_path_hint">Path to Lossless.dll inside the container</string>
@@ -1486,6 +1486,8 @@
     <string name="lsfg_performance_mode">Performance mode</string>
     <string name="lsfg_performance_mode_description">Reduces quality for higher framegen throughput</string>
     <string name="lsfg_not_supported">Frame generation requires a Bionic container</string>
-    <string name="lsfg_dll_missing">Lossless.dll not found — set the DLL path to arm frame generation</string>
+    <string name="lsfg_dll_missing">Lossless.dll not found - set the DLL path to arm frame generation</string>
     <string name="lsfg_armed">Frame generation armed (multiplier %1$dx)</string>
+    <string name="settings_interface_show_recommendations_title">Show game recommendations</string>
+    <string name="settings_interface_show_recommendations_subtitle">Show curated indie game picks in your library. Keeping this on helps support indie developers and GameNative.</string>
 </resources>

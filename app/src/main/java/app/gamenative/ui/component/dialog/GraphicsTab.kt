@@ -214,8 +214,7 @@ fun GraphicsTabContent(state: ContainerConfigState) {
                 }
             }
         }
-
-        } else {
+        else {
             // Non-bionic: existing driver/version UI and Vortek-specific options
             SettingsListDropdown(
                 colors = settingsTileColors(),
