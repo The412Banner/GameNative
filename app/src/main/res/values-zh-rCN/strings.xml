@@ -295,6 +295,11 @@
     <string name="quick_menu_tab_controller">控制器</string>
     <string name="performance_hud">性能 HUD</string>
     <string name="performance_hud_description">显示或隐藏游戏内叠加层。</string>
+    <string name="performance_hud_fps_limiter">FPS 限制器</string>
+    <string name="performance_hud_fps_limiter_description">限制游戏内帧率。最高：%1$d Hz。</string>
+    <string name="performance_hud_fps_limiter_target">目标 FPS</string>
+    <string name="performance_hud_fps_limiter_off">无限制</string>
+    <string name="performance_hud_fps_limiter_value">%1$d FPS</string>
     <string name="performance_hud_presets">预设</string>
     <string name="performance_hud_presets_description">快速切换常用 HUD 布局。</string>
     <string name="performance_hud_preset_fps_only">1</string>

@@ -284,6 +284,11 @@
     <string name="tools_wine_processes_empty">No running EXEs detected.</string>
     <string name="performance_hud">Performance HUD</string>
     <string name="performance_hud_description">Show or hide the in-game overlay.</string>
+    <string name="performance_hud_fps_limiter">FPS limiter</string>
+    <string name="performance_hud_fps_limiter_description">Caps the in-game frame rate. Max: %1$d Hz.</string>
+    <string name="performance_hud_fps_limiter_target">Target FPS</string>
+    <string name="performance_hud_fps_limiter_off">Unlimited</string>
+    <string name="performance_hud_fps_limiter_value">%1$d FPS</string>
     <string name="performance_hud_presets">Presets</string>
     <string name="performance_hud_presets_description">Quickly switch between common HUD layouts.</string>
     <string name="performance_hud_preset_fps_only">1</string>

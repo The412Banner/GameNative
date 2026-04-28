@@ -309,6 +309,11 @@
     <string name="quick_menu_tab_controller">Kontroler</string>
     <string name="performance_hud">HUD wydajności</string>
     <string name="performance_hud_description">Pokaż lub ukryj nakładkę w grze.</string>
+    <string name="performance_hud_fps_limiter">Ogranicznik FPS</string>
+    <string name="performance_hud_fps_limiter_description">Ogranicza liczbę klatek na sekundę w grze. Maks.: %1$d Hz.</string>
+    <string name="performance_hud_fps_limiter_target">Docelowy FPS</string>
+    <string name="performance_hud_fps_limiter_off">Bez limitu</string>
+    <string name="performance_hud_fps_limiter_value">%1$d FPS</string>
     <string name="performance_hud_presets">Presety</string>
     <string name="performance_hud_presets_description">Szybko przełączaj między typowymi układami HUD.</string>
     <string name="performance_hud_preset_fps_only">1</string>

@@ -297,6 +297,11 @@
     <string name="quick_menu_tab_controller">Contrôles</string>
     <string name="performance_hud">HUD de performance</string>
     <string name="performance_hud_description">Afficher ou masquer la surcouche en jeu.</string>
+    <string name="performance_hud_fps_limiter">Limiteur de FPS</string>
+    <string name="performance_hud_fps_limiter_description">Limite la fréquence d’images en jeu. Max. : %1$d Hz.</string>
+    <string name="performance_hud_fps_limiter_target">FPS cible</string>
+    <string name="performance_hud_fps_limiter_off">Illimité</string>
+    <string name="performance_hud_fps_limiter_value">%1$d FPS</string>
     <string name="performance_hud_presets">Préréglages</string>
     <string name="performance_hud_presets_description">Basculer rapidement entre des dispositions HUD courantes.</string>
     <string name="performance_hud_preset_fps_only">1</string>

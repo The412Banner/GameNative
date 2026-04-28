@@ -312,6 +312,11 @@
     <string name="quick_menu_tab_controller">Controles</string>
     <string name="performance_hud">HUD de rendimiento</string>
     <string name="performance_hud_description">Mostrar u ocultar la superposición en el juego.</string>
+    <string name="performance_hud_fps_limiter">Limitador de FPS</string>
+    <string name="performance_hud_fps_limiter_description">Limita la tasa de fotogramas en el juego. Máx.: %1$d Hz.</string>
+    <string name="performance_hud_fps_limiter_target">FPS objetivo</string>
+    <string name="performance_hud_fps_limiter_off">Ilimitado</string>
+    <string name="performance_hud_fps_limiter_value">%1$d FPS</string>
     <string name="performance_hud_presets">Preajustes</string>
     <string name="performance_hud_presets_description">Cambia rápidamente entre diseños de HUD comunes.</string>
     <string name="performance_hud_preset_fps_only">1</string>

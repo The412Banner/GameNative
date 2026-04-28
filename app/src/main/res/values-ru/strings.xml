@@ -873,6 +873,11 @@ https://gamenative.app
     <string name="quick_menu_tab_controller">Контроллер</string>
     <string name="performance_hud">HUD производительности</string>
     <string name="performance_hud_description">Показывать или скрывать игровое наложение.</string>
+    <string name="performance_hud_fps_limiter">Ограничитель FPS</string>
+    <string name="performance_hud_fps_limiter_description">Ограничивает частоту кадров в игре. Макс.: %1$d Гц.</string>
+    <string name="performance_hud_fps_limiter_target">Целевой FPS</string>
+    <string name="performance_hud_fps_limiter_off">Без ограничений</string>
+    <string name="performance_hud_fps_limiter_value">%1$d FPS</string>
     <string name="performance_hud_presets">Предустановки</string>
     <string name="performance_hud_presets_description">Быстро переключаться между типовыми макетами HUD.</string>
     <string name="performance_hud_preset_fps_only">1</string>

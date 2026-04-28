@@ -296,6 +296,11 @@
     <string name="quick_menu_tab_controller">Контролер</string>
     <string name="performance_hud">HUD продуктивності</string>
     <string name="performance_hud_description">Показувати або приховувати ігрове накладання.</string>
+    <string name="performance_hud_fps_limiter">Обмежувач FPS</string>
+    <string name="performance_hud_fps_limiter_description">Обмежує частоту кадрів у грі. Макс.: %1$d Гц.</string>
+    <string name="performance_hud_fps_limiter_target">Цільовий FPS</string>
+    <string name="performance_hud_fps_limiter_off">Без обмежень</string>
+    <string name="performance_hud_fps_limiter_value">%1$d FPS</string>
     <string name="performance_hud_presets">Набори</string>
     <string name="performance_hud_presets_description">Швидко перемикайтеся між типовими макетами HUD.</string>
     <string name="performance_hud_preset_fps_only">1</string>

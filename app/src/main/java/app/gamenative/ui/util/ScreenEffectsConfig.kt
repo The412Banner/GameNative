@@ -98,7 +98,7 @@ fun fsrQuickMenuLevelToStops(level: Int): Float {
 }
 
 fun applyScreenEffectsConfig(renderer: GLRenderer, config: ScreenEffectsConfig) {
-    val composer = renderer.effectComposer
+    val composer = renderer.getEffectComposer()
     val effects = mutableListOf<Effect>()
 
     when (config.scalingMode) {
