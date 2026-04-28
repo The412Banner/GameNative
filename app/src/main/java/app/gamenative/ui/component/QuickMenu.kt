@@ -112,10 +112,10 @@ object QuickMenuAction {
 
 private object QuickMenuTab {
     const val HUD = 0
-    const val EFFECTS = 1
-    const val CONTROLLER = 2
-    const val TOOLS = 3
-    const val LSFG = 4
+    const val LSFG = 1
+    const val EFFECTS = 2
+    const val CONTROLLER = 3
+    const val TOOLS = 4
 }
 
 data class QuickMenuItem(
@@ -328,9 +328,9 @@ fun QuickMenu(
     var selectedTab by rememberSaveable { mutableIntStateOf(PrefManager.quickMenuLastTab) }
     val selectedTabLabelResId = when (selectedTab) {
         QuickMenuTab.HUD -> R.string.performance_hud
+        QuickMenuTab.LSFG -> R.string.lsfg_tab_title
         QuickMenuTab.EFFECTS -> R.string.screen_effects
         QuickMenuTab.TOOLS -> R.string.task_manager
-        QuickMenuTab.LSFG -> R.string.lsfg_frame_generation
         else -> R.string.quick_menu_tab_controller
     }
 
@@ -457,6 +457,20 @@ fun QuickMenu(
                                     modifier = Modifier.width(56.dp),
                                     focusRequester = hudTabFocusRequester,
                                 )
+                                if (isLsfgAvailable) {
+                                    QuickMenuTabButton(
+                                        icon = Icons.Default.Speed,
+                                        contentDescriptionResId = R.string.lsfg_tab_title,
+                                        selected = selectedTab == QuickMenuTab.LSFG,
+                                        accentColor = PluviaTheme.colors.accentPurple,
+                                        onSelected = {
+                                            selectedTab = QuickMenuTab.LSFG
+                                            PrefManager.quickMenuLastTab = selectedTab
+                                        },
+                                        modifier = Modifier.width(56.dp),
+                                        focusRequester = lsfgTabFocusRequester,
+                                    )
+                                }
                                 QuickMenuTabButton(
                                     icon = Icons.Default.AutoFixHigh,
                                     contentDescriptionResId = R.string.screen_effects,
@@ -490,20 +504,6 @@ fun QuickMenu(
                                     modifier = Modifier.width(56.dp),
                                     focusRequester = toolsTabFocusRequester,
                                 )
-                                if (isLsfgAvailable) {
-                                    QuickMenuTabButton(
-                                        icon = Icons.Default.Speed,
-                                        contentDescriptionResId = R.string.lsfg_frame_generation,
-                                        selected = selectedTab == QuickMenuTab.LSFG,
-                                        accentColor = PluviaTheme.colors.accentPurple,
-                                        onSelected = {
-                                            selectedTab = QuickMenuTab.LSFG
-                                            PrefManager.quickMenuLastTab = selectedTab
-                                        },
-                                        modifier = Modifier.width(56.dp),
-                                        focusRequester = lsfgTabFocusRequester,
-                                    )
-                                }
                             }
 
                             Box(
@@ -572,6 +572,20 @@ fun QuickMenu(
                                         )
                                     }
 
+                                    QuickMenuTab.LSFG -> {
+                                        LsfgQuickMenuTab(
+                                            multiplier = lsfgMultiplier,
+                                            flowScale = lsfgFlowScale,
+                                            performanceMode = lsfgPerformanceMode,
+                                            onMultiplierChanged = onLsfgMultiplierChanged,
+                                            onFlowScaleChanged = onLsfgFlowScaleChanged,
+                                            onPerformanceModeChanged = onLsfgPerformanceModeChanged,
+                                            scrollState = lsfgScrollState,
+                                            focusRequester = lsfgItemFocusRequester,
+                                            modifier = Modifier.fillMaxSize(),
+                                        )
+                                    }
+
                                     QuickMenuTab.EFFECTS -> {
                                         if (renderer != null) {
                                             ScreenEffectsTabContent(
@@ -603,20 +617,6 @@ fun QuickMenu(
                                             processes = wineProcesses,
                                             isLoadingProcesses = isWineProcessesLoading,
                                             firstItemFocusRequester = toolsItemFocusRequester,
-                                            modifier = Modifier.fillMaxSize(),
-                                        )
-                                    }
-
-                                    QuickMenuTab.LSFG -> {
-                                        LsfgQuickMenuTab(
-                                            multiplier = lsfgMultiplier,
-                                            flowScale = lsfgFlowScale,
-                                            performanceMode = lsfgPerformanceMode,
-                                            onMultiplierChanged = onLsfgMultiplierChanged,
-                                            onFlowScaleChanged = onLsfgFlowScaleChanged,
-                                            onPerformanceModeChanged = onLsfgPerformanceModeChanged,
-                                            scrollState = lsfgScrollState,
-                                            focusRequester = lsfgItemFocusRequester,
                                             modifier = Modifier.fillMaxSize(),
                                         )
                                     }
@@ -1088,7 +1088,7 @@ private fun LsfgQuickMenuTab(
     ) {
         // ── Multiplier (Off / 2x / 3x / 4x) ───────────────────────────────
         QuickMenuSectionHeader(
-            title = stringResource(R.string.lsfg_frame_generation),
+            title = stringResource(R.string.lsfg_multiplier),
         )
         Row(
             modifier = Modifier.padding(horizontal = 8.dp),

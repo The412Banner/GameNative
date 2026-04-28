@@ -1475,6 +1475,7 @@
     <string name="review_overwhelmingly_negative">Overwhelmingly Negative</string>
     <!-- LSFG Frame Generation -->
     <string name="lsfg_frame_generation">Frame Generation</string>
+    <string name="lsfg_tab_title">LSFG-VK</string>
     <string name="lsfg_description">Generate intermediate frames using Lossless Scaling\'s Vulkan layer</string>
     <string name="lsfg_enable">Enable LSFG-VK frame generation</string>
     <string name="lsfg_multiplier">Frame multiplier</string>
