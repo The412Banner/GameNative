@@ -7,6 +7,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -15,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.gamenative.R
+import app.gamenative.service.SteamService
+import app.gamenative.ui.component.dialog.LoadingDialog
 import app.gamenative.ui.component.settings.SettingsListDropdown
 import app.gamenative.ui.component.settings.SettingsMultiListDropdown
 import app.gamenative.ui.theme.settingsTileColors
@@ -28,6 +31,7 @@ import com.winlator.core.KeyValueSet
 import com.winlator.core.StringUtils
 import com.winlator.core.envvars.EnvVars
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 @Composable
@@ -460,9 +464,30 @@ private fun DxWrapperSection(state: ContainerConfigState) {
 private fun LsfgSection(state: ContainerConfigState) {
     val config = state.config.value
     val isBionic = config.containerVariant.equals(Container.BIONIC, ignoreCase = true)
-    val dllAvailable = LsfgVkManager.isDllAvailable()
+    var dllAvailable by rememberSaveable { mutableStateOf(LsfgVkManager.isDllAvailable()) }
     val ownsApp = LsfgVkManager.ownsLosslessScaling()
     var showInstallDialog by rememberSaveable { mutableStateOf(false) }
+    var isInstalling by rememberSaveable { mutableStateOf(false) }
+    var installProgress by rememberSaveable { mutableStateOf(0f) }
+
+    // Poll download progress while installing
+    LaunchedEffect(isInstalling) {
+        while (isInstalling) {
+            val downloads = SteamService.getActiveDownloads()
+            val dlInfo = downloads[LsfgVkManager.LOSSLESS_SCALING_APP_ID]
+            if (dlInfo != null) {
+                installProgress = dlInfo.getProgress()
+                if (!dlInfo.isActive()) {
+                    isInstalling = false
+                    dllAvailable = LsfgVkManager.isDllAvailable()
+                }
+            } else {
+                isInstalling = false
+                dllAvailable = LsfgVkManager.isDllAvailable()
+            }
+            delay(500)
+        }
+    }
 
     SettingsGroup {
         if (!isBionic) {
@@ -519,9 +544,11 @@ private fun LsfgSection(state: ContainerConfigState) {
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = {
                     showInstallDialog = false
-                    app.gamenative.service.SteamService.downloadApp(
-                        LsfgVkManager.LOSSLESS_SCALING_APP_ID.toInt()
+                    SteamService.downloadApp(
+                        LsfgVkManager.LOSSLESS_SCALING_APP_ID
                     )
+                    isInstalling = true
+                    installProgress = 0f
                 }) {
                     Text(text = stringResource(android.R.string.ok))
                 }
@@ -533,4 +560,11 @@ private fun LsfgSection(state: ContainerConfigState) {
             },
         )
     }
+
+    // Download progress dialog
+    LoadingDialog(
+        visible = isInstalling,
+        progress = installProgress,
+        message = stringResource(R.string.lsfg_installing),
+    )
 }

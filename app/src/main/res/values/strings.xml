@@ -1489,7 +1489,8 @@
     <string name="lsfg_install_prompt">Lossless Scaling not installed. Tap to install.</string>
     <string name="lsfg_not_in_library">Lossless Scaling not in your Steam library</string>
     <string name="lsfg_install_title">Install Lossless Scaling?</string>
-    <string name="lsfg_install_message">This will download Lossless Scaling from Steam and open Downloads so you can track progress.</string>
+    <string name="lsfg_install_message">This will download Lossless Scaling from Steam to enable frame generation.</string>
+    <string name="lsfg_installing">Downloading Lossless Scaling…</string>
     <string name="lsfg_armed">Frame generation armed (multiplier %1$dx)</string>
     <string name="lsfg_quick_menu_subtitle">Hot-reload via conf.toml</string>
     <string name="lsfg_performance_mode_desc">Reduces quality for higher throughput</string>
