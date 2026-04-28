@@ -97,12 +97,6 @@ data class ContainerData(
     // LSFG Vulkan frame generation
     /** Whether LSFG frame generation is enabled for this container */
     val lsfgEnabled: Boolean = false,
-    /** Frame generation multiplier (2-4, default 2) */
-    val lsfgMultiplier: Int = 2,
-    /** Flow scale factor (0.25-1.0, default 1.0) */
-    val lsfgFlowScale: String = "1.0",
-    /** Whether performance mode is enabled */
-    val lsfgPerformanceMode: Boolean = false,
 ) {
     companion object {
         val Saver = mapSaver(
@@ -167,9 +161,6 @@ data class ContainerData(
                     "sharpnessLevel" to state.sharpnessLevel,
                     "sharpnessDenoise" to state.sharpnessDenoise,
                     "lsfgEnabled" to state.lsfgEnabled,
-                    "lsfgMultiplier" to state.lsfgMultiplier,
-                    "lsfgFlowScale" to state.lsfgFlowScale,
-                    "lsfgPerformanceMode" to state.lsfgPerformanceMode,
                 )
             },
             restore = { savedMap ->
@@ -233,9 +224,6 @@ data class ContainerData(
                     sharpnessLevel = (savedMap["sharpnessLevel"] as? Int) ?: 100,
                     sharpnessDenoise = (savedMap["sharpnessDenoise"] as? Int) ?: 100,
                     lsfgEnabled = (savedMap["lsfgEnabled"] as? Boolean) ?: false,
-                    lsfgMultiplier = (savedMap["lsfgMultiplier"] as? Int) ?: 2,
-                    lsfgFlowScale = (savedMap["lsfgFlowScale"] as? String) ?: "1.0",
-                    lsfgPerformanceMode = (savedMap["lsfgPerformanceMode"] as? Boolean) ?: false,
                 )
             },
         )
