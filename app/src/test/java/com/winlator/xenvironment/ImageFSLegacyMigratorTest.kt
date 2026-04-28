@@ -85,4 +85,52 @@ class ImageFSLegacyMigratorTest {
         assertTrue(migrated)
         assertTrue("Symlink should remain untouched", Files.isSymbolicLink(symlinkPath))
     }
+
+    @Test
+    fun migrateLegacyDirsIfNeeded_movesLegacyProtonDirsToSharedProton() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val protonDir = File(legacyImageFsRoot, "opt/proton-ge-9-2").apply { mkdirs() }
+        val protonFile = File(protonDir, "version.txt").apply { writeText("ge-9-2") }
+
+        val migrated = ImageFSLegacyMigrator.migrateLegacyDirsIfNeeded(context, legacyImageFsRoot)
+
+        val sharedProtonDir = File(sharedDir, "proton/proton-ge-9-2")
+        assertTrue(migrated)
+        assertFalse("Legacy proton dir should be moved away", protonDir.exists())
+        assertTrue("Shared proton dir should exist", sharedProtonDir.exists())
+        assertEquals("ge-9-2", File(sharedProtonDir, protonFile.name).readText())
+    }
+
+    @Test
+    fun migrateLegacyDirsIfNeeded_skipsNonProtonAndSymlinkEntriesInOpt() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val optDir = File(legacyImageFsRoot, "opt").apply { mkdirs() }
+        File(optDir, "wine-ge-custom").apply { mkdirs() }
+
+        val protonReal = File(legacyImageFsRoot, "proton-real").apply { mkdirs() }
+        val protonSymlinkPath = File(optDir, "proton-symlink").toPath()
+        Files.createSymbolicLink(protonSymlinkPath, protonReal.toPath())
+
+        val migrated = ImageFSLegacyMigrator.migrateLegacyDirsIfNeeded(context, legacyImageFsRoot)
+
+        assertTrue(migrated)
+        assertTrue(File(optDir, "wine-ge-custom").exists())
+        assertTrue(Files.isSymbolicLink(protonSymlinkPath))
+    }
+
+    @Test
+    fun migrateLegacyDirsIfNeeded_doesNotOverwriteExistingSharedProtonDir() {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val legacyProton = File(legacyImageFsRoot, "opt/proton-ge-9-5").apply { mkdirs() }
+        File(legacyProton, "from-legacy.txt").writeText("legacy")
+
+        val existingShared = File(sharedDir, "proton/proton-ge-9-5").apply { mkdirs() }
+        File(existingShared, "existing.txt").writeText("shared")
+
+        val migrated = ImageFSLegacyMigrator.migrateLegacyDirsIfNeeded(context, legacyImageFsRoot)
+
+        assertTrue(migrated)
+        assertTrue("Legacy proton should remain when shared exists", legacyProton.exists())
+        assertEquals("shared", File(existingShared, "existing.txt").readText())
+    }
 }

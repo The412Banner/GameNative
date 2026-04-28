@@ -34,6 +34,15 @@ public class ImageFs {
         wineprefix = rootDir + WINEPREFIX;
     }
 
+    /** Shared Proton directory; opt/<version> in each variant symlinks here. */
+    public static File getSharedProtonDir(Context context) {
+        File sharedProtonDir = new File(context.getFilesDir(), "imagefs_shared/proton");
+        if (!sharedProtonDir.exists()) {
+            sharedProtonDir.mkdirs();
+        }
+        return sharedProtonDir;
+    }
+
     public static ImageFs find(Context context) {
         ImageFs local = INSTANCE;
         if (local != null) return local;

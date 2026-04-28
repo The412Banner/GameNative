@@ -28,4 +28,23 @@ class ImageFsTest {
         assertTrue("Shared dir should be a directory", actual.isDirectory)
         assertEquals(expected.absolutePath, actual.absolutePath)
     }
+
+    @Test
+    fun getSharedProtonDir_createsAndReturnsSharedProtonDirectory() {
+        val actual = ImageFs.getSharedProtonDir(context)
+        val expected = File(context.filesDir, "imagefs_shared/proton")
+
+        assertTrue("Shared proton dir should exist after call", actual.exists())
+        assertTrue("Shared proton dir should be a directory", actual.isDirectory)
+        assertEquals(expected.absolutePath, actual.absolutePath)
+    }
+
+    @Test
+    fun getSharedProtonDir_isUnderSharedRoot() {
+        val sharedRoot = ImageFs.getImageFsSharedDir(context)
+        val sharedProton = ImageFs.getSharedProtonDir(context)
+        val expected = File(sharedRoot, "proton")
+
+        assertEquals(expected.absolutePath, sharedProton.absolutePath)
+    }
 }
