@@ -7,6 +7,7 @@ import com.winlator.core.envvars.EnvVars
 import java.io.File
 import java.util.Locale
 import timber.log.Timber
+import kotlin.jvm.JvmStatic
 
 /**
  * Manages the lsfg-vk Vulkan implicit layer for frame generation.
@@ -71,10 +72,12 @@ object LsfgVkManager {
     // ---- Public API --------------------------------------------------------
 
     /** Whether LSFG is supported for this container's variant. */
+    @JvmStatic
     fun isSupported(container: Container): Boolean =
         container.containerVariant.equals(Container.BIONIC, ignoreCase = true)
 
     /** Whether LSFG is armed (enabled + DLL available) for this container. */
+    @JvmStatic
     fun isArmed(container: Container): Boolean =
         isSupported(container) &&
             parseBool(container.getExtra(EXTRA_ARMED, "false")) &&
@@ -102,6 +105,7 @@ object LsfgVkManager {
      *
      * @return true if installation succeeded or was already up-to-date
      */
+    @JvmStatic
     fun ensureRuntimeInstalled(context: Context, container: Container): Boolean {
         if (!isSupported(container)) return false
 
@@ -161,6 +165,7 @@ object LsfgVkManager {
      *
      * @return true if the config was written successfully
      */
+    @JvmStatic
     fun writeConfig(container: Container): Boolean {
         if (!isSupported(container)) return false
 
@@ -192,6 +197,7 @@ object LsfgVkManager {
      *
      * @return true if LSFG is armed and env vars were applied
      */
+    @JvmStatic
     fun applyLaunchEnv(container: Container, envVars: EnvVars): Boolean {
         // Clear any stale env vars first
         envVars.remove(ENV_DISABLE)
@@ -233,6 +239,7 @@ object LsfgVkManager {
      *
      * @return absolute path to Lossless.dll, or null if not found
      */
+    @JvmStatic
     fun resolveDllPath(container: Container): String? {
         // User override
         val override = dllOverridePath(container).takeIf { it.isNotEmpty() }
