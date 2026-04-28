@@ -77,7 +77,7 @@ object LsfgVkManager {
     /** Whether LSFG is armed (enabled + DLL available) for this container. */
     fun isArmed(container: Container): Boolean =
         isSupported(container) &&
-            container.getExtra(EXTRA_ARMED, "0") == "1" &&
+            parseBool(container.getExtra(EXTRA_ARMED, "false")) &&
             resolveDllPath(container) != null
 
     /** Get the configured DLL override path (may be empty). */
@@ -94,7 +94,7 @@ object LsfgVkManager {
 
     /** Get whether performance mode is enabled. */
     fun performanceMode(container: Container): Boolean =
-        container.getExtra(EXTRA_PERFORMANCE_MODE, "0") == "1"
+        parseBool(container.getExtra(EXTRA_PERFORMANCE_MODE, "false"))
 
     /**
      * Install the layer runtime into the container's filesystem.
@@ -166,7 +166,7 @@ object LsfgVkManager {
 
         return try {
             val dllPath = resolveDllPath(container)
-            val armed = container.getExtra(EXTRA_ARMED, "0") == "1" && dllPath != null
+            val armed = parseBool(container.getExtra(EXTRA_ARMED, "false")) && dllPath != null
             val configFile = File(container.rootDir, CONFIG_RELATIVE_PATH)
             val configText = buildConfigToml(
                 dllPath = dllPath,
@@ -204,12 +204,12 @@ object LsfgVkManager {
         }
 
         val dllPath = resolveDllPath(container)
-        val armed = container.getExtra(EXTRA_ARMED, "0") == "1" && dllPath != null
+        val armed = parseBool(container.getExtra(EXTRA_ARMED, "false")) && dllPath != null
 
         if (!armed) {
             envVars.put(ENV_DISABLE, "1")
-            Timber.tag(TAG).i("LSFG disabled (armed=%s, dll=%s)",
-                container.getExtra(EXTRA_ARMED, "0"), dllPath ?: "null")
+            Timber.tag(TAG).i("LSFG disabled (enabled=%s, dll=%s)",
+                container.getExtra(EXTRA_ARMED, "false"), dllPath ?: "null")
             return false
         }
 
@@ -291,6 +291,10 @@ object LsfgVkManager {
         }
         append('"')
     }
+
+    /** Parse boolean from container extra (handles "true"/"false" and "1"/"0"). */
+    private fun parseBool(value: String): Boolean =
+        value.equals("true", ignoreCase = true) || value == "1"
 
     private fun formatFlowScale(value: Float): String =
         String.format(Locale.US, "%.2f", value.coerceIn(0.25f, 1.0f))
