@@ -314,9 +314,6 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
             envVars.putAll(this.envVars);
         }
 
-        // LSFG Vulkan layer: install runtime, write config, apply env vars.
-        // The layer hooks vkQueuePresentKHR and runs frame generation on
-        // the game's actual swapchain — no overlay or MediaProjection needed.
         if (app.gamenative.utils.LsfgVkManager.isSupported(container)) {
             app.gamenative.utils.LsfgVkManager.ensureRuntimeInstalled(
                 environment.getContext(), container);

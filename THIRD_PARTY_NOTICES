@@ -133,6 +133,22 @@ Full license text: https://creativecommons.org/publicdomain/zero/1.0/
 
 ---
 
+## lsfg-vk / lsfg-vk-android
+
+**Library:** lsfg-vk (Vulkan frame generation layer)
+**Authors:** PancakeTAS and contributors (upstream), xXJSONDeruloXx (Android patches)
+**Source (upstream):** https://github.com/PancakeTAS/lsfg-vk
+**Source (Android fork):** https://github.com/xXJSONDeruloXx/lsfg-vk-android
+**License:** MIT
+
+A prebuilt version of lsfg-vk with Android-specific patches (AHardwareBuffer
+image sharing, TMPDIR support, Vortek compatibility) is included as a Vulkan
+implicit layer at `app/src/main/assets/lsfg_vk/android_arm64_v8a/liblsfg-vk-layer.so`.
+The layer intercepts `vkQueuePresentKHR` to generate interpolated frames using
+Optical Flow, driven by the user's own `Lossless.dll` (not redistributed).
+
+---
+
 ## OpenAL Soft
 
 **Library:** OpenAL Soft v1.25.1
