@@ -7,37 +7,23 @@ The layer creates images and semaphores with `VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_
 Switch to the AHardwareBuffer-based path that `LSFG_3_1::createContextFromAHB()` provides (already exists in the framegen API, used by the LSFG-Android-Application). Use `presentContext(id, -1, {})` + `waitIdle()` for sync instead of semaphore FDs.
 
 ## Checklist
-- [x] **Mini::Image Android variant** — Added AHB-backed Image constructor + getAhb() accessor
-- [x] **LsContext constructor** — Android path uses createContextFromAHB()
-- [x] **LsContext::present** — Android path uses presentContext(-1, {}) + waitIdle()
-- [x] **Mini::Semaphore** — Removed Semaphore(device, &fd) from Android path
-- [x] **Rebuild** — Built, installed v1.3.0-android-arm64-v8a-ahb (versionCode 24)
+- [x] **Mini::Image Android variant** — AHB-backed Image constructor using `vkGetImageMemoryRequirements` instead of `vkGetAndroidHardwareBufferPropertiesANDROID` (Vortek doesn't support the latter)
+- [x] **LsContext constructor** — Android path uses `createContextFromAHB()`
+- [x] **LsContext::present** — Android path uses `presentContext(-1, {})` + `waitIdle()`
+- [x] **Mini::Semaphore** — Removed `Semaphore(device, &fd)` from Android path
+- [x] **Layer AHB function** — Made `ovkGetAndroidHardwareBufferPropertiesANDROID` optional (won't crash if Vortek doesn't provide it)
+- [x] **Rebuild** — Built, installed v1.4.0-android-arm64-v8a-ahb-no-props (versionCode 25)
+- [x] **Vortek AHB serializer** — Added AHB pNext serialization to `~/Developer/vortek` (feat/ahb-extension-support branch) for when server can be rebuilt
 - [ ] **Test** — Waiting for user to launch Alan Wake with LSFG enabled
 
-## Reflection (Iteration 3)
+## Bug history and fixes applied
+1. **Stale layer manifest**: Old VkLayer_LS_frame_generation.json from a previous install was being loaded. Fix: LsfgVkManager now deletes stale files from all container home dirs.
+2. **Wrong method**: LSFG code was in `execShellCommand()` (wineserver -k) instead of `execGuestProgram()` (game launch). Fix: Moved to execGuestProgram().
+3. **TMPDIR crash**: Layer wrote `/tmp/lsfg-vk_last` (not writable on Android) and called `exit(1)`. Fix: Patched to use `TMPDIR` env var.
+4. **OPAQUE_FD semaphore error**: `VK_ERROR_INVALID_EXTERNAL_HANDLE` (-1000072003) because Turnip doesn't support OPAQUE_FD semaphore export. Fix: Switched to AHB + waitIdle() path.
+5. **Missing AHB function**: Vortek doesn't provide `vkGetAndroidHardwareBufferPropertiesANDROID`, causing device layer init to fail. Fix: Made it optional, bypassed with `vkGetImageMemoryRequirements` instead.
 
-### What's been accomplished
-All code changes are done and the APK is installed. The layer now has a complete Android AHB path that avoids OPAQUE_FD entirely:
-- Image creation: AHardwareBuffer-backed VkImages instead of OPAQUE_FD export
-- Context creation: `createContextFromAHB()` instead of `createContext(fds)`
-- Presentation: `presentContext(-1, {})` + `waitIdle()` instead of semaphore FD sync
-- Layer dispatch: Added `ovkGetAndroidHardwareBufferPropertiesANDROID` for AHB property queries
-
-### What's working well
-- Build compiles cleanly with NDK 27, c++_static, arm64-v8a
-- Desktop Linux path preserved behind `#ifdef __ANDROID__` / `#else` guards
-- Previous fixes still in place: stale manifest cleanup, correct env var wiring, TMPDIR patch
-
-### What's not working / blocking
-- **User hasn't tested yet** — the AHB patch is installed but we don't know if it works
-- Potential concern: `waitIdle()` is a full pipeline stall — it will add latency vs the semaphore-based desktop path, but this is the only correct sync mechanism available on Android without OPAQUE_FD
-- Potential concern: The Vortek wrapper intercepts all Vulkan calls including `vkGetAndroidHardwareBufferPropertiesANDROID` — it may not pass this through to Turnip correctly. If framegen's `createContextFromAHB` fails, we may need to check if Vortek supports AHB Vulkan extensions.
-
-### Should the approach be adjusted?
-No — the AHB approach is exactly what the LSFG-Android-Application uses successfully. The main unknown is whether Vortek's wrapper layer properly forwards AHB-related Vulkan calls to Turnip. If it doesn't, we may need to bypass Vortek for AHB operations.
-
-### Next priorities
-1. **Test** — Get the user to launch and check logcat
-2. If AHB creation fails: check if Vortek wraps `vkGetAndroidHardwareBufferPropertiesANDROID` — may need a workaround
-3. If context creation succeeds but present fails: debug the waitIdle/present flow
-4. Once working: optimize the waitIdle stall (could use fences instead of full device idle)
+## Remaining risks
+- **Vortek pNext serialization**: `VkImportAndroidHardwareBufferInfoANDROID` in `vkAllocateMemory`'s pNext chain must be serialized through Vortek's IPC. The Vortek repo has been patched but the server (libvortekrenderer.so) also needs the new request handler. The client-side serializer changes ARE in the current Vortek repo branch but NOT yet in the prebuilt server.
+- **Framegen AHB context**: `LSFG_3_1::createContextFromAHB()` requires `VK_ANDROID_external_memory_android_hardware_buffer` extension. If Vortek reports this extension but can't pass through the AHB import calls, context creation will fail inside framegen.
+- **waitIdle() latency**: Full device idle stalls on every frame. Will add latency vs desktop semaphore path.
