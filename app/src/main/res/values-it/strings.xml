@@ -1421,4 +1421,19 @@
      <string name="steam_save_import_failed">Importazione salvataggi fallita: %s</string>
     <string name="option_import_saves">Importa salvataggi</string>
     <string name="option_export_saves">Esporta salvataggi</string>
+
+    <!-- LSFG-VK frame generation -->
+    <string name="lsfg_tab_title">LSFG-VK</string>
+    <string name="lsfg_description">Genera fotogrammi intermedi usando il layer Vulkan di Lossless Scaling</string>
+    <string name="lsfg_enable">Abilita generazione fotogrammi LSFG-VK</string>
+    <string name="lsfg_multiplier">Moltiplicatore fotogrammi</string>
+    <string name="lsfg_flow_scale">Scala di flusso</string>
+    <string name="lsfg_performance_mode">Modalità prestazioni</string>
+    <string name="lsfg_not_supported">La generazione di fotogrammi richiede un contenitore Bionic</string>
+    <string name="lsfg_install_prompt">Lossless Scaling non installato. Tocca per installare.</string>
+    <string name="lsfg_not_in_library">Lossless Scaling non è nella tua libreria Steam</string>
+    <string name="lsfg_install_title">Installare Lossless Scaling?</string>
+    <string name="lsfg_install_message">Scaricherà Lossless Scaling da Steam per abilitare la generazione di fotogrammi.</string>
+    <string name="lsfg_installing">Download di Lossless Scaling in corso…</string>
+    <string name="lsfg_performance_mode_desc">Riduce la qualità per una maggiore velocità</string>
 </resources>

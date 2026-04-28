@@ -1358,4 +1358,19 @@ https://gamenative.app
      <string name="steam_save_import_failed">Не удалось импортировать сохранения: %s</string>
     <string name="option_import_saves">Импортировать сохранения</string>
     <string name="option_export_saves">Экспортировать сохранения</string>
+
+    <!-- LSFG-VK frame generation -->
+    <string name="lsfg_tab_title">LSFG-VK</string>
+    <string name="lsfg_description">Генерация промежуточных кадров с помощью слоя Vulkan Lossless Scaling</string>
+    <string name="lsfg_enable">Включить генерацию кадров LSFG-VK</string>
+    <string name="lsfg_multiplier">Множитель кадров</string>
+    <string name="lsfg_flow_scale">Масштаб потока</string>
+    <string name="lsfg_performance_mode">Режим производительности</string>
+    <string name="lsfg_not_supported">Для генерации кадров требуется контейнер Bionic</string>
+    <string name="lsfg_install_prompt">Lossless Scaling не установлен. Нажмите для установки.</string>
+    <string name="lsfg_not_in_library">Lossless Scaling нет в вашей библиотеке Steam</string>
+    <string name="lsfg_install_title">Установить Lossless Scaling?</string>
+    <string name="lsfg_install_message">Это загрузит Lossless Scaling из Steam для включения генерации кадров.</string>
+    <string name="lsfg_installing">Загрузка Lossless Scaling…</string>
+    <string name="lsfg_performance_mode_desc">Снижает качество для повышения пропускной способности</string>
 </resources>
