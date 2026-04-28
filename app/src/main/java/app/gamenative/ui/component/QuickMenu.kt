@@ -666,7 +666,9 @@ fun QuickMenu(
                 try {
                     when (selectedTab) {
                         QuickMenuTab.HUD -> hudItemFocusRequester.requestFocus()
+                        QuickMenuTab.LSFG -> lsfgItemFocusRequester.requestFocus()
                         QuickMenuTab.EFFECTS -> effectsItemFocusRequester.requestFocus()
+                        QuickMenuTab.TOOLS -> toolsItemFocusRequester.requestFocus()
                         else -> controllerItemFocusRequester.requestFocus()
                     }
                     return@LaunchedEffect
