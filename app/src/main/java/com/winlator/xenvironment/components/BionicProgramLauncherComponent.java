@@ -313,6 +313,17 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         if (this.envVars != null) {
             envVars.putAll(this.envVars);
         }
+
+        // LSFG Vulkan layer: install runtime, write config, apply env vars.
+        // The layer hooks vkQueuePresentKHR and runs frame generation on
+        // the game's actual swapchain — no overlay or MediaProjection needed.
+        if (app.gamenative.utils.LsfgVkManager.isSupported(container)) {
+            app.gamenative.utils.LsfgVkManager.ensureRuntimeInstalled(
+                environment.getContext(), container);
+            app.gamenative.utils.LsfgVkManager.writeConfig(container);
+            app.gamenative.utils.LsfgVkManager.applyLaunchEnv(container, envVars);
+        }
+
         Log.d("BionicProgramLauncherComponent", "env vars are " + envVars.toString());
 
         String emulator = container.getEmulator();
@@ -486,16 +497,6 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
 
         String emulator = container.getEmulator();
         if (this.envVars != null) envVars.putAll(this.envVars);
-
-        // LSFG Vulkan layer: install runtime, write config, apply env vars.
-        // The layer hooks vkQueuePresentKHR and runs frame generation on
-        // the game's actual swapchain — no overlay or MediaProjection needed.
-        if (app.gamenative.utils.LsfgVkManager.isSupported(container)) {
-            app.gamenative.utils.LsfgVkManager.ensureRuntimeInstalled(
-                environment.getContext(), container);
-            app.gamenative.utils.LsfgVkManager.writeConfig(container);
-            app.gamenative.utils.LsfgVkManager.applyLaunchEnv(container, envVars);
-        }
 
         String finalCommand = getFinalCommand(winePath, emulator, envVars, imageFs.getBinDir(), command);
 
