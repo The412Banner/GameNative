@@ -242,6 +242,9 @@ object LsfgVkManager {
      *
      * @return true if LSFG is armed and env vars were applied
      */
+    /** Stale manifest from the old research/lsfgvk-poc branch. */
+    private const val STALE_MANIFEST_FILENAME = "VkLayer_LSFGVK_frame_generation.json"
+
     @JvmStatic
     fun applyLaunchEnv(container: Container, envVars: EnvVars): Boolean {
         // Clear any stale env vars first
@@ -249,8 +252,12 @@ object LsfgVkManager {
         envVars.remove(ENV_CONFIG)
         envVars.remove(ENV_PROCESS)
 
+        // Always clean up stale layer artifacts from old research branch
+        cleanupStaleLayerFiles(container)
+
         if (!isSupported(container)) {
-            envVars.put(ENV_DISABLE, "1")
+            // Remove the manifest so the Vulkan loader can't find the layer
+            disableLayerInContainer(container)
             return false
         }
 
@@ -258,7 +265,8 @@ object LsfgVkManager {
         val armed = parseBool(container.getExtra(EXTRA_ARMED, "false")) && dllPath != null
 
         if (!armed) {
-            envVars.put(ENV_DISABLE, "1")
+            // Remove the manifest so the Vulkan loader can't find the layer
+            disableLayerInContainer(container)
             Timber.tag(TAG).i("LSFG disabled (enabled=%s, dll=%s)",
                 container.getExtra(EXTRA_ARMED, "false"), dllPath ?: "null")
             return false
@@ -285,6 +293,35 @@ object LsfgVkManager {
             if (performanceMode(container)) "on" else "off"
         )
         return true
+    }
+
+    /**
+     * Remove the layer manifest so the Vulkan loader can't discover it.
+     * Called when LSFG is disabled to ensure no stale layer is loaded.
+     */
+    private fun disableLayerInContainer(container: Container) {
+        val layerDir = File(container.rootDir, LAYER_RELATIVE_DIR)
+        val manifest = File(layerDir, MANIFEST_FILENAME)
+        if (manifest.exists()) {
+            manifest.delete()
+            Timber.tag(TAG).d("Removed LSFG manifest to disable layer")
+        }
+    }
+
+    /**
+     * Clean up stale layer files from the old research/lsfgvk-poc branch.
+     * The old branch used a different layer name (VK_LAYER_LSFGVK) and
+     * different disable env var (DISABLE_LSFGVK vs DISABLE_LSFG).
+     * These stale manifests cause the Vulkan loader to load the layer
+     * even when LSFG is "disabled" in our new code.
+     */
+    private fun cleanupStaleLayerFiles(container: Container) {
+        val layerDir = File(container.rootDir, LAYER_RELATIVE_DIR)
+        val staleManifest = File(layerDir, STALE_MANIFEST_FILENAME)
+        if (staleManifest.exists()) {
+            staleManifest.delete()
+            Timber.tag(TAG).i("Removed stale VK_LAYER_LSFGVK manifest from old research branch")
+        }
     }
 
     // ---- DLL discovery -----------------------------------------------------
