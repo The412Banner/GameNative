@@ -7,6 +7,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -457,6 +461,8 @@ private fun LsfgSection(state: ContainerConfigState) {
     val config = state.config.value
     val isBionic = config.containerVariant.equals(Container.BIONIC, ignoreCase = true)
     val dllAvailable = LsfgVkManager.isDllAvailable()
+    val ownsApp = LsfgVkManager.ownsLosslessScaling()
+    var showInstallDialog by rememberSaveable { mutableStateOf(false) }
 
     SettingsGroup {
         if (!isBionic) {
@@ -468,22 +474,63 @@ private fun LsfgSection(state: ContainerConfigState) {
             return@SettingsGroup
         }
 
-        SettingsSwitch(
-            colors = settingsTileColorsAlt(),
-            title = { Text(text = stringResource(R.string.lsfg_enable)) },
-            subtitle = { Text(text = stringResource(R.string.lsfg_description)) },
-            state = config.lsfgEnabled,
-            onCheckedChange = {
-                state.config.value = config.copy(lsfgEnabled = it)
+        when {
+            dllAvailable -> {
+                // State 1: DLL found — toggle works normally
+                SettingsSwitch(
+                    colors = settingsTileColorsAlt(),
+                    title = { Text(text = stringResource(R.string.lsfg_enable)) },
+                    subtitle = { Text(text = stringResource(R.string.lsfg_description)) },
+                    state = config.lsfgEnabled,
+                    onCheckedChange = {
+                        state.config.value = config.copy(lsfgEnabled = it)
+                    },
+                )
+            }
+            ownsApp -> {
+                // State 2: User owns Lossless Scaling but hasn't installed it yet
+                SettingsSwitch(
+                    colors = settingsTileColorsAlt(),
+                    title = { Text(text = stringResource(R.string.lsfg_enable)) },
+                    subtitle = { Text(text = stringResource(R.string.lsfg_install_prompt)) },
+                    state = false,
+                    onCheckedChange = { showInstallDialog = true },
+                )
+            }
+            else -> {
+                // State 3: User doesn't own Lossless Scaling
+                SettingsSwitch(
+                    colors = settingsTileColorsAlt(),
+                    title = { Text(text = stringResource(R.string.lsfg_enable)) },
+                    subtitle = { Text(text = stringResource(R.string.lsfg_not_in_library)) },
+                    state = false,
+                    onCheckedChange = {},
+                )
+            }
+        }
+    }
+
+    // Install confirmation dialog
+    if (showInstallDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showInstallDialog = false },
+            title = { Text(text = stringResource(R.string.lsfg_install_title)) },
+            text = { Text(text = stringResource(R.string.lsfg_install_message)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showInstallDialog = false
+                    app.gamenative.service.SteamService.downloadApp(
+                        LsfgVkManager.LOSSLESS_SCALING_APP_ID.toInt()
+                    )
+                }) {
+                    Text(text = stringResource(android.R.string.ok))
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showInstallDialog = false }) {
+                    Text(text = stringResource(android.R.string.cancel))
+                }
             },
         )
-
-        if (config.lsfgEnabled && !dllAvailable) {
-            Text(
-                text = stringResource(R.string.lsfg_dll_missing),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                color = Color(0xFFFF9800),
-            )
-        }
     }
 }

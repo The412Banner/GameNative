@@ -33,7 +33,7 @@ object LsfgVkManager {
     private const val TAG = "LsfgVkManager"
 
     // Steam app ID for Lossless Scaling (used to auto-find the DLL)
-    private const val LOSSLESS_SCALING_APP_ID = 993090
+    const val LOSSLESS_SCALING_APP_ID = 993090
     private const val LOSSLESS_DLL_NAME = "Lossless.dll"
 
     // Paths inside the container's HOME (relative to rootDir)
@@ -89,6 +89,11 @@ object LsfgVkManager {
     /** Whether Lossless Scaling is installed (Lossless.dll exists in Steam dir). */
     @JvmStatic
     fun isDllAvailable(): Boolean = findSteamDll() != null
+
+    /** Whether the user owns Lossless Scaling in their Steam library. */
+    @JvmStatic
+    fun ownsLosslessScaling(): Boolean =
+        SteamService.getAppInfoOf(LOSSLESS_SCALING_APP_ID) != null
 
     /** Get the auto-resolved DLL path inside the container, or null. */
     @JvmStatic
