@@ -325,7 +325,13 @@ fun QuickMenu(
         )
     }
 
-    var selectedTab by rememberSaveable { mutableIntStateOf(PrefManager.quickMenuLastTab) }
+    var selectedTab by rememberSaveable {
+        mutableIntStateOf(
+            if (PrefManager.quickMenuLastTab == QuickMenuTab.LSFG && !isLsfgAvailable)
+                QuickMenuTab.HUD
+            else PrefManager.quickMenuLastTab
+        )
+    }
     val selectedTabLabelResId = when (selectedTab) {
         QuickMenuTab.HUD -> R.string.performance_hud
         QuickMenuTab.LSFG -> R.string.lsfg_tab_title

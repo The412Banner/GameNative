@@ -79,7 +79,7 @@ object LsfgVkManager {
     fun isSupported(container: Container): Boolean =
         container.containerVariant.equals(Container.BIONIC, ignoreCase = true)
 
-    /** Whether LSFG is armed (enabled + Lossless.dll found) for this container. */
+    /** Whether LSFG is armed (enabled + Lossless.dll available in Steam dir) for this container. The DLL is copied into the container at launch time by ensureRuntimeInstalled(). */
     @JvmStatic
     fun isArmed(container: Container): Boolean =
         isSupported(container) &&
@@ -102,9 +102,11 @@ object LsfgVkManager {
         return File(container.rootDir, "$DLL_RELATIVE_DIR/$LOSSLESS_DLL_NAME").absolutePath
     }
 
-    /** Get the multiplier (2-4, default 2). */
-    fun multiplier(container: Container): Int =
-        container.getExtra(EXTRA_MULTIPLIER, "2").toIntOrNull()?.coerceIn(2, 4) ?: 2
+    /** Get the multiplier (0=Off, 2-4, default 2). */
+    fun multiplier(container: Container): Int {
+        val raw = container.getExtra(EXTRA_MULTIPLIER, "2").toIntOrNull() ?: 2
+        return if (raw == 0) 0 else raw.coerceIn(2, 4)
+    }
 
     /** Get the flow scale (0.25-1.0, default 0.80). */
     fun flowScale(container: Container): Float =

@@ -463,7 +463,7 @@ private fun DxWrapperSection(state: ContainerConfigState) {
 @Composable
 private fun LsfgSection(state: ContainerConfigState) {
     val config = state.config.value
-    val isBionic = config.containerVariant.equals(Container.BIONIC, ignoreCase = true)
+    val lsfgSupported = config.containerVariant.equals(Container.BIONIC, ignoreCase = true)
     var dllAvailable by rememberSaveable { mutableStateOf(LsfgVkManager.isDllAvailable()) }
     val ownsApp = LsfgVkManager.ownsLosslessScaling()
     var showInstallDialog by rememberSaveable { mutableStateOf(false) }
@@ -490,7 +490,7 @@ private fun LsfgSection(state: ContainerConfigState) {
     }
 
     SettingsGroup {
-        if (!isBionic) {
+        if (!lsfgSupported) {
             Text(
                 text = stringResource(R.string.lsfg_not_supported),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
@@ -543,12 +543,14 @@ private fun LsfgSection(state: ContainerConfigState) {
             text = { Text(text = stringResource(R.string.lsfg_install_message)) },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = {
-                    showInstallDialog = false
-                    SteamService.downloadApp(
+                    val dlInfo = SteamService.downloadApp(
                         LsfgVkManager.LOSSLESS_SCALING_APP_ID
                     )
-                    isInstalling = true
-                    installProgress = 0f
+                    if (dlInfo != null) {
+                        showInstallDialog = false
+                        isInstalling = true
+                        installProgress = 0f
+                    }
                 }) {
                     Text(text = stringResource(android.R.string.ok))
                 }

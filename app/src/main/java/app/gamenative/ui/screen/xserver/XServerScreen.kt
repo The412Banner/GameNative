@@ -588,10 +588,11 @@ fun XServerScreen(
     // ── LSFG hot-reload callbacks ──────────────────────────────────────────
     fun applyLsfgMultiplier(mult: Int) {
         lsfgMultiplier = mult.coerceIn(0, 4)
-        container.putExtra(LsfgVkManager.EXTRA_MULTIPLIER, lsfgMultiplier.coerceIn(2, 4).toString())
+        container.putExtra(LsfgVkManager.EXTRA_MULTIPLIER, lsfgMultiplier.toString())
         container.saveData()
         val effectiveEnabled = lsfgMultiplier >= 2
-        LsfgVkManager.updateConfigAtRuntime(container, effectiveEnabled, lsfgMultiplier.coerceIn(2, 4), lsfgFlowScale, lsfgPerformanceMode)
+        val effectiveMultiplier = if (effectiveEnabled) lsfgMultiplier else 2
+        LsfgVkManager.updateConfigAtRuntime(container, effectiveEnabled, effectiveMultiplier, lsfgFlowScale, lsfgPerformanceMode)
     }
 
     fun applyLsfgFlowScale(scale: Float) {
@@ -599,7 +600,8 @@ fun XServerScreen(
         container.putExtra(LsfgVkManager.EXTRA_FLOW_SCALE, String.format(java.util.Locale.US, "%.2f", lsfgFlowScale))
         container.saveData()
         val effectiveEnabled = lsfgMultiplier >= 2
-        LsfgVkManager.updateConfigAtRuntime(container, effectiveEnabled, lsfgMultiplier.coerceIn(2, 4), lsfgFlowScale, lsfgPerformanceMode)
+        val effectiveMultiplier = if (effectiveEnabled) lsfgMultiplier else 2
+        LsfgVkManager.updateConfigAtRuntime(container, effectiveEnabled, effectiveMultiplier, lsfgFlowScale, lsfgPerformanceMode)
     }
 
     fun applyLsfgPerformanceMode(enabled: Boolean) {
@@ -607,7 +609,8 @@ fun XServerScreen(
         container.putExtra(LsfgVkManager.EXTRA_PERFORMANCE_MODE, enabled.toString())
         container.saveData()
         val effectiveEnabled = lsfgMultiplier >= 2
-        LsfgVkManager.updateConfigAtRuntime(container, effectiveEnabled, lsfgMultiplier.coerceIn(2, 4), lsfgFlowScale, lsfgPerformanceMode)
+        val effectiveMultiplier = if (effectiveEnabled) lsfgMultiplier else 2
+        LsfgVkManager.updateConfigAtRuntime(container, effectiveEnabled, effectiveMultiplier, lsfgFlowScale, lsfgPerformanceMode)
     }
 
     LaunchedEffect(xServerView) {
