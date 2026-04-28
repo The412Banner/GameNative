@@ -136,9 +136,10 @@ Full license text: https://creativecommons.org/publicdomain/zero/1.0/
 ## lsfg-vk / lsfg-vk-android
 
 **Library:** lsfg-vk (Vulkan frame generation layer)
-**Authors:** PancakeTAS and contributors (upstream), xXJSONDeruloXx (Android patches)
+**Authors:** PancakeTAS and contributors (upstream), FrankBarretta (Android port), xXJSONDeruloXx (Vortek/Adreno patches)
 **Source (upstream):** https://github.com/PancakeTAS/lsfg-vk
-**Source (Android fork):** https://github.com/xXJSONDeruloXx/lsfg-vk-android
+**Source (Android port):** https://github.com/FrankBarretta/lsfg-vk-android
+**Source (Vortek fork):** https://github.com/xXJSONDeruloXx/lsfg-vk-android
 **License:** MIT
 
 A prebuilt version of lsfg-vk with Android-specific patches (AHardwareBuffer
