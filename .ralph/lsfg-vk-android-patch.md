@@ -7,37 +7,37 @@ The layer creates images and semaphores with `VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_
 Switch to the AHardwareBuffer-based path that `LSFG_3_1::createContextFromAHB()` provides (already exists in the framegen API, used by the LSFG-Android-Application). Use `presentContext(id, -1, {})` + `waitIdle()` for sync instead of semaphore FDs.
 
 ## Checklist
-- [ ] **Mini::Image Android variant** — Add `#ifdef __ANDROID__` path in `image.cpp` / `image.hpp` that creates images backed by AHardwareBuffer (no OPAQUE_FD export). The AHB is shared with framegen via `createContextFromAHB`.
-- [ ] **LsContext constructor** — Under `#ifdef __ANDROID__`, create AHB-backed input/output images and call `LSFG_3_1::createContextFromAHB()` / `LSFG_3_1P::createContextFromAHB()` instead of the FD-based `createContext()`.
-- [ ] **LsContext::present** — Under `#ifdef __ANDROID__`, call `presentContext(*lsfgCtxId, -1, {})` + `waitIdle()` instead of creating exported semaphores and passing FDs. Replace the semaphore-based render pipeline with vkDeviceWaitIdle or fence-based synchronization.
-- [ ] **Mini::Semaphore** — Remove `Semaphore(device, &fd)` usage from Android path. Keep basic `Semaphore(device)` which works fine (no export).
-- [ ] **Rebuild** — Rebuild the layer .so with `c++_static`, `LSFGVK_ANDROID_WINE=ON`, `VK_USE_PLATFORM_ANDROID_KHR=1`, strip, copy to GameNative assets, bump RUNTIME_VERSION, build+install APK.
-- [ ] **Test** — Verify Alan Wake launches and LSFG layer initializes without the semaphore error.
+- [x] **Mini::Image Android variant** — Added AHB-backed Image constructor + getAhb() accessor
+- [x] **LsContext constructor** — Android path uses createContextFromAHB()
+- [x] **LsContext::present** — Android path uses presentContext(-1, {}) + waitIdle()
+- [x] **Mini::Semaphore** — Removed Semaphore(device, &fd) from Android path
+- [x] **Rebuild** — Built, installed v1.3.0-android-arm64-v8a-ahb (versionCode 24)
+- [ ] **Test** — Waiting for user to launch Alan Wake with LSFG enabled
 
-## Key files
-- `~/Developer/LSFG-Android/lsfg-vk-android/src/context.cpp` — Main file to patch
-- `~/Developer/LSFG-Android/lsfg-vk-android/src/mini/image.cpp` + `image.hpp` — Add AHB-backed image
-- `~/Developer/LSFG-Android/lsfg-vk-android/src/mini/semaphore.cpp` + `semaphore.hpp` — No changes needed (basic constructor works)
-- `~/Developer/LSFG-Android/lsfg-vk-android/framegen/public/lsfg_3_1.hpp` — API reference (createContextFromAHB, waitIdle, presentContext)
-- `~/Developer/LSFG-Android/LSFG-Android-Application/app/src/main/cpp/lsfg_render_loop.cpp` — Reference implementation for AHB path
-- `~/Developer/LSFG-Android/LSFG-Android-Application/app/src/main/cpp/ahb_image_bridge.cpp` — AHB image helper functions
-- GameNative: `app/src/main/java/app/gamenative/utils/LsfgVkManager.kt` — RUNTIME_VERSION bump
+## Reflection (Iteration 3)
 
-## Reference: LSFG-Android-Application AHB flow
-```
-// Context creation
-g.framegenCtxId = LSFG_3_1::createContextFromAHB(
-    g.inSlot[0].ahb, g.inSlot[1].ahb, outAhbs,
-    g.inSlot[0].extent, g.inSlot[0].format);
+### What's been accomplished
+All code changes are done and the APK is installed. The layer now has a complete Android AHB path that avoids OPAQUE_FD entirely:
+- Image creation: AHardwareBuffer-backed VkImages instead of OPAQUE_FD export
+- Context creation: `createContextFromAHB()` instead of `createContext(fds)`
+- Presentation: `presentContext(-1, {})` + `waitIdle()` instead of semaphore FD sync
+- Layer dispatch: Added `ovkGetAndroidHardwareBufferPropertiesANDROID` for AHB property queries
 
-// Present (no semaphore FDs)
-LSFG_3_1::presentContext(g.framegenCtxId, -1, {});
-LSFG_3_1::waitIdle();  // blocks until framegen GPU work done
-```
+### What's working well
+- Build compiles cleanly with NDK 27, c++_static, arm64-v8a
+- Desktop Linux path preserved behind `#ifdef __ANDROID__` / `#else` guards
+- Previous fixes still in place: stale manifest cleanup, correct env var wiring, TMPDIR patch
 
-## Constraints
-- Layer is built with NDK 27, arm64-v8a, API 26, c++_static, Release
-- `LSFGVK_ANDROID_WINE=ON` and `VK_USE_PLATFORM_ANDROID_KHR=1` are set at build time, so `__ANDROID__` is defined
-- The OPAQUE_FD desktop path must remain intact for non-Android builds (use `#ifdef __ANDROID__`)
-- AHardwareBuffer requires `<android/hardware_buffer.h>` and linking against `-landroid` (NDK provides this)
-- Framegen's internal Vulkan device shares AHB storage — we keep ownership/refcount on our side
+### What's not working / blocking
+- **User hasn't tested yet** — the AHB patch is installed but we don't know if it works
+- Potential concern: `waitIdle()` is a full pipeline stall — it will add latency vs the semaphore-based desktop path, but this is the only correct sync mechanism available on Android without OPAQUE_FD
+- Potential concern: The Vortek wrapper intercepts all Vulkan calls including `vkGetAndroidHardwareBufferPropertiesANDROID` — it may not pass this through to Turnip correctly. If framegen's `createContextFromAHB` fails, we may need to check if Vortek supports AHB Vulkan extensions.
+
+### Should the approach be adjusted?
+No — the AHB approach is exactly what the LSFG-Android-Application uses successfully. The main unknown is whether Vortek's wrapper layer properly forwards AHB-related Vulkan calls to Turnip. If it doesn't, we may need to bypass Vortek for AHB operations.
+
+### Next priorities
+1. **Test** — Get the user to launch and check logcat
+2. If AHB creation fails: check if Vortek wraps `vkGetAndroidHardwareBufferPropertiesANDROID` — may need a workaround
+3. If context creation succeeds but present fails: debug the waitIdle/present flow
+4. Once working: optimize the waitIdle stall (could use fences instead of full device idle)
