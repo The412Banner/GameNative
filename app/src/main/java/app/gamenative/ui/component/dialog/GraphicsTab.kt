@@ -6,7 +6,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
-import androidx.compose.ui.graphics.Color
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -16,6 +15,7 @@ import app.gamenative.ui.component.settings.SettingsListDropdown
 import app.gamenative.ui.component.settings.SettingsMultiListDropdown
 import app.gamenative.ui.theme.settingsTileColors
 import app.gamenative.ui.theme.settingsTileColorsAlt
+import app.gamenative.utils.LsfgVkManager
 import com.alorma.compose.settings.ui.SettingsGroup
 import com.alorma.compose.settings.ui.SettingsSwitch
 import com.winlator.contents.ContentProfile
@@ -23,6 +23,7 @@ import com.winlator.container.Container
 import com.winlator.core.KeyValueSet
 import com.winlator.core.StringUtils
 import com.winlator.core.envvars.EnvVars
+import androidx.compose.ui.graphics.Color
 import kotlin.math.roundToInt
 
 @Composable
@@ -455,6 +456,7 @@ private fun DxWrapperSection(state: ContainerConfigState) {
 private fun LsfgSection(state: ContainerConfigState) {
     val config = state.config.value
     val isBionic = config.containerVariant.equals(Container.BIONIC, ignoreCase = true)
+    val dllAvailable = LsfgVkManager.isDllAvailable()
 
     SettingsGroup(
         title = { Text(text = stringResource(R.string.lsfg_frame_generation)) },
@@ -479,69 +481,66 @@ private fun LsfgSection(state: ContainerConfigState) {
         )
 
         if (config.lsfgEnabled) {
-            // DLL path
-            OutlinedTextField(
-                value = config.lsfgDllPath,
-                onValueChange = { state.config.value = config.copy(lsfgDllPath = it) },
-                label = { Text(text = stringResource(R.string.lsfg_dll_path)) },
-                placeholder = { Text(text = stringResource(R.string.lsfg_dll_path_hint)) },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                singleLine = true,
-            )
-
-            // Multiplier (2x, 3x, 4x)
-            val multipliers = listOf(2, 3, 4)
-            val multiplierLabels = multipliers.map { stringResource(R.string.lsfg_multiplier_format, it) }
-            val selectedMultIdx = multipliers.indexOf(config.lsfgMultiplier).coerceAtLeast(0)
-            SettingsListDropdown(
-                colors = settingsTileColors(),
-                title = { Text(text = stringResource(R.string.lsfg_multiplier)) },
-                value = selectedMultIdx,
-                items = multiplierLabels,
-                onItemSelected = { idx ->
-                    state.config.value = config.copy(lsfgMultiplier = multipliers[idx])
-                },
-            )
-
-            // Flow scale slider (0.25 - 1.0)
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                Text(text = stringResource(R.string.lsfg_flow_scale))
-                val flowScale = config.lsfgFlowScale.toFloatOrNull()?.coerceIn(0.25f, 1.0f) ?: 1.0f
-                Slider(
-                    value = flowScale,
-                    onValueChange = { newValue ->
-                        val formatted = String.format(java.util.Locale.US, "%.2f", newValue)
-                        state.config.value = config.copy(lsfgFlowScale = formatted)
-                    },
-                    valueRange = 0.25f..1.0f,
-                    steps = 14,
-                )
+            if (!dllAvailable) {
+                // DLL not found - show install prompt
                 Text(
-                    text = String.format(java.util.Locale.US, "%.2f", flowScale),
+                    text = stringResource(R.string.lsfg_dll_missing),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    color = Color(0xFFFF9800),
+                )
+            } else {
+                // DLL found - show config options
+
+                // Multiplier (2x, 3x, 4x)
+                val multipliers = listOf(2, 3, 4)
+                val multiplierLabels = multipliers.map { stringResource(R.string.lsfg_multiplier_format, it) }
+                val selectedMultIdx = multipliers.indexOf(config.lsfgMultiplier).coerceAtLeast(0)
+                SettingsListDropdown(
+                    colors = settingsTileColors(),
+                    title = { Text(text = stringResource(R.string.lsfg_multiplier)) },
+                    value = selectedMultIdx,
+                    items = multiplierLabels,
+                    onItemSelected = { idx ->
+                        state.config.value = config.copy(lsfgMultiplier = multipliers[idx])
+                    },
+                )
+
+                // Flow scale slider (0.25 - 1.0)
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Text(text = stringResource(R.string.lsfg_flow_scale))
+                    val flowScale = config.lsfgFlowScale.toFloatOrNull()?.coerceIn(0.25f, 1.0f) ?: 1.0f
+                    Slider(
+                        value = flowScale,
+                        onValueChange = { newValue ->
+                            val formatted = String.format(java.util.Locale.US, "%.2f", newValue)
+                            state.config.value = config.copy(lsfgFlowScale = formatted)
+                        },
+                        valueRange = 0.25f..1.0f,
+                        steps = 14,
+                    )
+                    Text(
+                        text = String.format(java.util.Locale.US, "%.2f", flowScale),
+                    )
+                }
+
+                // Performance mode
+                SettingsSwitch(
+                    colors = settingsTileColorsAlt(),
+                    title = { Text(text = stringResource(R.string.lsfg_performance_mode)) },
+                    subtitle = { Text(text = stringResource(R.string.lsfg_performance_mode_description)) },
+                    state = config.lsfgPerformanceMode,
+                    onCheckedChange = {
+                        state.config.value = config.copy(lsfgPerformanceMode = it)
+                    },
+                )
+
+                // Armed status indicator
+                Text(
+                    text = stringResource(R.string.lsfg_armed, config.lsfgMultiplier),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    color = Color(0xFF4CAF50),
                 )
             }
-
-            // Performance mode
-            SettingsSwitch(
-                colors = settingsTileColorsAlt(),
-                title = { Text(text = stringResource(R.string.lsfg_performance_mode)) },
-                subtitle = { Text(text = stringResource(R.string.lsfg_performance_mode_description)) },
-                state = config.lsfgPerformanceMode,
-                onCheckedChange = {
-                    state.config.value = config.copy(lsfgPerformanceMode = it)
-                },
-            )
-
-            // Armed status indicator
-            val dllPath = config.lsfgDllPath.trim()
-            val isArmed = config.lsfgEnabled && dllPath.isNotEmpty()
-            Text(
-                text = if (isArmed) stringResource(R.string.lsfg_armed, config.lsfgMultiplier)
-                       else stringResource(R.string.lsfg_dll_missing),
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                color = if (isArmed) Color(0xFF4CAF50)
-                       else Color(0xFFFF9800),
-            )
         }
     }
 }

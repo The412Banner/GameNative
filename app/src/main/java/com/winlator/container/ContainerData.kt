@@ -97,8 +97,6 @@ data class ContainerData(
     // LSFG Vulkan frame generation
     /** Whether LSFG frame generation is enabled for this container */
     val lsfgEnabled: Boolean = false,
-    /** User override path for Lossless.dll (empty = auto-resolve) */
-    val lsfgDllPath: String = "",
     /** Frame generation multiplier (2-4, default 2) */
     val lsfgMultiplier: Int = 2,
     /** Flow scale factor (0.25-1.0, default 1.0) */
@@ -169,7 +167,6 @@ data class ContainerData(
                     "sharpnessLevel" to state.sharpnessLevel,
                     "sharpnessDenoise" to state.sharpnessDenoise,
                     "lsfgEnabled" to state.lsfgEnabled,
-                    "lsfgDllPath" to state.lsfgDllPath,
                     "lsfgMultiplier" to state.lsfgMultiplier,
                     "lsfgFlowScale" to state.lsfgFlowScale,
                     "lsfgPerformanceMode" to state.lsfgPerformanceMode,
@@ -236,7 +233,6 @@ data class ContainerData(
                     sharpnessLevel = (savedMap["sharpnessLevel"] as? Int) ?: 100,
                     sharpnessDenoise = (savedMap["sharpnessDenoise"] as? Int) ?: 100,
                     lsfgEnabled = (savedMap["lsfgEnabled"] as? Boolean) ?: false,
-                    lsfgDllPath = (savedMap["lsfgDllPath"] as? String) ?: "",
                     lsfgMultiplier = (savedMap["lsfgMultiplier"] as? Int) ?: 2,
                     lsfgFlowScale = (savedMap["lsfgFlowScale"] as? String) ?: "1.0",
                     lsfgPerformanceMode = (savedMap["lsfgPerformanceMode"] as? Boolean) ?: false,

@@ -319,7 +319,6 @@ object ContainerUtils {
             sharpnessDenoise = container.getExtra("sharpnessDenoise", "100").toIntOrNull() ?: 100,
             // LSFG Vulkan frame generation
             lsfgEnabled = container.getExtra("lsfgEnabled", "false").toBoolean(),
-            lsfgDllPath = container.getExtra("lsfgDllPath", ""),
             lsfgMultiplier = container.getExtra("lsfgMultiplier", "2").toIntOrNull() ?: 2,
             lsfgFlowScale = container.getExtra("lsfgFlowScale", "1.0"),
             lsfgPerformanceMode = container.getExtra("lsfgPerformanceMode", "false").toBoolean(),
@@ -491,7 +490,6 @@ object ContainerUtils {
         container.putExtra("sharpnessDenoise", containerData.sharpnessDenoise.toString())
         // LSFG Vulkan frame generation
         container.putExtra("lsfgEnabled", containerData.lsfgEnabled.toString())
-        container.putExtra("lsfgDllPath", containerData.lsfgDllPath)
         container.putExtra("lsfgMultiplier", containerData.lsfgMultiplier.toString())
         container.putExtra("lsfgFlowScale", containerData.lsfgFlowScale)
         container.putExtra("lsfgPerformanceMode", containerData.lsfgPerformanceMode.toString())
