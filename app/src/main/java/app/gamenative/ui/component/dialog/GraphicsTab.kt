@@ -1,8 +1,12 @@
 package app.gamenative.ui.component.dialog
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -14,6 +18,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.gamenative.R
@@ -465,12 +470,28 @@ private fun DxWrapperSection(state: ContainerConfigState) {
 @Composable
 private fun LsfgSection(state: ContainerConfigState) {
     val config = state.config.value
+    val context = LocalContext.current
     val lsfgSupported = config.containerVariant.equals(Container.BIONIC, ignoreCase = true)
-    var dllAvailable by rememberSaveable { mutableStateOf(LsfgVkManager.isDllAvailable()) }
+    var dllAvailable by rememberSaveable {
+        mutableStateOf(LsfgVkManager.isDllAvailable() || config.lsfgCustomDllPath.isNotEmpty())
+    }
     val ownsApp = LsfgVkManager.ownsLosslessScaling()
     var showInstallDialog by rememberSaveable { mutableStateOf(false) }
     var isInstalling by rememberSaveable { mutableStateOf(false) }
     var installProgress by rememberSaveable { mutableStateOf(0f) }
+
+    val dllPickerLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
+            )
+            state.config.value = config.copy(lsfgCustomDllPath = uri.toString())
+            dllAvailable = true
+        }
+    }
 
     // Poll download progress while installing
     LaunchedEffect(isInstalling) {
@@ -523,9 +544,17 @@ private fun LsfgSection(state: ContainerConfigState) {
                     state = false,
                     onCheckedChange = { showInstallDialog = true },
                 )
+                OutlinedButton(
+                    onClick = { dllPickerLauncher.launch("*/*") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                ) {
+                    Text(text = stringResource(R.string.lsfg_browse_dll))
+                }
             }
             else -> {
-                // State 3: User doesn't own Lossless Scaling
+                // State 3: User doesn't own Lossless Scaling — offer manual DLL selection
                 SettingsSwitch(
                     colors = settingsTileColorsAlt(),
                     title = { Text(text = stringResource(R.string.lsfg_enable)) },
@@ -533,6 +562,14 @@ private fun LsfgSection(state: ContainerConfigState) {
                     state = false,
                     onCheckedChange = {},
                 )
+                OutlinedButton(
+                    onClick = { dllPickerLauncher.launch("*/*") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                ) {
+                    Text(text = stringResource(R.string.lsfg_browse_dll))
+                }
             }
         }
     }
