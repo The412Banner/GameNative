@@ -11,6 +11,9 @@ on:
       - 'media/**'
       - '.github/ISSUE_TEMPLATE/**'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
