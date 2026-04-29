@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -32,6 +33,7 @@ import com.winlator.core.StringUtils
 import com.winlator.core.envvars.EnvVars
 import androidx.compose.ui.graphics.Color
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 @Composable
@@ -542,14 +544,17 @@ private fun LsfgSection(state: ContainerConfigState) {
             title = { Text(text = stringResource(R.string.lsfg_install_title)) },
             text = { Text(text = stringResource(R.string.lsfg_install_message)) },
             confirmButton = {
+                val scope = rememberCoroutineScope()
                 androidx.compose.material3.TextButton(onClick = {
-                    val dlInfo = SteamService.downloadApp(
-                        LsfgVkManager.LOSSLESS_SCALING_APP_ID
-                    )
-                    if (dlInfo != null) {
-                        showInstallDialog = false
-                        isInstalling = true
-                        installProgress = 0f
+                    scope.launch {
+                        val dlInfo = SteamService.downloadApp(
+                            LsfgVkManager.LOSSLESS_SCALING_APP_ID
+                        )
+                        if (dlInfo != null) {
+                            showInstallDialog = false
+                            isInstalling = true
+                            installProgress = 0f
+                        }
                     }
                 }) {
                     Text(text = stringResource(android.R.string.ok))
