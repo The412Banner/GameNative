@@ -85,7 +85,7 @@ object LsfgVkManager {
     fun isArmed(container: Container): Boolean =
         isSupported(container) &&
             parseBool(container.getExtra(EXTRA_ARMED, "false")) &&
-            isDllAvailable()
+            isDllAvailable(container)
 
     /** Whether Lossless.dll is available via Steam install or a manually selected path. */
     @JvmStatic
