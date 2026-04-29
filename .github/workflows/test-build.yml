@@ -1,0 +1,105 @@
+name: Test Build (Signed V1+V2+V3)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "master" ]
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - 'keyvalues/**'
+      - 'media/**'
+      - '.github/ISSUE_TEMPLATE/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Set up Java 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Validate Gradle wrapper
+      uses: gradle/actions/wrapper-validation@v4
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+
+    - name: Configure Keystore
+      env:
+        KEYSTORE: ${{ secrets.KEYSTORE }}
+        KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
+        KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+        KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+      run: |
+        mkdir -p app/keystores
+        echo "$KEYSTORE" | base64 --decode > app/keystores/keystore.jks
+        cat <<EOF > app/keystores/keystore.properties
+        storeFile=keystores/keystore.jks
+        keyAlias=$KEYSTORE_KEY_ALIAS
+        storePassword=$KEYSTORE_STORE_PASSWORD
+        keyPassword=$KEYSTORE_KEY_PASSWORD
+        EOF
+
+    - name: Inject credentials
+      run: |
+        cat <<EOF > local.properties
+        POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}
+        POSTHOG_HOST=${{ secrets.POSTHOG_HOST }}
+        STEAMGRIDDB_API_KEY=${{ secrets.STEAMGRIDDB_API_KEY }}
+        CLOUD_PROJECT_NUMBER=${{ secrets.CLOUD_PROJECT_NUMBER }}
+        EOF
+
+    - name: Install Android SDK Build Tools
+      run: |
+        SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+        if [ ! -x "$SDKMANAGER" ]; then
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+        fi
+        yes | "$SDKMANAGER" --install "build-tools;34.0.0"
+
+    - name: Build with Gradle
+      run: ./gradlew :app:bundleRelease
+
+    - name: Extract APK from Bundle
+      run: |
+        java -jar tools/bundletool-all-1.17.2.jar build-apks \
+          --bundle=app/build/outputs/bundle/release/app-release.aab \
+          --output=app-release.apks \
+          --mode=universal
+        unzip -o app-release.apks universal.apk
+
+    - name: Sign APK (V1 + V2 + V3)
+      env:
+        KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
+        KEY_PASS: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
+        STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+      run: |
+        BUILD_TOOLS_DIR="${ANDROID_HOME}/build-tools/34.0.0"
+        if [ ! -d "$BUILD_TOOLS_DIR" ]; then
+          BUILD_TOOLS_DIR="${ANDROID_SDK_ROOT}/build-tools/34.0.0"
+        fi
+        "${BUILD_TOOLS_DIR}/apksigner" sign \
+          --v1-signing-enabled true \
+          --v2-signing-enabled true \
+          --v3-signing-enabled true \
+          --ks app/keystores/keystore.jks \
+          --ks-key-alias "$KEY_ALIAS" \
+          --ks-pass pass:"$STORE_PASS" \
+          --key-pass pass:"$KEY_PASS" \
+          --out universal-signed.apk \
+          universal.apk
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: gamenative-test-signed
+        path: universal-signed.apk
