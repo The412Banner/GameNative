@@ -97,3 +97,17 @@ jobs:
       with:
         name: gamenative-test-signed
         path: universal-signed.apk
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: test-build-${{ github.run_number }}
+        name: "Test Build #${{ github.run_number }}"
+        body: |
+          Automated test build from commit ${{ github.sha }}
+
+          Signed with V1 + V2 + V3 signing schemes.
+        files: universal-signed.apk
+        prerelease: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
