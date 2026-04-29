@@ -46,6 +46,9 @@ object SteamBootstrap {
     @JvmStatic
     private external fun nativeShutdown()
 
+    @JvmStatic
+    private external fun nativePrepareApp(appId: Int)
+
     /**
      * Boot the native Steam client. Safe to call multiple times: only the
      * first call performs the dlopen + handshake; subsequent calls are no-ops
@@ -136,6 +139,32 @@ object SteamBootstrap {
             Log.e(TAG, "nativeShutdown threw", t)
         } finally {
             initialized = false
+        }
+    }
+
+    /**
+     * Pre-warm PICS metadata + an encrypted app ticket for [appId] so the
+     * Wine subprocess we spawn afterwards doesn't stall in
+     * "Validating Subscriptions" / "creating online session". Should be
+     * called after [start] returns 0, and before the Wine launch.
+     *
+     * Best-effort: if the engine isn't initialized or not yet logged on,
+     * the native side logs a warning and returns without blocking. Safe to
+     * call multiple times.
+     */
+    fun prepareApp(appId: Int) {
+        if (!initialized) {
+            Log.i(TAG, "prepareApp($appId) called but not initialized; skipping")
+            return
+        }
+        if (appId <= 0) {
+            Log.i(TAG, "prepareApp called with appId=$appId; skipping")
+            return
+        }
+        try {
+            nativePrepareApp(appId)
+        } catch (t: Throwable) {
+            Log.e(TAG, "nativePrepareApp threw", t)
         }
     }
 }

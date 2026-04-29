@@ -588,6 +588,23 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
                     refreshToken,
                     steamId64);
             Log.i("BionicProgramLauncherComponent", "SteamBootstrap.start rc=" + rc);
+
+            // Once the engine is logged on, kick PICS + encrypted-ticket
+            // pre-warm for the app we're about to launch. The Wine-side
+            // lsteamclient.dll has no path to drive these itself before the
+            // game asks for an ownership ticket, so without this the launch
+            // typically stalls at "Validating Subscriptions". Best-effort:
+            // skipped silently if rc != 0 or steamAppId isn't a valid AppID.
+            if (rc == 0 && steamAppId != null && !steamAppId.isEmpty()) {
+                try {
+                    int appIdInt = Integer.parseInt(steamAppId);
+                    app.gamenative.SteamBootstrap.INSTANCE.prepareApp(appIdInt);
+                } catch (NumberFormatException nfe) {
+                    Log.w("BionicProgramLauncherComponent",
+                          "steamAppId=" + steamAppId + " is not numeric; "
+                          + "skipping SteamBootstrap.prepareApp");
+                }
+            }
         } catch (Throwable t) {
             Log.e("BionicProgramLauncherComponent", "SteamBootstrap.start threw", t);
         }
