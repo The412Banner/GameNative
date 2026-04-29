@@ -33,29 +33,31 @@ jobs:
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v4
 
-    - name: Configure Keystore
-      env:
-        KEYSTORE: ${{ secrets.KEYSTORE }}
-        KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
-        KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
-        KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
+    - name: Configure debug keystore (for Gradle signing)
       run: |
         mkdir -p app/keystores
-        echo "$KEYSTORE" | base64 --decode > app/keystores/keystore.jks
+        # Use the Android default debug keystore for Gradle bundleRelease
+        cp "$HOME/.android/debug.keystore" app/keystores/keystore.jks 2>/dev/null || \
+          keytool -genkeypair -v \
+            -keystore app/keystores/keystore.jks \
+            -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US"
         cat <<EOF > app/keystores/keystore.properties
         storeFile=keystores/keystore.jks
-        keyAlias=$KEYSTORE_KEY_ALIAS
-        storePassword=$KEYSTORE_STORE_PASSWORD
-        keyPassword=$KEYSTORE_KEY_PASSWORD
+        keyAlias=androiddebugkey
+        storePassword=android
+        keyPassword=android
         EOF
 
-    - name: Inject credentials
+    - name: Inject credentials (empty for test build)
       run: |
         cat <<EOF > local.properties
-        POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}
-        POSTHOG_HOST=${{ secrets.POSTHOG_HOST }}
-        STEAMGRIDDB_API_KEY=${{ secrets.STEAMGRIDDB_API_KEY }}
-        CLOUD_PROJECT_NUMBER=${{ secrets.CLOUD_PROJECT_NUMBER }}
+        POSTHOG_API_KEY=
+        POSTHOG_HOST=https://us.i.posthog.com
+        STEAMGRIDDB_API_KEY=
+        CLOUD_PROJECT_NUMBER=
         EOF
 
     - name: Install Android SDK Build Tools
@@ -78,25 +80,17 @@ jobs:
         unzip -o app-release.apks universal.apk
 
     - name: Sign APK (V1 + V2 + V3)
-      env:
-        KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
-        KEY_PASS: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
-        STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
       run: |
-        BUILD_TOOLS_DIR="${ANDROID_HOME}/build-tools/34.0.0"
-        if [ ! -d "$BUILD_TOOLS_DIR" ]; then
-          BUILD_TOOLS_DIR="${ANDROID_SDK_ROOT}/build-tools/34.0.0"
-        fi
-        "${BUILD_TOOLS_DIR}/apksigner" sign \
+        BUILD_TOOLS=$(ls ${ANDROID_SDK_ROOT}/build-tools | tail -1)
+        ${ANDROID_SDK_ROOT}/build-tools/${BUILD_TOOLS}/apksigner sign \
+          --key testkey.pk8 \
+          --cert testkey.x509.pem \
           --v1-signing-enabled true \
           --v2-signing-enabled true \
           --v3-signing-enabled true \
-          --ks app/keystores/keystore.jks \
-          --ks-key-alias "$KEY_ALIAS" \
-          --ks-pass pass:"$STORE_PASS" \
-          --key-pass pass:"$KEY_PASS" \
           --out universal-signed.apk \
           universal.apk
+        echo "Signed: $(du -sh universal-signed.apk | cut -f1)"
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
