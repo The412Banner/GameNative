@@ -484,12 +484,18 @@ private fun LsfgSection(state: ContainerConfigState) {
         ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
-            context.contentResolver.takePersistableUriPermission(
-                uri,
-                android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION,
-            )
-            state.config.value = config.copy(lsfgCustomDllPath = uri.toString())
-            dllAvailable = true
+            try {
+                val destDir = java.io.File(context.filesDir, "lsfg")
+                destDir.mkdirs()
+                val destFile = java.io.File(destDir, "Lossless.dll")
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    destFile.outputStream().use { output -> input.copyTo(output) }
+                }
+                if (destFile.isFile) {
+                    state.config.value = config.copy(lsfgCustomDllPath = destFile.absolutePath)
+                    dllAvailable = true
+                }
+            } catch (_: Exception) {}
         }
     }
 
