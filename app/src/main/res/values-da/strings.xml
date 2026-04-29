@@ -228,6 +228,11 @@
     <string name="quick_menu_tab_controller">Controller</string>
     <string name="performance_hud">Ydelses-HUD</string>
     <string name="performance_hud_description">Vis eller skjul overlayet i spillet.</string>
+    <string name="performance_hud_fps_limiter">FPS-begrænser</string>
+    <string name="performance_hud_fps_limiter_description">Begrænser billedhastigheden i spillet. Maks.: %1$d Hz.</string>
+    <string name="performance_hud_fps_limiter_target">Mål-FPS</string>
+    <string name="performance_hud_fps_limiter_off">Ubegrænset</string>
+    <string name="performance_hud_fps_limiter_value">%1$d FPS</string>
     <string name="performance_hud_presets">Forudindstillinger</string>
     <string name="performance_hud_presets_description">Skift hurtigt mellem almindelige HUD-layouts.</string>
     <string name="performance_hud_preset_fps_only">1</string>
@@ -561,6 +566,31 @@
     <string name="gesture_zoom_page_up_down">Side op/ned</string>
     <string name="gesture_action_label">Handling</string>
     <string name="gesture_delay_label">Forsinkelse</string>
+    <string name="gesture_section_single_finger">En finger</string>
+    <string name="gesture_section_two_finger">To fingre</string>
+    <string name="gesture_section_three_finger">Tre fingre</string>
+    <string name="gesture_section_other">Andet</string>
+    <string name="gesture_pan_left_click_drag">Træk med venstreklik</string>
+    <string name="gesture_pan_right_click_drag">Træk med højreklik</string>
+    <string name="gesture_action_show_keyboard">Vis tastatur</string>
+    <string name="gesture_header_special">Særlige</string>
+    <string name="gesture_header_mouse">Mus</string>
+    <string name="gesture_header_common_game">Almindelige spiltaster</string>
+    <string name="gesture_header_letters">Bogstaver A-Z</string>
+    <string name="gesture_header_numbers">Tal 0-9</string>
+    <string name="gesture_header_function_keys">Funktionstaster</string>
+    <string name="gesture_two_finger_hold">Hold med to fingre</string>
+    <string name="gesture_two_finger_hold_delay">Forsinkelse for hold med to fingre (ms)</string>
+    <string name="gesture_three_finger_tap">Tryk med tre fingre</string>
+    <string name="gesture_three_finger_drag">Træk med tre fingre</string>
+    <string name="gesture_three_finger_hold">Hold med tre fingre</string>
+    <string name="gesture_three_finger_hold_delay">Forsinkelse for hold med tre fingre (ms)</string>
+    <string name="gesture_threshold">Gestus-tærskel (px)</string>
+    <string name="gesture_threshold_subtitle">Bevægelse, der kræves for at låse gestustypen (lavere = mere responsiv)</string>
+    <string name="gesture_show_click_highlight">Vis klikfremhævning</string>
+    <string name="gesture_show_click_highlight_subtitle">Vis en cirkel ved trykplacering</string>
+    <string name="gesture_show_debug_overlay">Vis fejlfindings-overlay for gestus</string>
+    <string name="gesture_show_debug_overlay_subtitle">Vis midlertidige gestusetiketter øverst i midten</string>
 
     <!-- Shooter Mode -->
     <string name="shooter_mode_settings">Indstillinger for dynamiske joysticks</string>
@@ -844,6 +874,7 @@
     <string name="main_app_running_message">Du er logget ind på en anden enhed og spiller allerede %s. \nDu kan stadig spille dette spil, men det vil afbryde den anden session fra Steam.</string>
     <string name="main_app_running_other_device">Du er logget ind på en anden enhed (%1$s) og spiller allerede %2$s (%3$s), og den gemfil er ikke i skyen endnu. \nDu kan stadig spille dette spil, men det vil afbryde den anden session fra Steam og kan skabe en gemfilkonflikt når sessionsframgangen synkroniseres</string>
     <string name="main_play_anyway">Spil alligevel</string>
+    <string name="main_app_running_unknown_game">et spil</string>
 
     <!-- TODO: Manual review - PluviaMain: Save Conflicts -->
     <string name="main_save_conflict_title">Gemfilkonflikt</string>

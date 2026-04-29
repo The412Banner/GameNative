@@ -4,6 +4,9 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Rect;
 import android.opengl.GLSurfaceView;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.SystemClock;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -24,6 +27,19 @@ public class XServerView extends GLSurfaceView {
     private final GLRenderer renderer;
     // private final ArrayList<Callback<MotionEvent>> mouseEventCallbacks = new ArrayList<>();
     private final XServer xServer;
+    private final Object renderThrottleLock = new Object();
+    private final Handler renderThrottleHandler = new Handler(Looper.getMainLooper());
+    private int frameRateLimit = 0;
+    private long minRenderIntervalMs = 0L;
+    private long lastRenderRequestUptimeMs = 0L;
+    private boolean renderRequestScheduled = false;
+    private final Runnable throttledRenderRunnable = () -> {
+        synchronized (renderThrottleLock) {
+            renderRequestScheduled = false;
+            lastRenderRequestUptimeMs = SystemClock.uptimeMillis();
+        }
+        XServerView.super.requestRender();
+    };
 
     public XServerView(Context context, XServer xServer) {
         super(context);
@@ -52,6 +68,63 @@ public class XServerView extends GLSurfaceView {
 
     public GLRenderer getRenderer() {
         return renderer;
+    }
+
+    public int getFrameRateLimit() {
+        synchronized (renderThrottleLock) {
+            return frameRateLimit;
+        }
+    }
+
+    public void setFrameRateLimit(int frameRateLimit) {
+        final boolean shouldRecomputeRender;
+        synchronized (renderThrottleLock) {
+            boolean hadScheduledRender = renderRequestScheduled;
+            this.frameRateLimit = Math.max(0, frameRateLimit);
+            minRenderIntervalMs = this.frameRateLimit > 0
+                ? Math.max(1L, Math.round(1000f / (float) this.frameRateLimit))
+                : 0L;
+
+            if (hadScheduledRender) {
+                renderThrottleHandler.removeCallbacks(throttledRenderRunnable);
+                renderRequestScheduled = false;
+            }
+            shouldRecomputeRender = this.frameRateLimit == 0 || hadScheduledRender;
+        }
+
+        if (shouldRecomputeRender) {
+            requestRender();
+        }
+    }
+
+    @Override
+    public void requestRender() {
+        long delayMs = 0L;
+
+        synchronized (renderThrottleLock) {
+            if (frameRateLimit <= 0) {
+                super.requestRender();
+                return;
+            }
+
+            long now = SystemClock.uptimeMillis();
+            long remainingDelay = minRenderIntervalMs - (now - lastRenderRequestUptimeMs);
+            if (!renderRequestScheduled && remainingDelay <= 0L) {
+                lastRenderRequestUptimeMs = now;
+            } else {
+                if (renderRequestScheduled) {
+                    return;
+                }
+                renderRequestScheduled = true;
+                delayMs = Math.max(1L, remainingDelay);
+            }
+        }
+
+        if (delayMs == 0L) {
+            super.requestRender();
+        } else {
+            renderThrottleHandler.postDelayed(throttledRenderRunnable, delayMs);
+        }
     }
 
     // public void addPointerEventListener(Callback<MotionEvent> listener) {

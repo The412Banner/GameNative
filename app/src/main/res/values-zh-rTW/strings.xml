@@ -295,6 +295,11 @@
     <string name="quick_menu_tab_controller">控制器</string>
     <string name="performance_hud">效能 HUD</string>
     <string name="performance_hud_description">顯示或隱藏遊戲內疊加層。</string>
+    <string name="performance_hud_fps_limiter">FPS 限制器</string>
+    <string name="performance_hud_fps_limiter_description">限制遊戲內幀率。最高：%1$d Hz。</string>
+    <string name="performance_hud_fps_limiter_target">目標 FPS</string>
+    <string name="performance_hud_fps_limiter_off">無限制</string>
+    <string name="performance_hud_fps_limiter_value">%1$d FPS</string>
     <string name="performance_hud_presets">預設</string>
     <string name="performance_hud_presets_description">快速切換常用 HUD 版面配置。</string>
     <string name="performance_hud_preset_fps_only">1</string>
@@ -732,6 +737,31 @@
     <string name="gesture_zoom_page_up_down">Page Up/Down</string>
     <string name="gesture_action_label">操作</string>
     <string name="gesture_delay_label">延遲</string>
+    <string name="gesture_section_single_finger">單指</string>
+    <string name="gesture_section_two_finger">雙指</string>
+    <string name="gesture_section_three_finger">三指</string>
+    <string name="gesture_section_other">其他</string>
+    <string name="gesture_pan_left_click_drag">左鍵拖曳</string>
+    <string name="gesture_pan_right_click_drag">右鍵拖曳</string>
+    <string name="gesture_action_show_keyboard">顯示鍵盤</string>
+    <string name="gesture_header_special">特殊</string>
+    <string name="gesture_header_mouse">滑鼠</string>
+    <string name="gesture_header_common_game">常用遊戲按鍵</string>
+    <string name="gesture_header_letters">字母 A-Z</string>
+    <string name="gesture_header_numbers">數字 0-9</string>
+    <string name="gesture_header_function_keys">功能鍵</string>
+    <string name="gesture_two_finger_hold">雙指長按</string>
+    <string name="gesture_two_finger_hold_delay">雙指長按延遲 (ms)</string>
+    <string name="gesture_three_finger_tap">三指點按</string>
+    <string name="gesture_three_finger_drag">三指拖曳</string>
+    <string name="gesture_three_finger_hold">三指長按</string>
+    <string name="gesture_three_finger_hold_delay">三指長按延遲 (ms)</string>
+    <string name="gesture_threshold">手勢閾值 (px)</string>
+    <string name="gesture_threshold_subtitle">鎖定手勢類型所需的移動距離（越低越靈敏）</string>
+    <string name="gesture_show_click_highlight">顯示點擊高亮</string>
+    <string name="gesture_show_click_highlight_subtitle">在點擊位置顯示圓圈</string>
+    <string name="gesture_show_debug_overlay">顯示手勢除錯疊加層</string>
+    <string name="gesture_show_debug_overlay_subtitle">在頂部中央顯示臨時手勢標籤</string>
 
     <!-- Shooter Mode -->
     <string name="shooter_mode_settings">動態搖桿設定</string>
@@ -848,6 +878,8 @@
     <string name="settings_emulation_default_config_title">修改預設配置</string>
     <string name="settings_emulation_default_config_subtitle">每款遊戲的初始容器設定 (不影響已安裝遊戲)</string>
     <string name="settings_emulation_default_config_dialog_title">預設容器設定</string>
+    <string name="settings_emulation_auto_apply_known_config_title">自動套用預設配置</string>
+    <string name="settings_emulation_auto_apply_known_config_subtitle">首次執行 Steam 遊戲時，自動載入並套用社群推薦的最佳設定</string>
     <string name="settings_emulation_box64_presets_title">Box64 預設集</string>
     <string name="settings_emulation_box64_presets_subtitle">檢視、修改及建立 Box64 預設集</string>
     <string name="settings_emulation_driver_manager_title">驅動程式管理員</string>
@@ -1014,6 +1046,7 @@
     <string name="main_app_running_message">您已在另一台裝置登入並正在遊玩 %s。\n您仍可繼續遊玩此遊戲，但此操作將導致 Steam 斷開另一裝置的連線。</string>
     <string name="main_app_running_other_device">您已在另一台裝置 (%1$s) 上登入並正在遊玩 %2$s (%3$s)，該存檔尚未同步至雲端。\n您仍可繼續遊玩此遊戲，但此操作將使另一裝置的 Steam 連線中斷，且當該裝置的進度同步時可能產生存檔衝突。</string>
     <string name="main_play_anyway">仍要繼續</string>
+    <string name="main_app_running_unknown_game">遊戲</string>
 
     <!-- PluviaMain: Save Conflicts -->
     <string name="main_save_conflict_title">存檔衝突</string>
@@ -1390,4 +1423,70 @@
      <string name="steam_save_import_failed">匯入存檔失敗：%s</string>
     <string name="option_import_saves">匯入存檔</string>
     <string name="option_export_saves">匯出存檔</string>
+    <string name="option_export_for_frontend">匯出至前端</string>
+    <string name="option_open_container">開啟容器</string>
+    <string name="option_edit_container">編輯容器</string>
+    <string name="option_reset_to_defaults">重置容器</string>
+    <string name="option_get_support">取得支援</string>
+    <string name="option_submit_feedback">提交意見回饋</string>
+    <string name="option_test_graphics">測試繪圖渲染</string>
+    <string name="option_fetch_game_images">取得遊戲封面</string>
+
+    <string name="container_config_custom_resolution_title">設定自訂解析度</string>
+    <string name="container_config_custom_resolution_separator">x</string>
+    <string name="container_config_custom_resolution_error_nonzero">寬度和高度必須大於 0</string>
+    <string name="container_config_custom_resolution_error_aspect">寬度必須大於高度</string>
+
+    <string name="steam_not_logged_in">您必須登入 Steam 才能使用此功能</string>
+
+    <string name="download_no_wifi">未連接到 Wi-Fi/LAN</string>
+    <string name="download_paused_wifi">下載已暫停 – 等待 Wi-Fi/LAN 連接</string>
+
+    <string name="library_compatibility_unknown">未知</string>
+    <string name="library_not_compatible">不相容</string>
+
+    <string name="local_saves_only">僅限本地存檔</string>
+    <string name="local_saves_only_description">停用此遊戲的雲端存檔同步，僅將存檔儲存在本地裝置上</string>
+
+    <string name="main_downloading_entry">正在下載 %s</string>
+
+    <string name="option_open_store_page">開啟商店頁面</string>
+    <string name="option_force_cloud_sync">強制雲端同步</string>
+    <string name="option_browse_online_saves">瀏覽線上存檔</string>
+    <string name="option_force_download_remote">強制下載遠端存檔</string>
+    <string name="option_force_upload_local">強制上傳本地存檔</string>
+    <string name="option_manage_dlc">管理 DLC</string>
+    <string name="option_manage_workshop">管理創意工坊</string>
+    <string name="option_move_to_external_storage">移至外部儲存空間</string>
+    <string name="option_move_to_internal_storage">移至內部儲存空間</string>
+    <string name="option_reset_drm">重置 DRM</string>
+    <string name="option_update">更新</string>
+    <string name="option_use_known_config">使用已知配置</string>
+    <string name="option_verify_files">驗證檔案完整性</string>
+
+    <string name="performance_hud_battery_temperature">電池溫度</string>
+
+    <string name="screen_effects_scaling">縮放</string>
+    <string name="screen_effects_scaling_mode">縮放模式</string>
+    <string name="screen_effects_scaling_mode_none">無</string>
+    <string name="screen_effects_scaling_mode_nearest">最近鄰</string>
+    <string name="screen_effects_scaling_mode_linear">線性</string>
+    <string name="screen_effects_scaling_mode_fill">填充</string>
+    <string name="screen_effects_scaling_mode_stretch">拉伸</string>
+    <string name="screen_effects_scaling_mode_fsr">FSR</string>
+    <string name="screen_effects_fsr">FSR 1.0</string>
+    <string name="screen_effects_fsr_description">官方 AMD FidelityFX Super Resolution 1.0，使用 EASU + RCAS，以較低的內部分辨率渲染並進行全分辨率放大。</string>
+    <string name="screen_effects_fsr_quality">FSR 品質</string>
+    <string name="screen_effects_fsr_quality_ultra_quality">超高品質</string>
+    <string name="screen_effects_fsr_quality_quality">品質</string>
+    <string name="screen_effects_fsr_quality_balanced">平衡</string>
+    <string name="screen_effects_fsr_quality_performance">效能</string>
+    <string name="screen_effects_fsr_sharpness">FSR 銳利度</string>
+    <string name="screen_effects_fsr_sharpness_value">%1$d/5</string>
+    <string name="screen_effects_launch_sharpness">啟動銳利度</string>
+    <string name="screen_effects_launch_sharpness_note">CAS 與 DLS 透過 vkBasalt 應用，將於下次啟動遊戲時生效。</string>
+
+    <string name="settings_interface_icon_style">圖示樣式</string>
+
+    <string name="tools_wine_processes_empty">未偵測到正在執行的 EXE。</string>
 </resources>

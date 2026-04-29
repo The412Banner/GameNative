@@ -296,6 +296,11 @@
     <string name="quick_menu_tab_controller">Контролер</string>
     <string name="performance_hud">HUD продуктивності</string>
     <string name="performance_hud_description">Показувати або приховувати ігрове накладання.</string>
+    <string name="performance_hud_fps_limiter">Обмежувач FPS</string>
+    <string name="performance_hud_fps_limiter_description">Обмежує частоту кадрів у грі. Макс.: %1$d Гц.</string>
+    <string name="performance_hud_fps_limiter_target">Цільовий FPS</string>
+    <string name="performance_hud_fps_limiter_off">Без обмежень</string>
+    <string name="performance_hud_fps_limiter_value">%1$d FPS</string>
     <string name="performance_hud_presets">Набори</string>
     <string name="performance_hud_presets_description">Швидко перемикайтеся між типовими макетами HUD.</string>
     <string name="performance_hud_preset_fps_only">1</string>
@@ -734,6 +739,31 @@
     <string name="gesture_zoom_page_up_down">PgUp/PgDn</string>
     <string name="gesture_action_label">Дія</string>
     <string name="gesture_delay_label">Затримка</string>
+    <string name="gesture_section_single_finger">Один палець</string>
+    <string name="gesture_section_two_finger">Два пальці</string>
+    <string name="gesture_section_three_finger">Три пальці</string>
+    <string name="gesture_section_other">Інше</string>
+    <string name="gesture_pan_left_click_drag">Перетягування лівою кнопкою миші</string>
+    <string name="gesture_pan_right_click_drag">Перетягування правою кнопкою миші</string>
+    <string name="gesture_action_show_keyboard">Показати клавіатуру</string>
+    <string name="gesture_header_special">Спеціальні</string>
+    <string name="gesture_header_mouse">Миша</string>
+    <string name="gesture_header_common_game">Поширені ігрові клавіші</string>
+    <string name="gesture_header_letters">Літери A-Z</string>
+    <string name="gesture_header_numbers">Числа 0-9</string>
+    <string name="gesture_header_function_keys">Функціональні клавіші</string>
+    <string name="gesture_two_finger_hold">Утримання двома пальцями</string>
+    <string name="gesture_two_finger_hold_delay">Затримка утримання двома пальцями (мс)</string>
+    <string name="gesture_three_finger_tap">Торкання трьома пальцями</string>
+    <string name="gesture_three_finger_drag">Перетягування трьома пальцями</string>
+    <string name="gesture_three_finger_hold">Утримання трьома пальцями</string>
+    <string name="gesture_three_finger_hold_delay">Затримка утримання трьома пальцями (мс)</string>
+    <string name="gesture_threshold">Поріг жесту (px)</string>
+    <string name="gesture_threshold_subtitle">Рух, потрібний для фіксації типу жесту (нижче = вища чутливість)</string>
+    <string name="gesture_show_click_highlight">Показувати підсвічування кліку</string>
+    <string name="gesture_show_click_highlight_subtitle">Показувати коло в місці торкання</string>
+    <string name="gesture_show_debug_overlay">Показувати оверлей налагодження жестів</string>
+    <string name="gesture_show_debug_overlay_subtitle">Показувати тимчасові підписи жестів угорі по центру</string>
 
     <!-- Shooter Mode -->
     <string name="shooter_mode_settings">Налаштування динамічних джойстиків</string>
@@ -1017,6 +1047,7 @@
     <string name="main_app_running_message">Ви авторизовані на іншому пристрої, де граєте у %s. Ви все одно можете грати в цю гру, але це завершить інший сеанс у Steam.</string>
     <string name="main_app_running_other_device">Ви авторизовані на іншому пристрої (%1$s), де граєте у %2$s (%3$s), і прогрес цієї гри ще не синхронізовано з хмарою. \nВи все одно можете грати в цю гру, але це завершить інший сеанс у Steam і може створити конфлікт збережень, коли прогрес того сеансу синхронізуватиметься</string>
     <string name="main_play_anyway">Все одно грати</string>
+    <string name="main_app_running_unknown_game">гру</string>
 
     <!-- PluviaMain: Save Conflicts -->
     <string name="main_save_conflict_title">Конфлікт збережень</string>

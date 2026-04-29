@@ -26,7 +26,7 @@ object BionicDefaultProtonDependency : LaunchDependency {
 
     override fun isSatisfied(context: Context, container: Container, gameSource: GameSource, gameId: Int): Boolean {
         val protonVersion = container.wineVersion
-        val outFile = File(ImageFs.find(context).getRootDir(), "opt/$protonVersion")
+        val outFile = File(ImageFs.getSharedProtonDir(context), protonVersion)
         val binDir = File(outFile, "bin")
         return binDir.exists() && binDir.isDirectory
     }
@@ -66,7 +66,7 @@ object BionicDefaultProtonDependency : LaunchDependency {
             }
         }
 
-        val outFile = File(ImageFs.find(context).getRootDir(), "opt/$protonVersion")
+        val outFile = File(ImageFs.getSharedProtonDir(context), protonVersion)
         val binDir = File(outFile, "bin")
         val needsExtract = withContext(Dispatchers.IO) { !binDir.exists() || !binDir.isDirectory }
         if (needsExtract) {

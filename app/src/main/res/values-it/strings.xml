@@ -301,6 +301,11 @@
     <string name="quick_menu_tab_controller">Controller</string>
     <string name="performance_hud">HUD prestazioni</string>
     <string name="performance_hud_description">Mostra o nascondi l’overlay di gioco.</string>
+    <string name="performance_hud_fps_limiter">Limitatore FPS</string>
+    <string name="performance_hud_fps_limiter_description">Limita il frame rate in gioco. Max: %1$d Hz.</string>
+    <string name="performance_hud_fps_limiter_target">FPS obiettivo</string>
+    <string name="performance_hud_fps_limiter_off">Illimitato</string>
+    <string name="performance_hud_fps_limiter_value">%1$d FPS</string>
     <string name="performance_hud_presets">Predefiniti</string>
     <string name="performance_hud_presets_description">Passa rapidamente tra layout HUD comuni.</string>
     <string name="performance_hud_preset_fps_only">1</string>
@@ -739,6 +744,31 @@
     <string name="gesture_zoom_page_up_down">Pag su/giù</string>
     <string name="gesture_action_label">Azione</string>
     <string name="gesture_delay_label">Ritardo</string>
+    <string name="gesture_section_single_finger">Un dito</string>
+    <string name="gesture_section_two_finger">Due dita</string>
+    <string name="gesture_section_three_finger">Tre dita</string>
+    <string name="gesture_section_other">Altro</string>
+    <string name="gesture_pan_left_click_drag">Trascina con clic sinistro</string>
+    <string name="gesture_pan_right_click_drag">Trascina con clic destro</string>
+    <string name="gesture_action_show_keyboard">Mostra tastiera</string>
+    <string name="gesture_header_special">Speciale</string>
+    <string name="gesture_header_mouse">Mouse</string>
+    <string name="gesture_header_common_game">Tasti di gioco comuni</string>
+    <string name="gesture_header_letters">Lettere A-Z</string>
+    <string name="gesture_header_numbers">Numeri 0-9</string>
+    <string name="gesture_header_function_keys">Tasti funzione</string>
+    <string name="gesture_two_finger_hold">Pressione con due dita</string>
+    <string name="gesture_two_finger_hold_delay">Ritardo pressione con due dita (ms)</string>
+    <string name="gesture_three_finger_tap">Tocco con tre dita</string>
+    <string name="gesture_three_finger_drag">Trascinamento con tre dita</string>
+    <string name="gesture_three_finger_hold">Pressione con tre dita</string>
+    <string name="gesture_three_finger_hold_delay">Ritardo pressione con tre dita (ms)</string>
+    <string name="gesture_threshold">Soglia gesto (px)</string>
+    <string name="gesture_threshold_subtitle">Movimento necessario per bloccare il tipo di gesto (più basso = più reattivo)</string>
+    <string name="gesture_show_click_highlight">Mostra evidenziazione clic</string>
+    <string name="gesture_show_click_highlight_subtitle">Mostra un cerchio nella posizione del tocco</string>
+    <string name="gesture_show_debug_overlay">Mostra overlay debug gesture</string>
+    <string name="gesture_show_debug_overlay_subtitle">Mostra etichette temporanee dei gesti in alto al centro</string>
 
     <!-- Shooter Mode -->
     <string name="shooter_mode_settings">Impostazioni joystick dinamici</string>
@@ -1014,6 +1044,7 @@
     <string name="main_app_running_message">Sei connesso su un altro dispositivo che sta già giocando a %s. \nPuoi comunque giocare a questo gioco, ma ciò disconnetterà l\'altra sessione da Steam.</string>
     <string name="main_app_running_other_device">Sei connesso su un altro dispositivo (%1$s) che sta già giocando a %2$s (%3$s), e quel salvataggio non è ancora nel cloud. \nPuoi comunque giocare a questo gioco, ma ciò disconnetterà l\'altra sessione da Steam e potrebbe creare un conflitto di salvataggio quando il progresso di quella sessione verrà sincronizzato</string>
     <string name="main_play_anyway">Gioca comunque</string>
+    <string name="main_app_running_unknown_game">un gioco</string>
 
     <!-- PluviaMain: Save Conflicts -->
     <string name="main_save_conflict_title">Conflitto Salvataggio</string>

@@ -71,8 +71,7 @@ class BionicDefaultProtonDependencyTest {
     fun isSatisfied_returnsTrue_whenProtonBinDirectoryExists() {
         every { container.wineVersion } returns "proton-9.0-arm64ec"
 
-        val imageFsRoot = ImageFs.find(context).rootDir
-        val binDir = File(imageFsRoot, "opt/proton-9.0-arm64ec/bin")
+        val binDir = File(ImageFs.getSharedProtonDir(context), "proton-9.0-arm64ec/bin")
         binDir.mkdirs()
 
         val result = BionicDefaultProtonDependency.isSatisfied(context, container, GameSource.STEAM, 4)
@@ -125,8 +124,7 @@ class BionicDefaultProtonDependencyTest {
         every { container.wineVersion } returns "proton-9.0-arm64ec"
         mockkObject(SteamService.Companion)
 
-        val imageFsRoot = ImageFs.find(context).rootDir
-        val binDir = File(imageFsRoot, "opt/proton-9.0-arm64ec/bin")
+        val binDir = File(ImageFs.getSharedProtonDir(context), "proton-9.0-arm64ec/bin")
         binDir.mkdirs()
 
         every { SteamService.isFileInstallable(context, "proton-9.0-arm64ec.txz") } returns false

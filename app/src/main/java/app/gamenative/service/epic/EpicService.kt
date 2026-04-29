@@ -441,10 +441,34 @@ class EpicService : Service() {
 
                     if (result.isSuccess) {
                         Timber.i("[Download] Completed successfully for game $gameId")
-                        downloadInfo.setProgress(1.0f)
-                        downloadInfo.setActive(false)
+
+                        // Download cloud saves so they're ready before first launch.
+                        // Status message keeps isDownloading() true so Play stays hidden during sync.
+                        val epicAppId = "EPIC_$gameId"
+                        if (game.cloudSaveEnabled && !ContainerUtils.isLocalSavesOnly(context, epicAppId)) {
+                            downloadInfo.setPostInstallSyncing(true)
+                            PluviaApp.events.emit(AndroidEvent.PostInstallSyncStatusChanged(gameId, true))
+                            downloadInfo.updateStatusMessage("Syncing saves...")
+                            try {
+                                EpicCloudSavesManager.syncCloudSaves(
+                                    context = context,
+                                    appId = gameId,
+                                    preferredAction = "download",
+                                )
+                            } catch (e: CancellationException) {
+                                throw e
+                            } catch (e: Exception) {
+                                Timber.e(e, "[PostInstallSync] Cloud save sync failed for game $gameId")
+                            } finally {
+                                downloadInfo.setPostInstallSyncing(false)
+                                downloadInfo.updateStatusMessage(null)
+                                PluviaApp.events.emit(AndroidEvent.PostInstallSyncStatusChanged(gameId, false))
+                            }
+                        }
 
                         SnackbarManager.show("Download completed successfully!")
+                        downloadInfo.setProgress(1.0f)
+                        downloadInfo.setActive(false)
                     } else {
                         val error = result.exceptionOrNull()
                         Timber.e(error, "[Download] Failed for game $gameId")
@@ -453,8 +477,16 @@ class EpicService : Service() {
 
                         SnackbarManager.show("Download failed: ${error?.message ?: "Unknown error"}")
                     }
+                } catch (e: CancellationException) {
+                    downloadInfo.setPostInstallSyncing(false)
+                    downloadInfo.updateStatusMessage(null)
+                    PluviaApp.events.emit(AndroidEvent.PostInstallSyncStatusChanged(gameId, false))
+                    throw e
                 } catch (e: Exception) {
                     Timber.e(e, "[Download] Exception for game $gameId")
+                    downloadInfo.setPostInstallSyncing(false)
+                    downloadInfo.updateStatusMessage(null)
+                    PluviaApp.events.emit(AndroidEvent.PostInstallSyncStatusChanged(gameId, false))
                     downloadInfo.setProgress(-1.0f)
                     downloadInfo.setActive(false)
 

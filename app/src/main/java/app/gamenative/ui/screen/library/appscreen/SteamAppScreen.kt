@@ -59,8 +59,10 @@ import app.gamenative.utils.SteamUtils
 import app.gamenative.utils.StorageUtils
 import app.gamenative.workshop.WorkshopManager
 import app.gamenative.NetworkMonitor
+import app.gamenative.service.SteamService.Companion.getInstalledApp
 import com.google.android.play.core.splitcompat.SplitCompat
 import com.posthog.PostHog
+import com.winlator.container.Container
 import com.winlator.container.ContainerData
 import com.winlator.container.ContainerManager
 import com.winlator.fexcore.FEXCoreManager
@@ -79,6 +81,7 @@ import app.gamenative.ui.component.dialog.state.GameManagerDialogState
 import app.gamenative.ui.util.SnackbarManager
 import app.gamenative.ui.util.SteamSaveTransfer
 import app.gamenative.utils.ContainerUtils.getContainer
+import app.gamenative.utils.CustomGameScanner
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import timber.log.Timber
@@ -359,8 +362,9 @@ class SteamAppScreen : BaseAppScreen() {
     }
 
     override fun isDownloading(context: Context, libraryItem: LibraryItem): Boolean {
-        // download job is removed on completion, so non-null means actively downloading
-        return SteamService.getAppDownloadInfo(libraryItem.gameId) != null
+        val downloadInfo = SteamService.getAppDownloadInfo(libraryItem.gameId) ?: return false
+        val progress = downloadInfo.getProgress() ?: 0f
+        return downloadInfo.isPostInstallSyncing() || (downloadInfo.isActive() && progress < 1f)
     }
 
     override fun getDownloadProgress(context: Context, libraryItem: LibraryItem): Float {
@@ -419,6 +423,14 @@ class SteamAppScreen : BaseAppScreen() {
         }
         PluviaApp.events.on<AndroidEvent.DownloadPausedDueToConnectivity, Unit>(connectivityListener)
         disposables += { PluviaApp.events.off<AndroidEvent.DownloadPausedDueToConnectivity, Unit>(connectivityListener) }
+
+        val postInstallSyncListener: (AndroidEvent.PostInstallSyncStatusChanged) -> Unit = { event ->
+            if (event.appId == appId) {
+                onStateChanged()
+            }
+        }
+        PluviaApp.events.on<AndroidEvent.PostInstallSyncStatusChanged, Unit>(postInstallSyncListener)
+        disposables += { PluviaApp.events.off<AndroidEvent.PostInstallSyncStatusChanged, Unit>(postInstallSyncListener) }
 
         return {
             progressDisposer?.invoke()
@@ -652,38 +664,13 @@ class SteamAppScreen : BaseAppScreen() {
         return libraryItem.gameSource == app.gamenative.data.GameSource.STEAM
     }
 
-    private suspend fun activateSaveTransferContainer(context: Context, appId: String): Throwable? {
-        return try {
-            withContext(Dispatchers.IO) {
-                val containerManager = ContainerManager(context)
-                val container = ContainerUtils.getOrCreateContainer(context, appId)
-                containerManager.activateContainer(container)
-            }
-            null
-        } catch (e: kotlinx.coroutines.CancellationException) {
-            throw e
-        } catch (t: Throwable) {
-            Timber.e(t, "Failed to activate save transfer container for $appId")
-            t
-        }
-    }
-
     override suspend fun exportSaves(
         context: Context,
         libraryItem: LibraryItem,
         uri: Uri,
     ): Boolean {
-        val activationError = activateSaveTransferContainer(context, libraryItem.appId)
-        if (activationError != null) {
-            SnackbarManager.show(
-                context.getString(
-                    R.string.steam_save_export_failed,
-                    activationError.message ?: "Unknown error",
-                ),
-            )
-            return false
-        }
-        return SteamSaveTransfer.exportSaves(context, libraryItem.gameId, uri)
+        val container = withContext(Dispatchers.IO) { ContainerUtils.getOrCreateContainer(context, libraryItem.appId) }
+        return SteamSaveTransfer.exportSaves(context, container, libraryItem.gameId, uri)
     }
 
     override suspend fun importSaves(
@@ -691,17 +678,8 @@ class SteamAppScreen : BaseAppScreen() {
         libraryItem: LibraryItem,
         uri: Uri,
     ): Boolean {
-        val activationError = activateSaveTransferContainer(context, libraryItem.appId)
-        if (activationError != null) {
-            SnackbarManager.show(
-                context.getString(
-                    R.string.steam_save_import_failed,
-                    activationError.message ?: "Unknown error",
-                ),
-            )
-            return false
-        }
-        return SteamSaveTransfer.importSaves(context, libraryItem.gameId, uri)
+        val container = withContext(Dispatchers.IO) { ContainerUtils.getOrCreateContainer(context, libraryItem.appId) }
+        return SteamSaveTransfer.importSaves(context, container, libraryItem.gameId, uri)
     }
 
     @Composable
@@ -826,12 +804,10 @@ class SteamAppScreen : BaseAppScreen() {
                             return@launch
                         }
 
-                        val containerManager = ContainerManager(context)
                         val container = ContainerUtils.getOrCreateContainer(context, appId)
-                        containerManager.activateContainer(container)
 
                         val prefixToPath: (String) -> String = { prefix ->
-                            PathType.from(prefix).toAbsPath(context, gameId, steamId.accountID)
+                            PathType.from(prefix).toAbsPath(container, gameId, steamId.accountID)
                         }
                         val syncResult = SteamService.forceSyncUserFiles(
                             appId = gameId,
@@ -1128,7 +1104,7 @@ class SteamAppScreen : BaseAppScreen() {
                                     val steamId = SteamService.userSteamId
                                     if (steamId != null) {
                                         val prefixToPath: (String) -> String = { prefix ->
-                                            PathType.from(prefix).toAbsPath(context, gameId, steamId.accountID)
+                                            PathType.from(prefix).toAbsPath(container, gameId, steamId.accountID)
                                         }
                                         SteamService.forceSyncUserFiles(
                                             appId = gameId,
@@ -1223,6 +1199,8 @@ class SteamAppScreen : BaseAppScreen() {
                             hideUninstallDialog(libraryItem.appId)
 
                             CoroutineScope(Dispatchers.IO).launch {
+                                val installedAppInfo = getInstalledApp(libraryItem.gameId)
+
                                 val success = SteamService.deleteApp(gameId)
                                 DownloadService.invalidateCache()
                                 withContext(Dispatchers.Main) {
@@ -1243,6 +1221,13 @@ class SteamAppScreen : BaseAppScreen() {
                                         )
                                     } else {
                                         SnackbarManager.show(context.getString(R.string.steam_uninstall_failed))
+                                    }
+                                }
+
+                                // Back to home screen as the game is imported
+                                if (success && installedAppInfo?.isImported == true) {
+                                    withContext(Dispatchers.Main) {
+                                        onBack()
                                     }
                                 }
                             }

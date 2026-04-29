@@ -2,11 +2,13 @@ package app.gamenative.ui.util
 
 import android.content.Context
 import android.net.Uri
+import app.gamenative.PrefManager
 import app.gamenative.R
 import app.gamenative.data.SaveFilePattern
 import app.gamenative.enums.PathType
 import app.gamenative.service.SteamService
 import app.gamenative.utils.FileUtils
+import com.winlator.container.Container
 import java.io.IOException
 import java.nio.channels.Channels
 import java.nio.file.Files
@@ -14,6 +16,7 @@ import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardOpenOption
+import java.util.stream.Collectors
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
@@ -61,13 +64,14 @@ object SteamSaveTransfer {
 
     suspend fun exportSaves(
         context: Context,
+        container: Container,
         steamAppId: Int,
         uri: Uri,
     ): Boolean {
         return try {
             val app = SteamService.getAppInfoOf(steamAppId)
                 ?: throw IOException("Steam app not found")
-            val prefixToPath = makePrefixToPath(context, steamAppId)
+            val prefixToPath = makePrefixToPath(container, steamAppId)
             val roots = withContext(Dispatchers.IO) { resolveExportRoots(app, prefixToPath) }
 
             if (roots.isEmpty()) {
@@ -116,6 +120,7 @@ object SteamSaveTransfer {
 
     suspend fun importSaves(
         context: Context,
+        container: Container,
         steamAppId: Int,
         uri: Uri,
     ): Boolean {
@@ -130,7 +135,7 @@ object SteamSaveTransfer {
                 throw IOException("Archive does not declare any save roots")
             }
 
-            val prefixToPath = makePrefixToPath(context, steamAppId)
+            val prefixToPath = makePrefixToPath(container, steamAppId)
             val rootMap = withContext(Dispatchers.IO) {
                 resolveImportRoots(app, archiveManifest.roots, prefixToPath)
             }
@@ -182,10 +187,8 @@ object SteamSaveTransfer {
      */
     private fun resolveExportRoots(
         app: app.gamenative.data.SteamApp,
-        prefixToPath: (String) -> String,
+        prefixToPath: (String) -> String?,
     ): List<ResolvedSaveRoot> {
-        val accountId = SteamService.userSteamId?.accountID?.toLong()
-            ?: throw IOException("Steam not logged in")
         val result = mutableListOf<ResolvedSaveRoot>()
 
         // 1) UFS patterns (skip SteamUserData — handled below)
@@ -193,7 +196,8 @@ object SteamSaveTransfer {
         savePatterns
             .filter { it.root != PathType.SteamUserData }
             .forEach { pattern ->
-                val basePath = Paths.get(prefixToPath(pattern.root.name), pattern.substitutedPath)
+                val rootPath = prefixToPath(pattern.root.name) ?: return@forEach
+                val basePath = Paths.get(rootPath, pattern.substitutedPath)
                 val files = findPatternFiles(basePath, pattern)
                 if (files.isNotEmpty()) {
                     result += ResolvedSaveRoot(
@@ -205,14 +209,19 @@ object SteamSaveTransfer {
             }
 
         // 2) SteamUserData — always scanned recursively (matches SteamAutoCloud behavior)
-        val userDataPath = Paths.get(prefixToPath(PathType.SteamUserData.name))
-        val userDataFiles = findPatternFiles(userDataPath, SaveFilePattern(root = PathType.SteamUserData, path = "", pattern = "*", recursive = 5))
-        if (userDataFiles.isNotEmpty()) {
-            result += ResolvedSaveRoot(
-                rootId = PathType.SteamUserData.name.lowercase(),
-                absolutePath = userDataPath,
-                files = userDataFiles,
+        prefixToPath(PathType.SteamUserData.name)?.let { userDataRoot ->
+            val userDataPath = Paths.get(userDataRoot)
+            val userDataFiles = findPatternFiles(
+                userDataPath,
+                SaveFilePattern(root = PathType.SteamUserData, path = "", pattern = "*", recursive = 5),
             )
+            if (userDataFiles.isNotEmpty()) {
+                result += ResolvedSaveRoot(
+                    rootId = PathType.SteamUserData.name.lowercase(),
+                    absolutePath = userDataPath,
+                    files = userDataFiles,
+                )
+            }
         }
 
         return result
@@ -225,11 +234,8 @@ object SteamSaveTransfer {
     private fun resolveImportRoots(
         app: app.gamenative.data.SteamApp,
         manifestRoots: List<SaveRoot>,
-        prefixToPath: (String) -> String,
+        prefixToPath: (String) -> String?,
     ): Map<String, Path> {
-        val accountId = SteamService.userSteamId?.accountID?.toLong()
-            ?: throw IOException("Steam not logged in")
-
         val knownRoots = mutableMapOf<String, Path>()
 
         // Build lookup from UFS patterns
@@ -237,12 +243,15 @@ object SteamSaveTransfer {
             .filter { it.root.isWindows }
             .filter { it.root != PathType.SteamUserData }
             .forEach { pattern ->
+                val rootPath = prefixToPath(pattern.root.name) ?: return@forEach
                 val id = patternRootId(pattern)
-                knownRoots[id] = Paths.get(prefixToPath(pattern.root.name), pattern.substitutedPath)
+                knownRoots[id] = Paths.get(rootPath, pattern.substitutedPath)
             }
 
         // SteamUserData
-        knownRoots[PathType.SteamUserData.name.lowercase()] = Paths.get(prefixToPath(PathType.SteamUserData.name))
+        prefixToPath(PathType.SteamUserData.name)?.let { userDataRoot ->
+            knownRoots[PathType.SteamUserData.name.lowercase()] = Paths.get(userDataRoot)
+        }
 
         // Resolve manifest roots against known roots, fall back to stored path
         return manifestRoots.associate { mr ->
@@ -259,7 +268,7 @@ object SteamSaveTransfer {
             maxDepth = depth,
         )
             .filter { Files.isRegularFile(it) }
-            .toList()
+            .collect(Collectors.toList())
     }
 
     private fun patternRootId(pattern: SaveFilePattern): String {
@@ -337,8 +346,52 @@ object SteamSaveTransfer {
 
     // -- Helpers ---------------------------------------------------------------
 
-    private fun makePrefixToPath(context: Context, appId: Int): (String) -> String = { prefix ->
-        PathType.from(prefix).toAbsPath(context, appId, SteamService.userSteamId!!.accountID)
+    private fun makePrefixToPath(container: Container, appId: Int): (String) -> String? = { prefix ->
+        resolveRootBasePath(container, appId, PathType.from(prefix))?.pathString
+    }
+
+    private fun resolveRootBasePath(
+        container: Container,
+        appId: Int,
+        rootType: PathType,
+    ): Path? {
+        val accountId = when (rootType) {
+            PathType.SteamUserData -> resolveSteamAccountId(container, appId) ?: return null
+            else -> 0L
+        }
+        return Paths.get(rootType.toAbsPath(container, appId, accountId))
+    }
+
+    private fun resolveSteamAccountId(container: Container, appId: Int): Long? {
+        SteamService.userSteamId?.accountID?.toLong()?.let { return it }
+        PrefManager.steamUserAccountId.takeIf { it != 0 }?.toLong()?.let { return it }
+
+        val userdataRoot = Paths.get(
+            container.rootDir.absolutePath,
+            ".wine/drive_c/Program Files (x86)/Steam/userdata",
+        )
+        if (!Files.isDirectory(userdataRoot)) return null
+
+        val matchingAccountIds = Files.list(userdataRoot).use { children ->
+            children
+                .filter { Files.isDirectory(it) }
+                .map { it.fileName.toString() }
+                .filter { candidate -> candidate.all(Char::isDigit) }
+                .filter { candidate ->
+                    val appRoot = userdataRoot.resolve(candidate).resolve(appId.toString())
+                    Files.isDirectory(appRoot)
+                }
+                .sorted()
+                .collect(Collectors.toList())
+        }
+
+        if (matchingAccountIds.size > 1) {
+            Timber.w(
+                "Multiple Steam userdata accounts found for appId=$appId; using ${matchingAccountIds.first()} for save transfer",
+            )
+        }
+
+        return matchingAccountIds.firstOrNull()?.toLongOrNull()
     }
 
     private fun normalizeRelativePath(value: String): String =

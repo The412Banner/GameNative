@@ -23,4 +23,6 @@ public interface Extension {
     default void setFirstErrorId(byte firstErrorId) {}
 
     void handleRequest(XClient client, XInputStream inputStream, XOutputStream outputStream) throws IOException, XRequestError;
+
+    default void close() {}
 }

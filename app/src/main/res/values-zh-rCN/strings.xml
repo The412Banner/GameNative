@@ -295,6 +295,11 @@
     <string name="quick_menu_tab_controller">控制器</string>
     <string name="performance_hud">性能 HUD</string>
     <string name="performance_hud_description">显示或隐藏游戏内叠加层。</string>
+    <string name="performance_hud_fps_limiter">FPS 限制器</string>
+    <string name="performance_hud_fps_limiter_description">限制游戏内帧率。最高：%1$d Hz。</string>
+    <string name="performance_hud_fps_limiter_target">目标 FPS</string>
+    <string name="performance_hud_fps_limiter_off">无限制</string>
+    <string name="performance_hud_fps_limiter_value">%1$d FPS</string>
     <string name="performance_hud_presets">预设</string>
     <string name="performance_hud_presets_description">快速切换常用 HUD 布局。</string>
     <string name="performance_hud_preset_fps_only">1</string>
@@ -730,6 +735,31 @@
     <string name="gesture_zoom_page_up_down">Page Up/Down</string>
     <string name="gesture_action_label">操作</string>
     <string name="gesture_delay_label">延迟</string>
+    <string name="gesture_section_single_finger">单指</string>
+    <string name="gesture_section_two_finger">双指</string>
+    <string name="gesture_section_three_finger">三指</string>
+    <string name="gesture_section_other">其他</string>
+    <string name="gesture_pan_left_click_drag">左键拖动</string>
+    <string name="gesture_pan_right_click_drag">右键拖动</string>
+    <string name="gesture_action_show_keyboard">显示键盘</string>
+    <string name="gesture_header_special">特殊</string>
+    <string name="gesture_header_mouse">鼠标</string>
+    <string name="gesture_header_common_game">常用游戏按键</string>
+    <string name="gesture_header_letters">字母 A-Z</string>
+    <string name="gesture_header_numbers">数字 0-9</string>
+    <string name="gesture_header_function_keys">功能键</string>
+    <string name="gesture_two_finger_hold">双指长按</string>
+    <string name="gesture_two_finger_hold_delay">双指长按延迟 (ms)</string>
+    <string name="gesture_three_finger_tap">三指点按</string>
+    <string name="gesture_three_finger_drag">三指拖动</string>
+    <string name="gesture_three_finger_hold">三指长按</string>
+    <string name="gesture_three_finger_hold_delay">三指长按延迟 (ms)</string>
+    <string name="gesture_threshold">手势阈值 (px)</string>
+    <string name="gesture_threshold_subtitle">锁定手势类型所需的移动距离（越低越灵敏）</string>
+    <string name="gesture_show_click_highlight">显示点击高亮</string>
+    <string name="gesture_show_click_highlight_subtitle">在点击位置显示圆圈</string>
+    <string name="gesture_show_debug_overlay">显示手势调试叠加层</string>
+    <string name="gesture_show_debug_overlay_subtitle">在顶部中央显示临时手势标签</string>
 
     <!-- Shooter Mode -->
     <string name="shooter_mode_settings">动态摇杆设置</string>
@@ -846,6 +876,8 @@
     <string name="settings_emulation_default_config_title">修改默认配置</string>
     <string name="settings_emulation_default_config_subtitle">每款游戏的初始容器设置（不影响已安装游戏）</string>
     <string name="settings_emulation_default_config_dialog_title">默认容器设置</string>
+    <string name="settings_emulation_auto_apply_known_config_title">自动匹配预设配置</string>
+    <string name="settings_emulation_auto_apply_known_config_subtitle">首次运行 Steam 游戏时，自动加载并应用社区推荐的最佳设置</string>
     <string name="settings_emulation_box64_presets_title">Box64 预设集</string>
     <string name="settings_emulation_box64_presets_subtitle">查看、修改及创建 Box64 预设集</string>
     <string name="settings_emulation_driver_manager_title">驱动程序管理器</string>
@@ -1011,6 +1043,7 @@
     <string name="main_app_running_message">您已在另一台设备登录并正在游玩 %s。\n您仍可继续游玩此游戏，但此操作将导致 Steam 断开另一设备的连接。</string>
     <string name="main_app_running_other_device">您已在另一台设备（%1$s）上登录并正在游玩 %2$s（%3$s），该存档尚未同步至云端。\n您仍可继续游玩此游戏，但此操作将使另一设备的 Steam 连接中断，且当该设备的进度同步时可能产生存档冲突。</string>
     <string name="main_play_anyway">仍要继续</string>
+    <string name="main_app_running_unknown_game">游戏</string>
 
     <!-- 主界面：存档冲突 -->
     <string name="main_save_conflict_title">存档冲突</string>
@@ -1297,7 +1330,7 @@
 
     <!-- Epic Games Integration -->
     <string name="epic_integration_title">Epic Games 集成</string>
-    <string name="epic_settings_login_title">登录</string>
+    <string name="epic_settings_login_title">登录 Epic</string>
     <string name="epic_settings_login_subtitle">登录到您的 Epic Games 账户</string>
     <string name="epic_login_success_title">登录成功</string>
     <string name="epic_login_cancel">取消</string>
@@ -1387,4 +1420,81 @@
      <string name="steam_save_import_failed">导入存档失败：%s</string>
     <string name="option_import_saves">导入存档</string>
     <string name="option_export_saves">导出存档</string>
+    <string name="option_export_for_frontend">导出至前端</string>
+    <string name="option_open_container">打开容器</string>
+    <string name="option_edit_container">编辑容器</string>
+    <string name="option_reset_to_defaults">重置容器</string>
+    <string name="option_get_support">获取支持</string>
+    <string name="option_submit_feedback">提交反馈</string>
+    <string name="option_test_graphics">测试图形渲染</string>
+    <string name="option_fetch_game_images">获取游戏封面</string>
+
+    <!-- 容器配置：自定义分辨率 -->
+    <string name="container_config_custom_resolution_title">设置自定义分辨率</string>
+    <string name="container_config_custom_resolution_separator">x</string>
+    <string name="container_config_custom_resolution_error_nonzero">宽度和高度必须大于 0</string>
+    <string name="container_config_custom_resolution_error_aspect">宽度必须大于高度</string>
+
+    <!-- Steam 登录状态 -->
+    <string name="steam_not_logged_in">您必须登录 Steam 才能使用此功能</string>
+
+    <!-- 下载网络提示 -->
+    <string name="download_no_wifi">未连接到 Wi-Fi/LAN</string>
+    <string name="download_paused_wifi">下载已暂停 – 等待 Wi-Fi/LAN 连接</string>
+
+    <!-- 库兼容性 -->
+    <string name="library_compatibility_unknown">未知</string>
+    <string name="library_not_compatible">不兼容</string>
+
+    <!-- Steam 集成：存档设置 -->
+    <string name="local_saves_only">仅本地存档</string>
+    <string name="local_saves_only_description">禁用此游戏的云存档同步，仅将存档保存在本地设备上</string>
+
+    <!-- 主界面：下载条目 -->
+    <string name="main_downloading_entry">正在下载 %s</string>
+
+    <!-- 应用选项菜单 -->
+    <string name="option_open_store_page">打开商店页面</string>
+    <string name="option_force_cloud_sync">强制云同步</string>
+    <string name="option_browse_online_saves">浏览在线存档</string>
+    <string name="option_force_download_remote">强制下载远程存档</string>
+    <string name="option_force_upload_local">强制上传本地存档</string>
+    <string name="option_manage_dlc">管理 DLC</string>
+    <string name="option_manage_workshop">管理创意工坊</string>
+    <string name="option_move_to_external_storage">移至外部存储</string>
+    <string name="option_move_to_internal_storage">移至内部存储</string>
+    <string name="option_reset_drm">重置 DRM</string>
+    <string name="option_update">更新</string>
+    <string name="option_use_known_config">使用已知配置</string>
+    <string name="option_verify_files">验证文件</string>
+
+    <!-- 性能 HUD -->
+    <string name="performance_hud_battery_temperature">电池温度</string>
+
+    <!-- 屏幕效果 -->
+    <string name="screen_effects_scaling">缩放</string>
+    <string name="screen_effects_scaling_mode">缩放模式</string>
+    <string name="screen_effects_scaling_mode_none">无</string>
+    <string name="screen_effects_scaling_mode_nearest">最近邻</string>
+    <string name="screen_effects_scaling_mode_linear">线性</string>
+    <string name="screen_effects_scaling_mode_fill">填充</string>
+    <string name="screen_effects_scaling_mode_stretch">拉伸</string>
+    <string name="screen_effects_scaling_mode_fsr">FSR</string>
+    <string name="screen_effects_fsr">FSR 1.0</string>
+    <string name="screen_effects_fsr_description">官方 AMD FidelityFX Super Resolution 1.0，使用 EASU + RCAS，以较低的内部分辨率渲染并进行全分辨率放大。</string>
+    <string name="screen_effects_fsr_quality">FSR 质量</string>
+    <string name="screen_effects_fsr_quality_ultra_quality">超高质量</string>
+    <string name="screen_effects_fsr_quality_quality">质量</string>
+    <string name="screen_effects_fsr_quality_balanced">平衡</string>
+    <string name="screen_effects_fsr_quality_performance">性能</string>
+    <string name="screen_effects_fsr_sharpness">FSR 锐度</string>
+    <string name="screen_effects_fsr_sharpness_value">%1$d/5</string>
+    <string name="screen_effects_launch_sharpness">启动锐度</string>
+    <string name="screen_effects_launch_sharpness_note">CAS 和 DLS 通过 vkBasalt 应用，将在下次启动游戏时生效。</string>
+
+    <!-- 设置：界面组 -->
+    <string name="settings_interface_icon_style">图标样式</string>
+
+    <!-- 工具：Wine 进程 -->
+    <string name="tools_wine_processes_empty">未检测到正在运行的EXE。</string>
 </resources>

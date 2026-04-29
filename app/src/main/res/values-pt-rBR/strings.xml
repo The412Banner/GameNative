@@ -228,6 +228,11 @@
     <string name="quick_menu_tab_controller">Controle</string>
     <string name="performance_hud">HUD de desempenho</string>
     <string name="performance_hud_description">Mostrar ou ocultar a sobreposição no jogo.</string>
+    <string name="performance_hud_fps_limiter">Limitador de FPS</string>
+    <string name="performance_hud_fps_limiter_description">Limita a taxa de quadros no jogo. Máx.: %1$d Hz.</string>
+    <string name="performance_hud_fps_limiter_target">FPS alvo</string>
+    <string name="performance_hud_fps_limiter_off">Ilimitado</string>
+    <string name="performance_hud_fps_limiter_value">%1$d FPS</string>
     <string name="performance_hud_presets">Predefinições</string>
     <string name="performance_hud_presets_description">Alterne rapidamente entre layouts comuns de HUD.</string>
     <string name="performance_hud_preset_fps_only">1</string>
@@ -561,6 +566,31 @@
     <string name="gesture_zoom_page_up_down">PgUp/PgDn</string>
     <string name="gesture_action_label">Ação</string>
     <string name="gesture_delay_label">Atraso</string>
+    <string name="gesture_section_single_finger">Um dedo</string>
+    <string name="gesture_section_two_finger">Dois dedos</string>
+    <string name="gesture_section_three_finger">Três dedos</string>
+    <string name="gesture_section_other">Outro</string>
+    <string name="gesture_pan_left_click_drag">Arrastar com clique esquerdo</string>
+    <string name="gesture_pan_right_click_drag">Arrastar com clique direito</string>
+    <string name="gesture_action_show_keyboard">Mostrar teclado</string>
+    <string name="gesture_header_special">Especial</string>
+    <string name="gesture_header_mouse">Mouse</string>
+    <string name="gesture_header_common_game">Teclas comuns de jogo</string>
+    <string name="gesture_header_letters">Letras A-Z</string>
+    <string name="gesture_header_numbers">Números 0-9</string>
+    <string name="gesture_header_function_keys">Teclas de função</string>
+    <string name="gesture_two_finger_hold">Segurar com dois dedos</string>
+    <string name="gesture_two_finger_hold_delay">Atraso ao segurar com dois dedos (ms)</string>
+    <string name="gesture_three_finger_tap">Toque com três dedos</string>
+    <string name="gesture_three_finger_drag">Arrastar com três dedos</string>
+    <string name="gesture_three_finger_hold">Segurar com três dedos</string>
+    <string name="gesture_three_finger_hold_delay">Atraso ao segurar com três dedos (ms)</string>
+    <string name="gesture_threshold">Limite do gesto (px)</string>
+    <string name="gesture_threshold_subtitle">Movimento necessário para travar o tipo de gesto (menor = mais responsivo)</string>
+    <string name="gesture_show_click_highlight">Mostrar destaque de clique</string>
+    <string name="gesture_show_click_highlight_subtitle">Mostrar um círculo no local do toque</string>
+    <string name="gesture_show_debug_overlay">Mostrar sobreposição de depuração de gestos</string>
+    <string name="gesture_show_debug_overlay_subtitle">Mostrar rótulos temporários de gestos no topo central</string>
 
     <!-- Shooter Mode -->
     <string name="shooter_mode_settings">Configurações de joysticks dinâmicos</string>
@@ -844,6 +874,7 @@
     <string name="main_app_running_message">Você já está logado em outro dispositivo jogando %s. \nVocê ainda pode jogar este jogo, mas isso desconectará a outra sessão do Steam.</string>
     <string name="main_app_running_other_device">Você já está logado em outro dispositivo (%1$s) jogando %2$s (%3$s), e esse save ainda não está na nuvem. \nVocê ainda pode jogar este jogo, mas isso desconectará a outra sessão do Steam e pode criar um conflito de save quando o progresso da sessão for sincronizado</string>
     <string name="main_play_anyway">Jogar mesmo assim</string>
+    <string name="main_app_running_unknown_game">um jogo</string>
 
     <!-- TODO: Revisão manual - PluviaMain: Conflitos de save -->
     <string name="main_save_conflict_title">Conflito de save</string>

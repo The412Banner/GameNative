@@ -68,6 +68,15 @@ object WorkshopManager {
     private var workshopTypesPatched = false
 
     /**
+     * Games whose own mod system reads .zip files directly from workshop
+     * item directories. Our extractZipMods skips these to avoid deleting
+     * the archive before the game can process it.
+     */
+    private val SKIP_ZIP_EXTRACTION_APP_IDS = setOf(
+        1942280, // Brotato
+    )
+
+    /**
      * Fetches the list of subscribed Workshop items for the given app.
      *
      * Uses the `PublishedFile.GetUserFiles` service RPC with `type=mysubscriptions`
@@ -501,9 +510,17 @@ object WorkshopManager {
      *
      * A `.zip_extracted` marker file prevents re-extraction on subsequent runs.
      * Preview images (`preview.jpg`/`preview.png`) are preserved.
+     *
+     * Games in [SKIP_ZIP_EXTRACTION_APP_IDS] are skipped — they read .zip
+     * files directly from workshop item directories.
      */
     fun extractZipMods(workshopContentDir: File) {
         if (!workshopContentDir.exists()) return
+        val appId = workshopContentDir.name.toIntOrNull()
+        if (appId != null && appId in SKIP_ZIP_EXTRACTION_APP_IDS) {
+            Timber.tag(TAG).d("Skipping ZIP extraction for appId $appId (game reads .zip directly)")
+            return
+        }
         var extractedCount = 0
 
         workshopContentDir.listFiles()?.forEach { itemDir ->
