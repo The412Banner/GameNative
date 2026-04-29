@@ -1,7 +1,6 @@
 package app.gamenative.utils
 
 import android.content.Context
-import android.net.Uri
 import app.gamenative.service.SteamService
 import com.winlator.container.Container
 import com.winlator.core.FileUtils
@@ -210,16 +209,17 @@ object LsfgVkManager {
             }
             customDllUri.isNotEmpty() -> {
                 try {
-                    if (!dllFile.isFile) {
+                    val sourceDll = File(customDllUri)
+                    if (!dllFile.isFile || dllFile.length() != sourceDll.length()) {
                         dllDir.mkdirs()
-                        context.contentResolver.openInputStream(Uri.parse(customDllUri))?.use { input ->
+                        sourceDll.inputStream().use { input ->
                             dllFile.outputStream().use { output -> input.copyTo(output) }
                         }
                         if (dllFile.exists()) FileUtils.chmod(dllFile, 0b110100100)
-                        Timber.tag(TAG).i("Copied Lossless.dll (%d bytes) from custom URI into %s", dllFile.length(), dllDir)
+                        Timber.tag(TAG).i("Copied Lossless.dll (%d bytes) from custom path into %s", dllFile.length(), dllDir)
                     }
                 } catch (t: Throwable) {
-                    Timber.tag(TAG).e(t, "Failed to copy Lossless.dll from custom URI into container")
+                    Timber.tag(TAG).e(t, "Failed to copy Lossless.dll from custom path into container")
                     success = false
                 }
             }
