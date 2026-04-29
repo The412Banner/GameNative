@@ -313,6 +313,14 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
         if (this.envVars != null) {
             envVars.putAll(this.envVars);
         }
+
+        if (app.gamenative.utils.LsfgVkManager.isSupported(container)) {
+            app.gamenative.utils.LsfgVkManager.ensureRuntimeInstalled(
+                environment.getContext(), container);
+            app.gamenative.utils.LsfgVkManager.writeConfig(container);
+            app.gamenative.utils.LsfgVkManager.applyLaunchEnv(container, envVars);
+        }
+
         Log.d("BionicProgramLauncherComponent", "env vars are " + envVars.toString());
 
         String emulator = container.getEmulator();
@@ -486,6 +494,7 @@ public class BionicProgramLauncherComponent extends GuestProgramLauncherComponen
 
         String emulator = container.getEmulator();
         if (this.envVars != null) envVars.putAll(this.envVars);
+
         String finalCommand = getFinalCommand(winePath, emulator, envVars, imageFs.getBinDir(), command);
 
         File box64File = new File(rootDir, "/usr/bin/box64");
