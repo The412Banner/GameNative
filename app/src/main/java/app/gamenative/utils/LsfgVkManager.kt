@@ -95,11 +95,11 @@ object LsfgVkManager {
     fun ownsLosslessScaling(): Boolean =
         SteamService.getAppInfoOf(LOSSLESS_SCALING_APP_ID) != null
 
-    /** Get the auto-resolved DLL path inside the container, or null. */
+    /** Get the DLL path inside the container, or null if the copy doesn't exist. */
     @JvmStatic
     fun containerDllPath(container: Container): String? {
-        if (!isDllAvailable()) return null
-        return File(container.rootDir, "$DLL_RELATIVE_DIR/$LOSSLESS_DLL_NAME").absolutePath
+        val dllFile = File(container.rootDir, "$DLL_RELATIVE_DIR/$LOSSLESS_DLL_NAME")
+        return dllFile.absolutePath.takeIf { dllFile.isFile }
     }
 
     /** Get the multiplier (0=Off, 2-4, default 2). */
