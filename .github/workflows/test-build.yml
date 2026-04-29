@@ -54,10 +54,10 @@ jobs:
     - name: Inject credentials (empty for test build)
       run: |
         cat <<EOF > local.properties
-        POSTHOG_API_KEY=
+        POSTHOG_API_KEY=placeholder
         POSTHOG_HOST=https://us.i.posthog.com
-        STEAMGRIDDB_API_KEY=
-        CLOUD_PROJECT_NUMBER=
+        STEAMGRIDDB_API_KEY=placeholder
+        CLOUD_PROJECT_NUMBER=0
         EOF
 
     - name: Install Android SDK Build Tools
