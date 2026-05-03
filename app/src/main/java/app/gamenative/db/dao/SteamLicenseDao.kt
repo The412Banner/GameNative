@@ -32,6 +32,26 @@ interface SteamLicenseDao {
     @Query("SELECT * FROM steam_license WHERE packageId = :packageId")
     suspend fun findLicense(packageId: Int): SteamLicense?
 
+    @Query(
+        "SELECT * FROM steam_license " +
+                "WHERE EXISTS (SELECT 1 FROM json_each(steam_license.app_ids) WHERE value IN (:appIds))",
+    )
+    suspend fun _findLicensesContainingAnyApp(appIds: List<Int>): List<SteamLicense>
+
+    @Transaction
+    suspend fun findLicensesContainingAnyApp(appIds: List<Int>): List<SteamLicense> {
+        if (appIds.isEmpty()) return emptyList()
+        val seen = HashSet<Int>()
+        val results = mutableListOf<SteamLicense>()
+        for (chunkStart in appIds.indices step SQLITE_MAX_VARS) {
+            val chunkEnd = min(chunkStart + SQLITE_MAX_VARS, appIds.size)
+            for (license in _findLicensesContainingAnyApp(appIds.subList(chunkStart, chunkEnd))) {
+                if (seen.add(license.packageId)) results += license
+            }
+        }
+        return results
+    }
+
     /* ----------------------------------------------------------
        INTERNAL queries that Room generates.  Keep them abstract.
        ---------------------------------------------------------- */

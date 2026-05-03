@@ -568,14 +568,33 @@ class SteamService : Service(), IChallengeUrlChanged {
             }
         }
 
+        // For each appid in [targetAppIds], the union of depot_ids across every license that grants it.
+        // Tolerates the case where SteamApp.package_id points at one license but the depots live in another.
+        fun buildAccessibleDepotMap(targetAppIds: Collection<Int>): Map<Int, Set<Int>> {
+            if (targetAppIds.isEmpty()) return emptyMap()
+            val target = targetAppIds.toHashSet()
+            val licenses = runBlocking(Dispatchers.IO) {
+                instance?.licenseDao?.findLicensesContainingAnyApp(target.toList()).orEmpty()
+            }
+            val map = HashMap<Int, MutableSet<Int>>()
+            for (license in licenses) {
+                if (ELicenseFlags.Expired in license.licenseFlags) continue
+                if (license.depotIds.isEmpty()) continue
+                for (appId in license.appIds) {
+                    if (appId !in target) continue
+                    map.getOrPut(appId) { HashSet() }.addAll(license.depotIds)
+                }
+            }
+            return map
+        }
+
         /**
          * Depot IDs the user's license actually grants for [appId].
          * Returns null when unknown (license not cached yet) so callers
          * can fall back to the old behaviour instead of blocking everything.
          */
         fun getLicensedDepotIds(appId: Int): Set<Int>? {
-            val ids = getPkgInfoOf(appId)?.depotIds ?: return null
-            val directDepotIds = ids.takeIf { it.isNotEmpty() }?.toSet() ?: emptySet()
+            val directDepotIds = buildAccessibleDepotMap(setOf(appId))[appId].orEmpty()
             val sharedDepotIds = getSharedPkg()?.depotIds?.takeIf { it.isNotEmpty() }?.toSet() ?: emptySet()
             return (directDepotIds + sharedDepotIds).takeIf { it.isNotEmpty() }
         }
@@ -585,13 +604,9 @@ class SteamService : Service(), IChallengeUrlChanged {
          * Returns appId → depotIds; missing entries mean license unknown (fall back to unfiltered).
          */
         fun buildLicensedDepotMap(apps: List<SteamApp>): Map<Int, Set<Int>> {
-            val pkgIds = apps.map { it.packageId }.filter { it != INVALID_PKG_ID }.distinct()
-            val licenses = runBlocking(Dispatchers.IO) {
-                instance?.licenseDao?.findLicenses(pkgIds) ?: emptyList()
-            }
-            val pkgToDepots = licenses.associate { it.packageId to it.depotIds.toSet() }
+            val appToDepots = buildAccessibleDepotMap(apps.map { it.id })
             return apps.mapNotNull { app ->
-                val depots = pkgToDepots[app.packageId]?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+                val depots = appToDepots[app.id]?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
                 app.id to depots
             }.toMap()
         }
@@ -855,16 +870,23 @@ class SteamService : Service(), IChallengeUrlChanged {
             }
         }
 
-        fun getMainAppDepots(appId: Int, containerLanguage: String): Map<Int, DepotInfo> {
+        fun getMainAppDepots(
+            appId: Int,
+            containerLanguage: String,
+            accessibleDepotMap: Map<Int, Set<Int>>? = null,
+        ): Map<Int, DepotInfo> {
             val appInfo = getAppInfoOf(appId) ?: return emptyMap()
             val ownedDlc = runBlocking { getOwnedAppDlc(appId) }
             val hasSteamUnlockedBranch = runBlocking { getSteamUnlockedBranches(appId).isNotEmpty() }
-            val licensedDepots = getLicensedDepotIds(appId).orEmpty().toMutableSet()
+            val depotMap = accessibleDepotMap
+                ?: buildAccessibleDepotMap(buildSet { add(appId); addAll(ownedDlc.keys) })
+            val sharedDepotIds = getSharedPkg()?.depotIds?.takeIf { it.isNotEmpty() }?.toSet() ?: emptySet()
+            val licensedDepots = (depotMap[appId].orEmpty() + sharedDepotIds).toMutableSet()
 
             // Use the dlcAppID of the ownedDlc, to find the licensed depotIds from steam_license
             val mapDlcDepotIds = mutableMapOf<Int, List<Int>>()
             ownedDlc.forEach { (dlcAppId, info) ->
-                val dlcDepotIds = getPkgInfoOf(dlcAppId)?.depotIds.orEmpty()
+                val dlcDepotIds = depotMap[dlcAppId].orEmpty().toList()
                 mapDlcDepotIds[dlcAppId] = dlcDepotIds
 
                 // Make sure licensedDepots contains the dlc depots
@@ -905,17 +927,26 @@ class SteamService : Service(), IChallengeUrlChanged {
             val appInfo = getAppInfoOf(appId) ?: return emptyMap()
             val ownedDlc = runBlocking { getOwnedAppDlc(appId) }
             val hasSteamUnlockedBranch = runBlocking { getSteamUnlockedBranches(appId).isNotEmpty() }
-            val licensedDepots = getLicensedDepotIds(appId).orEmpty().toMutableSet()
+            val indirectDlcApps = getDownloadableDlcAppsOf(appId).orEmpty()
+            val accessibleDepotMap = buildAccessibleDepotMap(
+                buildSet {
+                    add(appId)
+                    addAll(ownedDlc.keys)
+                    indirectDlcApps.forEach { add(it.id) }
+                },
+            )
+            val sharedDepotIds = getSharedPkg()?.depotIds?.takeIf { it.isNotEmpty() }?.toSet() ?: emptySet()
+            val licensedDepots = (accessibleDepotMap[appId].orEmpty() + sharedDepotIds).toMutableSet()
 
-            val map = getMainAppDepots(appId, preferredLanguage).toMutableMap()
+            val map = getMainAppDepots(appId, preferredLanguage, accessibleDepotMap).toMutableMap()
 
             // parent app's arch applies to DLC arch selection
             val has64Bit = eligibleDepots(appInfo.depots, preferredLanguage, ownedDlc, licensedDepots)
                 .any { it.osArch == OSArch.Arch64 }
 
-            val indirectDlcApps = getDownloadableDlcAppsOf(appId).orEmpty()
             indirectDlcApps.forEach { dlcApp ->
-                val dlcLicensedDepots = getLicensedDepotIds(dlcApp.id)
+                val dlcLicensedDepots = accessibleDepotMap[dlcApp.id]
+                    ?.let { (it + sharedDepotIds).takeIf { combined -> combined.isNotEmpty() } }
                 val dlcEligible = eligibleDepots(dlcApp.depots, preferredLanguage, null, dlcLicensedDepots)
                 val dlcHasNonDeckWin = dlcEligible.any { !it.steamDeck && it.isWindowsCompatible }
                 dlcApp.depots
@@ -4027,17 +4058,28 @@ class SteamService : Service(), IChallengeUrlChanged {
                             // last-write-wins assignment within this batch and (b) refuse to downgrade an
                             // existing user-owned packageId across batches.
                             val accountId = userSteamId?.accountID?.toInt()
-                            val userOwnedPackageIds: Set<Int> = if (accountId != null) {
+                            val packageLicenses: Map<Int, SteamLicense> = if (accountId != null) {
                                 val packageIds = picsCallback.packages.values.map { it.id }
-                                licenseDao.findLicenses(packageIds)
+                                licenseDao.findLicenses(packageIds).associateBy { it.packageId }
+                            } else {
+                                emptyMap()
+                            }
+                            val userOwnedPackageIds: Set<Int> = if (accountId != null) {
+                                packageLicenses.values
                                     .filter { it.ownerAccountId.contains(accountId) }
                                     .mapTo(HashSet()) { it.packageId }
                             } else {
                                 emptySet()
                             }
 
-                            val orderedPackages = picsCallback.packages.values
-                                .sortedBy { pkg -> if (pkg.id in userOwnedPackageIds) 1 else 0 }
+                            // Prefer non-expired user-owned packages so a live sub wins over an expired remnant.
+                            fun pkgRank(pkgId: Int): Int {
+                                if (pkgId !in userOwnedPackageIds) return 0
+                                val expired = packageLicenses[pkgId]?.licenseFlags?.contains(ELicenseFlags.Expired) == true
+                                return if (expired) 1 else 2
+                            }
+
+                            val orderedPackages = picsCallback.packages.values.sortedBy { pkgRank(it.id) }
 
                             orderedPackages.forEach { pkg ->
                                 val appIds = pkg.keyValues["appids"].children.map { it.asInteger() }
@@ -4057,10 +4099,15 @@ class SteamService : Service(), IChallengeUrlChanged {
                                         return@forEach
                                     }
                                     if (accountId != null && existing.packageId != INVALID_PKG_ID) {
-                                        val existingIsUserOwned = licenseDao.findLicense(existing.packageId)
-                                            ?.ownerAccountId?.contains(accountId) == true
-                                        val newIsUserOwned = pkg.id in userOwnedPackageIds
-                                        if (existingIsUserOwned && !newIsUserOwned) {
+                                        val existingLicense = packageLicenses[existing.packageId]
+                                            ?: licenseDao.findLicense(existing.packageId)
+                                        val existingRank = when {
+                                            existingLicense == null -> 0
+                                            !existingLicense.ownerAccountId.contains(accountId) -> 0
+                                            ELicenseFlags.Expired in existingLicense.licenseFlags -> 1
+                                            else -> 2
+                                        }
+                                        if (existingRank > pkgRank(pkg.id)) {
                                             return@forEach
                                         }
                                     }
