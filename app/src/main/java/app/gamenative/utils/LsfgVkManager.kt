@@ -58,6 +58,7 @@ object LsfgVkManager {
     const val EXTRA_MULTIPLIER = "lsfgMultiplier"
     const val EXTRA_FLOW_SCALE = "lsfgFlowScale"
     const val EXTRA_PERFORMANCE_MODE = "lsfgPerformanceMode"
+    const val EXTRA_CUSTOM_DLL_PATH = "lsfgCustomDllPath"
 
     // Environment variables consumed by the lsfg-vk layer
     private const val ENV_DISABLE = "DISABLE_LSFG"
@@ -84,11 +85,13 @@ object LsfgVkManager {
     fun isArmed(container: Container): Boolean =
         isSupported(container) &&
             parseBool(container.getExtra(EXTRA_ARMED, "false")) &&
-            isDllAvailable()
+            isDllAvailable(container)
 
-    /** Whether Lossless Scaling is installed (Lossless.dll exists in Steam dir). */
+    /** Whether Lossless.dll is available via Steam install or a manually selected path. */
     @JvmStatic
-    fun isDllAvailable(): Boolean = findSteamDll() != null
+    fun isDllAvailable(container: Container? = null): Boolean =
+        findSteamDll() != null ||
+            container?.getExtra(EXTRA_CUSTOM_DLL_PATH, "")?.isNotEmpty() == true
 
     /** Whether the user owns Lossless Scaling in their Steam library. */
     @JvmStatic
@@ -184,28 +187,46 @@ object LsfgVkManager {
             Timber.tag(TAG).d("Runtime %s already installed in %s", RUNTIME_VERSION, rootDir)
         }
 
-        // Copy Lossless.dll from Steam install dir into the container
+        // Copy Lossless.dll into the container — Steam dir first, custom URI fallback
         val dllFile = File(dllDir, LOSSLESS_DLL_NAME)
         val steamDll = findSteamDll()
-        if (steamDll != null) {
-            try {
-                if (!dllFile.isFile || dllFile.length() != steamDll.length()) {
-                    dllDir.mkdirs()
-                    steamDll.inputStream().use { input ->
-                        dllFile.outputStream().use { output ->
-                            input.copyTo(output)
+        val customDllUri = container.getExtra(EXTRA_CUSTOM_DLL_PATH, "")
+        when {
+            steamDll != null -> {
+                try {
+                    if (!dllFile.isFile || dllFile.length() != steamDll.length()) {
+                        dllDir.mkdirs()
+                        steamDll.inputStream().use { input ->
+                            dllFile.outputStream().use { output -> input.copyTo(output) }
                         }
+                        if (dllFile.exists()) FileUtils.chmod(dllFile, 0b110100100)
+                        Timber.tag(TAG).i("Copied Lossless.dll (%d bytes) from Steam into %s", dllFile.length(), dllDir)
                     }
-                    if (dllFile.exists()) FileUtils.chmod(dllFile, 0b110100100)
-                    Timber.tag(TAG).i("Copied Lossless.dll (%d bytes) into %s", dllFile.length(), dllDir)
+                } catch (t: Throwable) {
+                    Timber.tag(TAG).e(t, "Failed to copy Lossless.dll from Steam into container")
+                    success = false
                 }
-            } catch (t: Throwable) {
-                Timber.tag(TAG).e(t, "Failed to copy Lossless.dll into container")
+            }
+            customDllUri.isNotEmpty() -> {
+                try {
+                    val sourceDll = File(customDllUri)
+                    if (!dllFile.isFile || dllFile.length() != sourceDll.length()) {
+                        dllDir.mkdirs()
+                        sourceDll.inputStream().use { input ->
+                            dllFile.outputStream().use { output -> input.copyTo(output) }
+                        }
+                        if (dllFile.exists()) FileUtils.chmod(dllFile, 0b110100100)
+                        Timber.tag(TAG).i("Copied Lossless.dll (%d bytes) from custom path into %s", dllFile.length(), dllDir)
+                    }
+                } catch (t: Throwable) {
+                    Timber.tag(TAG).e(t, "Failed to copy Lossless.dll from custom path into container")
+                    success = false
+                }
+            }
+            parseBool(container.getExtra(EXTRA_ARMED, "false")) -> {
+                Timber.tag(TAG).w("LSFG enabled but Lossless.dll not found (Steam or custom)")
                 success = false
             }
-        } else if (parseBool(container.getExtra(EXTRA_ARMED, "false"))) {
-            Timber.tag(TAG).w("LSFG enabled but Lossless.dll not found in Steam dir")
-            success = false
         }
 
         return success
