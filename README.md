@@ -1,6 +1,8 @@
 [![Star History Rank](https://api.star-history.com/badge?repo=utkarshdalal/GameNative&theme=dark)](https://www.star-history.com/utkarshdalal/gamenative)
 
 # GameNative
+[![Discord](https://img.shields.io/badge/Discord-Join%20Server-5865F2?logo=discord&logoColor=white)](https://discord.gg/n8S4G2WZQ4)
+
 
 
 GameNative allows you to play games you own on Steam, Epic and GOG directly on Android devices, with cloud saves.
@@ -63,3 +65,8 @@ See our full [Privacy Policy](PrivacyPolicy/README.md) for more details.
 
 **Disclaimer: This software is intended for playing games that you legally own. Do not use this software for piracy or any other illegal purposes. The maintainer of this fork assumes no
 responsibility for misuse.**
+
+
+## Community
+
+Join our Discord: https://discord.gg/n8S4G2WZQ4
