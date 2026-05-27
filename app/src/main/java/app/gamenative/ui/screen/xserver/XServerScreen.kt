@@ -453,7 +453,7 @@ fun XServerScreen(
     var fpsLimiterTarget by rememberSaveable(container.id) { mutableIntStateOf(initialFpsLimiterTarget(container)) }
 
     // LSFG tab in QuickMenu only visible when enabled in container settings
-    val isLsfgAvailable = LsfgQuickMenuHelper.isAvailable(container)
+    val isLsfgAvailable = LsfgQuickMenuHelper.isAvailable(context, container)
     val initialLsfgSettings = remember(container.id) { LsfgQuickMenuHelper.readSettings(container) }
     var lsfgMultiplier by rememberSaveable(container.id) { mutableIntStateOf(initialLsfgSettings.multiplier) }
     var lsfgFlowScale by rememberSaveable(container.id) { mutableStateOf(initialLsfgSettings.flowScale) }

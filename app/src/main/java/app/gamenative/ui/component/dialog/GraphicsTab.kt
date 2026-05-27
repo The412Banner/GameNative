@@ -1,5 +1,8 @@
 package app.gamenative.ui.component.dialog
 
+import android.provider.OpenableColumns
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -11,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import app.gamenative.R
@@ -18,8 +22,10 @@ import app.gamenative.ui.component.settings.SettingsListDropdown
 import app.gamenative.ui.component.settings.SettingsMultiListDropdown
 import app.gamenative.ui.theme.settingsTileColors
 import app.gamenative.ui.theme.settingsTileColorsAlt
+import app.gamenative.ui.util.SnackbarManager
 import app.gamenative.utils.LsfgVkManager
 import com.alorma.compose.settings.ui.SettingsGroup
+import com.alorma.compose.settings.ui.SettingsMenuLink
 import com.alorma.compose.settings.ui.SettingsSwitch
 import com.winlator.contents.ContentProfile
 import com.winlator.container.Container
@@ -479,8 +485,42 @@ private fun LsfgSection(state: ContainerConfigState) {
     val lsfgSupported = config.containerVariant.equals(Container.BIONIC, ignoreCase = true)
     if (!lsfgSupported) return
 
-    var dllAvailable by rememberSaveable { mutableStateOf(LsfgVkManager.isDllAvailable()) }
+    val context = LocalContext.current
+    var dllAvailable by rememberSaveable { mutableStateOf(LsfgVkManager.isDllAvailable(context)) }
+    var manualDllPresent by rememberSaveable { mutableStateOf(LsfgVkManager.isManualDllAvailable(context)) }
     val ownsApp = LsfgVkManager.ownsLosslessScaling()
+
+    val pickDllLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        val displayName = context.contentResolver.query(
+            uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null
+        )?.use { c ->
+            if (c.moveToFirst()) c.getString(0) else null
+        }
+        when (val result = LsfgVkManager.importManualDll(context, uri, displayName)) {
+            is LsfgVkManager.ImportResult.Success -> {
+                manualDllPresent = true
+                dllAvailable = LsfgVkManager.isDllAvailable(context)
+                if (dllAvailable) {
+                    state.config.value = state.config.value.copy(lsfgEnabled = true)
+                }
+                SnackbarManager.show(
+                    context.getString(R.string.lsfg_manual_pick_imported, result.bytes / 1024)
+                )
+            }
+            LsfgVkManager.ImportResult.WrongName ->
+                SnackbarManager.show(context.getString(R.string.lsfg_manual_pick_wrong_name))
+            LsfgVkManager.ImportResult.NotPe ->
+                SnackbarManager.show(context.getString(R.string.lsfg_manual_pick_invalid))
+            LsfgVkManager.ImportResult.TooLarge ->
+                SnackbarManager.show(context.getString(R.string.lsfg_manual_pick_too_large))
+            is LsfgVkManager.ImportResult.IoError ->
+                SnackbarManager.show(context.getString(R.string.lsfg_manual_pick_io_error, result.message))
+        }
+    }
+    val launchPicker = { pickDllLauncher.launch(arrayOf("*/*")) }
 
     SettingsGroup {
         when {
@@ -495,6 +535,14 @@ private fun LsfgSection(state: ContainerConfigState) {
                         state.config.value = config.copy(lsfgEnabled = it)
                     },
                 )
+                if (manualDllPresent) {
+                    SettingsMenuLink(
+                        colors = settingsTileColorsAlt(),
+                        title = { Text(text = stringResource(R.string.lsfg_manual_replace_title)) },
+                        subtitle = { Text(text = stringResource(R.string.lsfg_manual_replace_subtitle)) },
+                        onClick = launchPicker,
+                    )
+                }
             }
             ownsApp -> {
                 // State 2: User owns Lossless Scaling but hasn't installed it yet
@@ -508,22 +556,34 @@ private fun LsfgSection(state: ContainerConfigState) {
                             LsfgVkManager.LOSSLESS_SCALING_APP_ID,
                             "Lossless Scaling",
                         ) {
-                            dllAvailable = LsfgVkManager.isDllAvailable()
+                            dllAvailable = LsfgVkManager.isDllAvailable(context)
                             if (dllAvailable) {
                                 state.config.value = state.config.value.copy(lsfgEnabled = true)
                             }
                         }
                     },
                 )
+                SettingsMenuLink(
+                    colors = settingsTileColorsAlt(),
+                    title = { Text(text = stringResource(R.string.lsfg_manual_pick_title)) },
+                    subtitle = { Text(text = stringResource(R.string.lsfg_manual_pick_subtitle)) },
+                    onClick = launchPicker,
+                )
             }
             else -> {
-                // State 3: User doesn't own Lossless Scaling
+                // State 3: User doesn't own Lossless Scaling — offer the picker instead
                 SettingsSwitch(
                     colors = settingsTileColorsAlt(),
                     title = { Text(text = stringResource(R.string.lsfg_enable)) },
                     subtitle = { Text(text = stringResource(R.string.lsfg_not_in_library)) },
                     state = false,
                     onCheckedChange = {},
+                )
+                SettingsMenuLink(
+                    colors = settingsTileColorsAlt(),
+                    title = { Text(text = stringResource(R.string.lsfg_manual_pick_title)) },
+                    subtitle = { Text(text = stringResource(R.string.lsfg_manual_pick_subtitle)) },
+                    onClick = launchPicker,
                 )
             }
         }

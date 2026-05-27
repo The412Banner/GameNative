@@ -1501,6 +1501,15 @@
     <string name="lsfg_install_message">This will download Lossless Scaling from Steam to enable frame generation.</string>
     <string name="lsfg_installing">Downloading Lossless Scaling…</string>
     <string name="lsfg_performance_mode_desc">Reduces quality for higher throughput</string>
+    <string name="lsfg_manual_pick_title">Use my own Lossless.dll</string>
+    <string name="lsfg_manual_pick_subtitle">Pick a copy of Lossless.dll from device storage</string>
+    <string name="lsfg_manual_replace_title">Replace stored Lossless.dll</string>
+    <string name="lsfg_manual_replace_subtitle">Swap the imported copy for a different file</string>
+    <string name="lsfg_manual_pick_imported">Imported Lossless.dll (%1$d KB)</string>
+    <string name="lsfg_manual_pick_wrong_name">File must be named Lossless.dll</string>
+    <string name="lsfg_manual_pick_invalid">Not a valid Windows DLL</string>
+    <string name="lsfg_manual_pick_too_large">File is larger than 50 MB</string>
+    <string name="lsfg_manual_pick_io_error">Import failed: %1$s</string>
     <string name="settings_interface_show_recommendations_title">Show game recommendations</string>
     <string name="settings_interface_show_recommendations_subtitle">Show curated indie game picks in your library. Keeping this on helps support indie developers and GameNative.</string>
     <!-- Game Launch Tips -->

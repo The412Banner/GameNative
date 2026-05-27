@@ -1,5 +1,6 @@
 package app.gamenative.utils
 
+import android.content.Context
 import com.winlator.container.Container
 import java.util.Locale
 
@@ -11,8 +12,8 @@ object LsfgQuickMenuHelper {
         val performanceMode: Boolean,
     )
 
-    fun isAvailable(container: Container): Boolean =
-        LsfgVkManager.isSupported(container) && LsfgVkManager.isArmed(container)
+    fun isAvailable(context: Context, container: Container): Boolean =
+        LsfgVkManager.isSupported(container) && LsfgVkManager.isArmed(context, container)
 
     fun readSettings(container: Container): Settings = Settings(
         multiplier = LsfgVkManager.multiplier(container),

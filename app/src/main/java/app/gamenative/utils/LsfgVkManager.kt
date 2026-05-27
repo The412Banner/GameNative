@@ -1,11 +1,13 @@
 package app.gamenative.utils
 
 import android.content.Context
+import android.net.Uri
 import app.gamenative.service.SteamService
 import com.winlator.container.Container
 import com.winlator.core.FileUtils
 import com.winlator.core.envvars.EnvVars
 import java.io.File
+import java.io.FileOutputStream
 import java.util.Locale
 import timber.log.Timber
 import kotlin.jvm.JvmStatic
@@ -72,6 +74,20 @@ object LsfgVkManager {
     private const val ASSET_LIB = "$ASSET_DIR/$LIB_FILENAME"
     private const val ASSET_MANIFEST = "$ASSET_DIR/$MANIFEST_FILENAME"
 
+    // Manual-import fallback: <filesDir>/lsfg-vk/Lossless.dll
+    private const val MANUAL_DLL_REL_DIR = "lsfg-vk"
+    private const val MANUAL_DLL_MAX_BYTES = 50L * 1024 * 1024
+    private val PE_MAGIC = byteArrayOf(0x4D, 0x5A)
+
+    /** Outcome of an importManualDll call. */
+    sealed class ImportResult {
+        data class Success(val bytes: Long) : ImportResult()
+        object WrongName : ImportResult()
+        object NotPe : ImportResult()
+        object TooLarge : ImportResult()
+        data class IoError(val message: String) : ImportResult()
+    }
+
     // ---- Public API --------------------------------------------------------
 
     /** Whether LSFG is supported for this container's variant. */
@@ -79,16 +95,83 @@ object LsfgVkManager {
     fun isSupported(container: Container): Boolean =
         container.containerVariant.equals(Container.BIONIC, ignoreCase = true)
 
-    /** Whether LSFG is armed (enabled + Lossless.dll available in Steam dir) for this container. The DLL is copied into the container at launch time by ensureRuntimeInstalled(). */
+    /** Whether LSFG is armed (enabled + Lossless.dll available) for this container. The DLL is copied into the container at launch time by ensureRuntimeInstalled(). */
     @JvmStatic
-    fun isArmed(container: Container): Boolean =
+    fun isArmed(context: Context, container: Container): Boolean =
         isSupported(container) &&
             parseBool(container.getExtra(EXTRA_ARMED, "false")) &&
-            isDllAvailable()
+            isDllAvailable(context)
 
-    /** Whether Lossless Scaling is installed (Lossless.dll exists in Steam dir). */
+    /** Whether Lossless.dll is available (Steam dir first, else manually-imported fallback). */
     @JvmStatic
-    fun isDllAvailable(): Boolean = findSteamDll() != null
+    fun isDllAvailable(context: Context): Boolean = findAvailableDll(context) != null
+
+    /** Whether a manually-imported Lossless.dll is present in app-private storage. */
+    @JvmStatic
+    fun isManualDllAvailable(context: Context): Boolean = manualDllFile(context).isFile
+
+    /** Delete the manually-imported Lossless.dll, if any. */
+    @JvmStatic
+    fun clearManualDll(context: Context): Boolean = manualDllFile(context).delete()
+
+    /**
+     * Import a Lossless.dll from a SAF Uri into app-private storage so all containers can use it.
+     * Strict: requires displayName to be exactly "Lossless.dll" (case-insensitive),
+     * the file to start with the PE magic (`MZ`), and to be at most 50 MB.
+     */
+    @JvmStatic
+    fun importManualDll(context: Context, uri: Uri, displayName: String?): ImportResult {
+        if (displayName == null || !displayName.equals(LOSSLESS_DLL_NAME, ignoreCase = true)) {
+            return ImportResult.WrongName
+        }
+
+        val target = manualDllFile(context)
+        val tmp = File(target.parentFile, "${target.name}.tmp")
+        return try {
+            target.parentFile?.mkdirs()
+            if (tmp.exists()) tmp.delete()
+
+            val input = context.contentResolver.openInputStream(uri)
+                ?: return ImportResult.IoError("Cannot open stream")
+
+            input.use { ins ->
+                val header = ByteArray(2)
+                val read = ins.read(header)
+                if (read < 2 || header[0] != PE_MAGIC[0] || header[1] != PE_MAGIC[1]) {
+                    return ImportResult.NotPe
+                }
+                FileOutputStream(tmp).use { out ->
+                    out.write(header, 0, read)
+                    val buf = ByteArray(64 * 1024)
+                    var total = read.toLong()
+                    while (true) {
+                        val n = ins.read(buf)
+                        if (n <= 0) break
+                        total += n
+                        if (total > MANUAL_DLL_MAX_BYTES) {
+                            tmp.delete()
+                            return ImportResult.TooLarge
+                        }
+                        out.write(buf, 0, n)
+                    }
+                    out.fd.sync()
+                }
+            }
+
+            if (target.exists()) target.delete()
+            if (!tmp.renameTo(target)) {
+                tmp.delete()
+                return ImportResult.IoError("Rename failed")
+            }
+            FileUtils.chmod(target, 0b110100100)
+            Timber.tag(TAG).i("Imported manual Lossless.dll (%d bytes) -> %s", target.length(), target)
+            ImportResult.Success(target.length())
+        } catch (t: Throwable) {
+            tmp.delete()
+            Timber.tag(TAG).e(t, "Failed to import manual Lossless.dll")
+            ImportResult.IoError(t.message ?: t.javaClass.simpleName)
+        }
+    }
 
     /** Whether the user owns Lossless Scaling in their Steam library. */
     @JvmStatic
@@ -184,27 +267,27 @@ object LsfgVkManager {
             Timber.tag(TAG).d("Runtime %s already installed in %s", RUNTIME_VERSION, rootDir)
         }
 
-        // Copy Lossless.dll from Steam install dir into the container
+        // Copy Lossless.dll into the container (Steam install dir first, else manual import)
         val dllFile = File(dllDir, LOSSLESS_DLL_NAME)
-        val steamDll = findSteamDll()
-        if (steamDll != null) {
+        val sourceDll = findAvailableDll(context)
+        if (sourceDll != null) {
             try {
-                if (!dllFile.isFile || dllFile.length() != steamDll.length()) {
+                if (!dllFile.isFile || dllFile.length() != sourceDll.length()) {
                     dllDir.mkdirs()
-                    steamDll.inputStream().use { input ->
+                    sourceDll.inputStream().use { input ->
                         dllFile.outputStream().use { output ->
                             input.copyTo(output)
                         }
                     }
                     if (dllFile.exists()) FileUtils.chmod(dllFile, 0b110100100)
-                    Timber.tag(TAG).i("Copied Lossless.dll (%d bytes) into %s", dllFile.length(), dllDir)
+                    Timber.tag(TAG).i("Copied Lossless.dll (%d bytes) from %s into %s", dllFile.length(), sourceDll, dllDir)
                 }
             } catch (t: Throwable) {
                 Timber.tag(TAG).e(t, "Failed to copy Lossless.dll into container")
                 success = false
             }
         } else if (parseBool(container.getExtra(EXTRA_ARMED, "false"))) {
-            Timber.tag(TAG).w("LSFG enabled but Lossless.dll not found in Steam dir")
+            Timber.tag(TAG).w("LSFG enabled but Lossless.dll not available (Steam or manual import)")
             success = false
         }
 
@@ -313,6 +396,10 @@ object LsfgVkManager {
 
     // ---- DLL discovery -----------------------------------------------------
 
+    /** Steam install dir first, else manually-imported app-private fallback. */
+    private fun findAvailableDll(context: Context): File? =
+        findSteamDll() ?: manualDllFile(context).takeIf { it.isFile }
+
     /**
      * Find Lossless.dll in the Steam install directory for app 993090.
      * Returns the File if it exists, null otherwise.
@@ -322,6 +409,10 @@ object LsfgVkManager {
         val dll = File(appDir, LOSSLESS_DLL_NAME)
         return dll.takeIf { it.isFile }
     }
+
+    /** App-private path where a manually-imported Lossless.dll is stored. */
+    private fun manualDllFile(context: Context): File =
+        File(File(context.filesDir, MANUAL_DLL_REL_DIR), LOSSLESS_DLL_NAME)
 
     // ---- Helpers -----------------------------------------------------------
 
