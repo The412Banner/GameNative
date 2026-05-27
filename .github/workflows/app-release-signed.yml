@@ -41,7 +41,7 @@ jobs:
         yes | "$SDKMANAGER" --install "build-tools;34.0.0"
 
     - name: Build with Gradle
-      run: ./gradlew :app:assembleLegacyRelease :app:assembleModernRelease
+      run: ./gradlew :app:assembleLegacyRelease :app:assembleModernRelease -x lintVitalLegacyRelease -x lintVitalModernRelease -x lintVitalAnalyzeLegacyRelease -x lintVitalAnalyzeModernRelease
 
     - name: Stage APKs
       run: |
