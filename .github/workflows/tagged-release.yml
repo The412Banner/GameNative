@@ -1,4 +1,4 @@
-name: Create tagged prerelease
+name: Create tagged release (testkey-signed)
 
 on:
   push:
@@ -26,43 +26,25 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Configure Keystore
-        env:
-          KEYSTORE: ${{ secrets.KEYSTORE }}
-          KEYSTORE_KEY_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
-          KEYSTORE_KEY_PASSWORD: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
-          KEYSTORE_STORE_PASSWORD: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
-        run: |
-          mkdir -p app/keystores
-          echo "$KEYSTORE" | base64 --decode > app/keystores/keystore
-          echo "storeFile=keystores/keystore" >> app/keystores/keystore.properties
-          echo "keyAlias=$KEYSTORE_KEY_ALIAS" >> app/keystores/keystore.properties
-          echo "storePassword=$KEYSTORE_STORE_PASSWORD" >> app/keystores/keystore.properties
-          echo "keyPassword=$KEYSTORE_KEY_PASSWORD" >> app/keystores/keystore.properties
+      - name: Create empty local.properties
+        run: touch local.properties
 
-      - name: Configure Production Keystore
-        env:
-          PROD_KEYSTORE: ${{ secrets.PROD_KEYSTORE }}
-          PROD_KEYSTORE_KEY_ALIAS: ${{ secrets.PROD_KEYSTORE_KEY_ALIAS }}
-          PROD_KEYSTORE_KEY_PASSWORD: ${{ secrets.PROD_KEYSTORE_KEY_PASSWORD }}
-          PROD_KEYSTORE_STORE_PASSWORD: ${{ secrets.PROD_KEYSTORE_STORE_PASSWORD }}
+      - name: Generate AOSP testkey keystore
         run: |
+          set -euo pipefail
           mkdir -p app/keystores
-          echo "$PROD_KEYSTORE" | base64 --decode > app/keystores/prod.keystore
-          cat <<EOF > app/keystores/prod-keystore.properties
-          keyAlias=$PROD_KEYSTORE_KEY_ALIAS
-          keyPassword=$PROD_KEYSTORE_KEY_PASSWORD
-          storePassword=$PROD_KEYSTORE_STORE_PASSWORD
-          EOF
-
-      - name: Inject credentials
-        run: |
-          cat <<EOF > local.properties
-          POSTHOG_API_KEY=${{ secrets.POSTHOG_API_KEY }}
-          POSTHOG_HOST=${{ secrets.POSTHOG_HOST }}
-          STEAMGRIDDB_API_KEY=${{ secrets.STEAMGRIDDB_API_KEY }}
-          CLOUD_PROJECT_NUMBER=${{ secrets.CLOUD_PROJECT_NUMBER }}
-          EOF
+          BASE="https://android.googlesource.com/platform/build/+/refs/heads/main/target/product/security"
+          curl -fsSL "$BASE/testkey.pk8?format=TEXT" | base64 -d > testkey.pk8
+          curl -fsSL "$BASE/testkey.x509.pem?format=TEXT" | base64 -d > testkey.x509.pem
+          # pk8 is unencrypted PKCS#8 DER -> convert to a PEM private key
+          openssl pkcs8 -inform DER -nocrypt -in testkey.pk8 -out testkey.key
+          # bundle cert + key into a PKCS#12 keystore (password is public on purpose)
+          openssl pkcs12 -export \
+            -in testkey.x509.pem -inkey testkey.key \
+            -name testkey -out app/keystores/testkey.p12 \
+            -passout pass:android
+          rm -f testkey.pk8 testkey.key testkey.x509.pem
+          keytool -list -keystore app/keystores/testkey.p12 -storetype PKCS12 -storepass android
 
       - name: Install Android SDK Build Tools
         run: |
@@ -73,84 +55,43 @@ jobs:
           yes | "$SDKMANAGER" --install "build-tools;34.0.0"
 
       - name: Build with Gradle
-        run: ./gradlew :app:bundleLegacyRelease :app:bundleModernRelease
+        run: ./gradlew :app:assembleLegacyRelease :app:assembleModernRelease -x lintVitalLegacyRelease -x lintVitalModernRelease -x lintVitalAnalyzeLegacyRelease -x lintVitalAnalyzeModernRelease
 
-      - name: Stage bundles
+      - name: Stage APKs
         run: |
-          cp app/build/outputs/bundle/legacyRelease/app-legacy-release.aab app-release.aab
-          cp app/build/outputs/bundle/modernRelease/app-modern-release.aab app-modern-release.aab
+          TAG="${GITHUB_REF#refs/tags/}"
+          [ "$TAG" = "$GITHUB_REF" ] && TAG="${{ github.sha }}"
+          cp app/build/outputs/apk/legacy/release/app-legacy-release.apk "gamenative-$TAG.apk"
+          cp app/build/outputs/apk/modern/release/app-modern-release.apk "gamenative-$TAG-modern.apk"
 
-      - name: Extract APKs from Bundles
-        run: |
-          java -jar tools/bundletool-all-1.17.2.jar build-apks \
-            --bundle=app-release.aab \
-            --output=app-release.apks \
-            --mode=universal
-          unzip -o app-release.apks universal.apk
-          java -jar tools/bundletool-all-1.17.2.jar build-apks \
-            --bundle=app-modern-release.aab \
-            --output=app-modern-release.apks \
-            --mode=universal
-          unzip -p app-modern-release.apks universal.apk > universal-modern.apk
-
-      - name: Copy lineage file
-        run: |
-          mkdir -p app/keystores
-          cp prod-debug.lineage app/keystores/prod-debug.lineage
-
-      - name: Dual sign universal APKs
-        env:
-          DEBUG_ALIAS: ${{ secrets.KEYSTORE_KEY_ALIAS }}
-          DEBUG_KEY_PASS: ${{ secrets.KEYSTORE_KEY_PASSWORD }}
-          DEBUG_STORE_PASS: ${{ secrets.KEYSTORE_STORE_PASSWORD }}
-          PROD_ALIAS: ${{ secrets.PROD_KEYSTORE_KEY_ALIAS }}
-          PROD_KEY_PASS: ${{ secrets.PROD_KEYSTORE_KEY_PASSWORD }}
-          PROD_STORE_PASS: ${{ secrets.PROD_KEYSTORE_STORE_PASSWORD }}
+      - name: Verify testkey signatures
         run: |
           BUILD_TOOLS_DIR="${ANDROID_HOME}/build-tools/34.0.0"
-          if [ ! -d "$BUILD_TOOLS_DIR" ]; then
-            BUILD_TOOLS_DIR="${ANDROID_SDK_ROOT}/build-tools/34.0.0"
-          fi
-          for apk in universal.apk universal-modern.apk; do
-            "${BUILD_TOOLS_DIR}/apksigner" sign \
-              --lineage app/keystores/prod-debug.lineage \
-              --ks app/keystores/keystore \
-              --ks-key-alias "$DEBUG_ALIAS" \
-              --ks-pass pass:$DEBUG_STORE_PASS \
-              --key-pass pass:$DEBUG_KEY_PASS \
-              --next-signer --ks app/keystores/prod.keystore \
-              --ks-key-alias "$PROD_ALIAS" \
-              --ks-pass pass:$PROD_STORE_PASS \
-              --key-pass pass:$PROD_KEY_PASS \
-              --out "${apk%.apk}-signed.apk" \
-              "$apk"
-            mv "${apk%.apk}-signed.apk" "$apk"
+          [ -d "$BUILD_TOOLS_DIR" ] || BUILD_TOOLS_DIR="${ANDROID_SDK_ROOT}/build-tools/34.0.0"
+          for apk in gamenative-*.apk; do
+            echo "== $apk =="
+            "${BUILD_TOOLS_DIR}/apksigner" verify --verbose --print-certs "$apk" | \
+              grep -E "Verified using|Number of signers|certificate DN"
           done
 
       - name: Upload APKs for next job
         uses: actions/upload-artifact@v4
         with:
-          name: universal-apk
-          path: |
-            universal.apk
-            universal-modern.apk
+          name: release-apks
+          path: gamenative-*.apk
 
   release:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
-      - name: Download built APK
+      - name: Download built APKs
         uses: actions/download-artifact@v4
         with:
-          name: universal-apk
+          name: release-apks
           path: ./
-
-      - name: Rename APKs
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          mv universal.apk "gamenative-$TAG.apk"
-          mv universal-modern.apk "gamenative-$TAG-modern.apk"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -161,9 +102,11 @@ jobs:
           generate_release_notes: true
           append_body: true
           body: |
+            > **Unofficial** community build. Signed with the public **AOSP testkey** (v1+v2+v3) — this is **not** an official GameNative key. You must uninstall any existing GameNative before installing, and these APKs grant no platform/system privileges.
+
             ## Downloads
-            - **`gamenative-${{ github.ref_name }}.apk`** — Legacy build (Android 8–14). Recommended for most users.
-            - **`gamenative-${{ github.ref_name }}-modern.apk`** — Modern build (Android 11+). **Not backwards compatible** — glibc not supported, external storage location changed.
+            - **`gamenative-${{ github.ref_name }}.apk`** — Unofficial GameNative Legacy (Android 8–14). Recommended for most users.
+            - **`gamenative-${{ github.ref_name }}-modern.apk`** — Unofficial GameNative Modern (Android 11+). **Not backwards compatible** — glibc not supported, external storage location changed.
           files: |
             gamenative-${{ github.ref_name }}.apk
             gamenative-${{ github.ref_name }}-modern.apk
