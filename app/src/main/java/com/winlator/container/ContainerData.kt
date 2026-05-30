@@ -6,6 +6,7 @@ import com.winlator.core.DefaultVersion
 import com.winlator.core.WineInfo
 import com.winlator.core.WineThemeManager
 import com.winlator.fexcore.FEXCorePreset
+import com.winlator.xenvironment.components.PulseAudioComponent
 import kotlin.String
 
 data class ContainerData(
@@ -16,10 +17,12 @@ data class ContainerData(
     val graphicsDriverVersion: String = "",
     val graphicsDriverConfig: String = "",
     val rendererPresentMode: String = "fifo",
-    val useLegacyRenderer: Boolean = true,
+    val useLegacyRenderer: Boolean = false,
     var dxwrapper: String = Container.DEFAULT_DXWRAPPER,
     val dxwrapperConfig: String = "",
     val audioDriver: String = Container.DEFAULT_AUDIO_DRIVER,
+    val pulseaudioSuspendBehavior: String = PulseAudioComponent.SUSPEND_BEHAVIOR_THREAD,
+    val pulseaudioLowLatency: Boolean = false,
     val wincomponents: String = Container.DEFAULT_WINCOMPONENTS,
     val drives: String = Container.DEFAULT_DRIVES,
     val execArgs: String = "",
@@ -90,6 +93,7 @@ data class ContainerData(
     val forceDlc: Boolean = false,
     val localSavesOnly: Boolean = false,
     val steamOfflineMode: Boolean = false,
+    val epicOfflineMode: Boolean = false,
     val useLegacyDRM: Boolean = false,
     val unpackFiles: Boolean = false,
     val suspendPolicy: String = Container.SUSPEND_POLICY_MANUAL,
@@ -116,6 +120,8 @@ data class ContainerData(
                     "dxwrapper" to state.dxwrapper,
                     "dxwrapperConfig" to state.dxwrapperConfig,
                     "audioDriver" to state.audioDriver,
+                    "pulseaudioSuspendBehavior" to state.pulseaudioSuspendBehavior,
+                    "pulseaudioLowLatency" to state.pulseaudioLowLatency,
                     "wincomponents" to state.wincomponents,
                     "drives" to state.drives,
                     "execArgs" to state.execArgs,
@@ -159,6 +165,7 @@ data class ContainerData(
                     "forceDlc" to state.forceDlc,
                     "localSavesOnly" to state.localSavesOnly,
                     "steamOfflineMode" to state.steamOfflineMode,
+                    "epicOfflineMode" to state.epicOfflineMode,
                     "useLegacyDRM" to state.useLegacyDRM,
                     "unpackFiles" to state.unpackFiles,
                     "suspendPolicy" to state.suspendPolicy,
@@ -182,6 +189,8 @@ data class ContainerData(
                     dxwrapper = savedMap["dxwrapper"] as String,
                     dxwrapperConfig = savedMap["dxwrapperConfig"] as String,
                     audioDriver = savedMap["audioDriver"] as String,
+                    pulseaudioSuspendBehavior = (savedMap["pulseaudioSuspendBehavior"] as? String) ?: PulseAudioComponent.SUSPEND_BEHAVIOR_THREAD,
+                    pulseaudioLowLatency = (savedMap["pulseaudioLowLatency"] as? Boolean) ?: false,
                     wincomponents = savedMap["wincomponents"] as String,
                     drives = savedMap["drives"] as String,
                     execArgs = savedMap["execArgs"] as String,
@@ -225,6 +234,7 @@ data class ContainerData(
                     forceDlc = (savedMap["forceDlc"] as? Boolean) ?: false,
                     localSavesOnly = (savedMap["localSavesOnly"] as? Boolean) ?: false,
                     steamOfflineMode = (savedMap["steamOfflineMode"] as? Boolean) ?: false,
+                    epicOfflineMode = (savedMap["epicOfflineMode"] as? Boolean) ?: false,
                     useLegacyDRM = (savedMap["useLegacyDRM"] as? Boolean) ?: false,
                     unpackFiles = (savedMap["unpackFiles"] as? Boolean) ?: false,
                     suspendPolicy = (savedMap["suspendPolicy"] as? String) ?: Container.SUSPEND_POLICY_MANUAL,
