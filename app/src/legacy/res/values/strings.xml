@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Flavor-specific launcher label. Overrides app_name from src/main. -->
+    <string name="app_name">Unofficial GameNative Legacy</string>
+</resources>

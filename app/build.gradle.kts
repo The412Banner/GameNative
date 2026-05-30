@@ -44,6 +44,23 @@ android {
                 keyPassword = keystoreProperties["keyPassword"].toString()
             }
         }
+        // Public AOSP "testkey" (build/target/product/security/testkey).
+        // The PKCS#12 keystore is generated at build time by CI from the
+        // upstream pk8 + x509.pem; password is fixed since the key is public.
+        // APKs are signed with v1 (JAR) + v2 + v3 signature schemes.
+        create("testkey") {
+            val testkeyStore = rootProject.file("app/keystores/testkey.p12")
+            if (testkeyStore.exists()) {
+                storeFile = testkeyStore
+                storeType = "PKCS12"
+                storePassword = "android"
+                keyAlias = "testkey"
+                keyPassword = "android"
+            }
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+        }
     }
 
     defaultConfig {
@@ -134,7 +151,14 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("debug")
+            // Sign with the AOSP testkey when its keystore is present (CI generates
+            // it); otherwise fall back to the debug key so other flows (e.g. the
+            // tagged bundle build, which re-signs afterwards) still build.
+            signingConfig = if (rootProject.file("app/keystores/testkey.p12").exists()) {
+                signingConfigs.getByName("testkey")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
         create("release-signed") {
             isMinifyEnabled = true

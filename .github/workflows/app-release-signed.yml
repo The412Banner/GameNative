@@ -32,6 +32,23 @@ jobs:
     - name: Create empty local.properties
       run: touch local.properties
 
+    - name: Generate AOSP testkey keystore
+      run: |
+        set -euo pipefail
+        mkdir -p app/keystores
+        BASE="https://android.googlesource.com/platform/build/+/refs/heads/main/target/product/security"
+        curl -fsSL "$BASE/testkey.pk8?format=TEXT" | base64 -d > testkey.pk8
+        curl -fsSL "$BASE/testkey.x509.pem?format=TEXT" | base64 -d > testkey.x509.pem
+        # pk8 is unencrypted PKCS#8 DER -> convert to a PEM private key
+        openssl pkcs8 -inform DER -nocrypt -in testkey.pk8 -out testkey.key
+        # bundle cert + key into a PKCS#12 keystore (password is public on purpose)
+        openssl pkcs12 -export \
+          -in testkey.x509.pem -inkey testkey.key \
+          -name testkey -out app/keystores/testkey.p12 \
+          -passout pass:android
+        rm -f testkey.pk8 testkey.key testkey.x509.pem
+        keytool -list -keystore app/keystores/testkey.p12 -storetype PKCS12 -storepass android
+
     - name: Install Android SDK Build Tools
       run: |
         SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
