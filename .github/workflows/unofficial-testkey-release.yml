@@ -88,11 +88,18 @@ jobs:
           name: release-apk
           path: ./
 
+      - name: Compute release title
+        id: meta
+        run: |
+          TAG="${{ github.ref_name }}"
+          VER="${TAG#v}"; VER="${VER%-unofficial-testkey}"
+          echo "title=Unofficial GameNative ${VER} - Manual LSFG DLL Picker" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
+          name: ${{ steps.meta.outputs.title }}
           prerelease: true
           generate_release_notes: true
           append_body: true
