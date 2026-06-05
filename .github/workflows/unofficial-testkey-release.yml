@@ -104,7 +104,10 @@ jobs:
           generate_release_notes: true
           append_body: true
           body: |
-            > **Unofficial** community build. Signed with the public **AOSP testkey** (v1+v2+v3) — this is **not** an official GameNative key. You must uninstall any existing GameNative before installing, and these APKs grant no platform/system privileges.
+            > **Unofficial** community build, signed with the public **AOSP testkey** (v2+v3 schemes). This is **not** an official GameNative key — the testkey is publicly known, so only install builds from a source you trust. On a normal device the testkey grants **no** platform/system privileges.
+            >
+            > ✅ **Updates in place** over previous *unofficial testkey* builds (same key + package `app.gamenative`) — no need to uninstall.
+            > ⚠️ Coming from the **official GameNative** (or any differently-signed build)? Android will block the update with a signature mismatch — **uninstall that one first**.
 
             ## Downloads
             - **`gamenative-${{ github.ref_name }}.apk`** — Unofficial GameNative Legacy (Android 8–14). Recommended for most users.
