@@ -46,25 +46,34 @@ object ContainerUtils {
         // Override default driver and DXVK version based on Turnip capability
         if (GPUInformation.isTurnipCapable(context)) {
             DefaultVersion.VARIANT = Container.BIONIC
-            DefaultVersion.WINE_VERSION = "proton-9.0-arm64ec"
+            DefaultVersion.WINE_VERSION = "proton-10.0-arm64ec-2"
             DefaultVersion.DEFAULT_GRAPHICS_DRIVER = "Wrapper"
             DefaultVersion.DXVK = if (GPUInformation.isAdreno6xx(context)) "1.11.1-sarek" else "2.4.1-gplasync"
             DefaultVersion.VKD3D = "2.14.1"
-            DefaultVersion.WRAPPER = "turnip26.0.0_R8"
+            DefaultVersion.WRAPPER = "Turnip_v26.2.0_R4"
+            DefaultVersion.STEAM_TYPE = Container.STEAM_TYPE_NORMAL
+            DefaultVersion.ASYNC_CACHE = "1"
+        } else if (GPUInformation.isAdreno8EliteGen5(context)) {
+            DefaultVersion.VARIANT = Container.BIONIC
+            DefaultVersion.WINE_VERSION = "proton-10.0-arm64ec-2"
+            DefaultVersion.DEFAULT_GRAPHICS_DRIVER = "Wrapper"
+            DefaultVersion.DXVK = "2.4.1-gplasync"
+            DefaultVersion.VKD3D = "2.14.1"
+            DefaultVersion.WRAPPER = "Turnip Adreno Driver T26 (@Mr_Purple_666)"
             DefaultVersion.STEAM_TYPE = Container.STEAM_TYPE_NORMAL
             DefaultVersion.ASYNC_CACHE = "1"
         } else if (GPUInformation.isAdreno8Elite(context)) {
             DefaultVersion.VARIANT = Container.BIONIC
-            DefaultVersion.WINE_VERSION = "proton-9.0-arm64ec"
+            DefaultVersion.WINE_VERSION = "proton-10.0-arm64ec-2"
             DefaultVersion.DEFAULT_GRAPHICS_DRIVER = "Wrapper"
             DefaultVersion.DXVK = "2.4.1-gplasync"
             DefaultVersion.VKD3D = "2.14.1"
-            DefaultVersion.WRAPPER = "Turnip_Gen8_V25"
+            DefaultVersion.WRAPPER = "Turnip_Gen8_V30"
             DefaultVersion.STEAM_TYPE = Container.STEAM_TYPE_NORMAL
             DefaultVersion.ASYNC_CACHE = "1"
         } else {
             DefaultVersion.VARIANT = Container.BIONIC
-            DefaultVersion.WINE_VERSION = "proton-9.0-arm64ec"
+            DefaultVersion.WINE_VERSION = "proton-10.0-arm64ec-2"
             DefaultVersion.DEFAULT_GRAPHICS_DRIVER = "Wrapper"
             DefaultVersion.DXVK = "async-1.10.3"
             DefaultVersion.VKD3D = "2.14.1"
@@ -120,6 +129,7 @@ object ContainerUtils {
             forceDlc = PrefManager.forceDlc,
             localSavesOnly = PrefManager.localSavesOnly,
             steamOfflineMode = PrefManager.steamOfflineMode,
+            epicOfflineMode = PrefManager.epicOfflineMode,
             useLegacyDRM = PrefManager.useLegacyDRM,
             unpackFiles = PrefManager.unpackFiles,
             suspendPolicy = PrefManager.suspendPolicy,
@@ -206,6 +216,7 @@ object ContainerUtils {
         PrefManager.forceDlc = containerData.forceDlc
         PrefManager.localSavesOnly = containerData.localSavesOnly
         PrefManager.steamOfflineMode = containerData.steamOfflineMode
+        PrefManager.epicOfflineMode = containerData.epicOfflineMode
         PrefManager.useLegacyDRM = containerData.useLegacyDRM
         PrefManager.unpackFiles = containerData.unpackFiles
         PrefManager.suspendPolicy = containerData.suspendPolicy
@@ -277,6 +288,8 @@ object ContainerUtils {
             dxwrapper = container.dxWrapper,
             dxwrapperConfig = container.dxWrapperConfig,
             audioDriver = container.audioDriver,
+            pulseaudioSuspendBehavior = container.getPulseaudioSuspendBehavior(),
+            pulseaudioLowLatency = container.getPulseaudioLowLatency(),
             wincomponents = container.winComponents,
             drives = container.drives,
             execArgs = container.execArgs,
@@ -306,6 +319,7 @@ object ContainerUtils {
             forceDlc = container.isForceDlc,
             localSavesOnly = container.isLocalSavesOnly,
             steamOfflineMode = container.isSteamOfflineMode(),
+            epicOfflineMode = container.isEpicOfflineMode(),
             useLegacyDRM = container.isUseLegacyDRM(),
             unpackFiles = container.isUnpackFiles(),
             suspendPolicy = container.suspendPolicy,
@@ -395,6 +409,7 @@ object ContainerUtils {
                     ?: updatedData
                 "useLegacyDRM" -> value?.let { updatedData.copy(useLegacyDRM = it as? Boolean ?: updatedData.useLegacyDRM) } ?: updatedData
                 "steamOfflineMode" -> value?.let { updatedData.copy(steamOfflineMode = it as? Boolean ?: updatedData.steamOfflineMode) } ?: updatedData
+                "epicOfflineMode" -> value?.let { updatedData.copy(epicOfflineMode = it as? Boolean ?: updatedData.epicOfflineMode) } ?: updatedData
                 "unpackFiles" -> value?.let { updatedData.copy(unpackFiles = it as? Boolean ?: updatedData.unpackFiles) } ?: updatedData
                 "suspendPolicy" -> value?.let { updatedData.copy(suspendPolicy = it as? String ?: updatedData.suspendPolicy) } ?: updatedData
                 "envVars" -> value?.let { updatedData.copy(envVars = it as? String ?: updatedData.envVars) } ?: updatedData
@@ -423,6 +438,7 @@ object ContainerUtils {
         }
         val previousForceDlc: Boolean = container.isForceDlc
         val previousSteamOfflineMode: Boolean = container.isSteamOfflineMode()
+
         val previousUnpackFiles: Boolean = container.isUnpackFiles
         val userRegFile = File(container.rootDir, ".wine/user.reg")
         WineRegistryEditor(userRegFile).use { registryEditor ->
@@ -453,6 +469,8 @@ object ContainerUtils {
         container.dxWrapper = containerData.dxwrapper
         container.dxWrapperConfig = containerData.dxwrapperConfig
         container.audioDriver = containerData.audioDriver
+        container.setPulseaudioSuspendBehavior(containerData.pulseaudioSuspendBehavior)
+        container.setPulseaudioLowLatency(containerData.pulseaudioLowLatency)
         container.winComponents = containerData.wincomponents
         container.drives = containerData.drives
         container.execArgs = containerData.execArgs
@@ -491,6 +509,7 @@ object ContainerUtils {
         container.setForceDlc(containerData.forceDlc)
         container.setLocalSavesOnly(containerData.localSavesOnly)
         container.setSteamOfflineMode(containerData.steamOfflineMode)
+        container.setEpicOfflineMode(containerData.epicOfflineMode)
         container.setUseLegacyDRM(containerData.useLegacyDRM)
         container.setUnpackFiles(containerData.unpackFiles)
         container.setSuspendPolicy(containerData.suspendPolicy)
@@ -796,6 +815,7 @@ object ContainerUtils {
                                     bestConfig.matchType,
                                     true,
                                     bestConfig.matchedStore.equals(gameSource.name, ignoreCase = true),
+                                    matchedGpu = bestConfig.matchedGpu,
                                 )
                                 if (parsedConfig != null && parsedConfig.isNotEmpty()) {
                                     bestConfigMap = parsedConfig
@@ -870,6 +890,7 @@ object ContainerUtils {
                 disableMouseInput = PrefManager.disableMouseInput,
                 forceDlc = PrefManager.forceDlc,
                 steamOfflineMode = PrefManager.steamOfflineMode,
+                epicOfflineMode = PrefManager.epicOfflineMode,
                 useLegacyDRM = PrefManager.useLegacyDRM,
                 unpackFiles = PrefManager.unpackFiles,
                 suspendPolicy = PrefManager.suspendPolicy,
@@ -886,7 +907,7 @@ object ContainerUtils {
             containerData
         }
 
-        if (Build.MANUFACTURER.equals("samsung", ignoreCase = true)) {
+        if (Build.MANUFACTURER.equals("samsung", ignoreCase = true) && GPUInformation.isAdreno740(context)) {
             val ev = EnvVars(containerData.envVars)
             if (!ev.has("FD_DEV_FEATURES")) {
                 ev.put("FD_DEV_FEATURES", "enable_tp_ubwc_flag_hint=1")
