@@ -82,6 +82,12 @@ jobs:
       contents: write
 
     steps:
+      # Full history + tags so we can diff against the previous unofficial tag.
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download built APK
         uses: actions/download-artifact@v4
         with:
@@ -95,22 +101,60 @@ jobs:
           VER="${TAG#v}"; VER="${VER%-unofficial-testkey}"
           echo "title=Unofficial GameNative ${VER} - Manual LSFG DLL Picker" >> "$GITHUB_OUTPUT"
 
+      # Builds RELEASE_BODY.md: fixed disclaimer/downloads + a collapsible
+      # <details> "What's New" list of every commit since the previous
+      # v*-unofficial-testkey tag. Fully automatic for future releases.
+      - name: Build release body
+        run: |
+          set -euo pipefail
+          CUR="${{ github.ref_name }}"
+          REPO="${{ github.repository }}"
+          PREV="$(git tag --sort=-creatordate -l 'v*-unofficial-testkey' | grep -vxF "$CUR" | head -n1 || true)"
+
+          {
+            echo "> **Unofficial** community build, signed with the public **AOSP testkey** (v2+v3 schemes). This is **not** an official GameNative key — the testkey is publicly known, so only install builds from a source you trust. On a normal device the testkey grants **no** platform/system privileges."
+            echo ">"
+            echo "> ✅ **Updates in place** over previous *unofficial testkey* builds (same key + package \`app.gamenative\`) — no need to uninstall."
+            echo "> ⚠️ Coming from the **official GameNative** (or any differently-signed build)? Android will block the update with a signature mismatch — **uninstall that one first**."
+            echo ""
+          } > RELEASE_BODY.md
+
+          if [ -n "$PREV" ]; then
+            N="$(git rev-list --no-merges --count "${PREV}..HEAD")"
+            echo "This build keeps the **manual LSFG \`Lossless.dll\` picker** (this fork's feature) and includes **${N} commit(s)** since \`${PREV}\`." >> RELEASE_BODY.md
+            echo "" >> RELEASE_BODY.md
+            echo "<details>" >> RELEASE_BODY.md
+            echo "<summary><b>What's New</b> (click to expand)</summary>" >> RELEASE_BODY.md
+            echo "" >> RELEASE_BODY.md
+            git log --no-merges --pretty=format:'- %s' "${PREV}..HEAD" >> RELEASE_BODY.md
+            echo "" >> RELEASE_BODY.md
+            echo "" >> RELEASE_BODY.md
+            echo "</details>" >> RELEASE_BODY.md
+          else
+            echo "This build keeps the **manual LSFG \`Lossless.dll\` picker** (this fork's feature)." >> RELEASE_BODY.md
+          fi
+
+          {
+            echo ""
+            echo "## Downloads"
+            echo "- **\`gamenative-${CUR}.apk\`** — Unofficial GameNative Legacy (Android 8–14). Recommended for most users."
+          } >> RELEASE_BODY.md
+
+          if [ -n "$PREV" ]; then
+            echo "" >> RELEASE_BODY.md
+            echo "**Full Changelog**: https://github.com/${REPO}/compare/${PREV}...${CUR}" >> RELEASE_BODY.md
+          fi
+
+          echo "----- RELEASE_BODY.md -----"
+          cat RELEASE_BODY.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ steps.meta.outputs.title }}
           prerelease: true
-          generate_release_notes: true
-          append_body: true
-          body: |
-            > **Unofficial** community build, signed with the public **AOSP testkey** (v2+v3 schemes). This is **not** an official GameNative key — the testkey is publicly known, so only install builds from a source you trust. On a normal device the testkey grants **no** platform/system privileges.
-            >
-            > ✅ **Updates in place** over previous *unofficial testkey* builds (same key + package `app.gamenative`) — no need to uninstall.
-            > ⚠️ Coming from the **official GameNative** (or any differently-signed build)? Android will block the update with a signature mismatch — **uninstall that one first**.
-
-            ## Downloads
-            - **`gamenative-${{ github.ref_name }}.apk`** — Unofficial GameNative Legacy (Android 8–14). Recommended for most users.
+          body_path: RELEASE_BODY.md
           files: |
             gamenative-${{ github.ref_name }}.apk
         env:
