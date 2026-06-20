@@ -60,8 +60,8 @@ android {
         manifestPlaceholders["screenOrientation"] = "unspecified"
         buildConfigField("boolean", "XR_BUILD", "false")
 
-        versionCode = 16
-        versionName = "1.0.2"
+        versionCode = 17
+        versionName = "1.0.3"
 
         buildConfigField("boolean", "GOLD", "false")
         fun secret(name: String) =
