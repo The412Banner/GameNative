@@ -624,6 +624,11 @@
     <string name="app_filter_tool">Tool</string>
     <string name="app_filter_demo">Demo</string>
     <string name="app_filter_family">Family</string>
+    <string name="filter_expired">Expired</string>
+    <string name="filter_playable">Playable (30+ FPS)</string>
+    <string name="filter_five_star_device">5-star reviews on device</string>
+    <string name="filter_five_star_gpu">5-star reviews on GPU</string>
+    <string name="filter_proven_gpu">Proven on your GPU</string>
 
     <!-- Login & Connection -->
     <string name="connecting_to_steam">Connecting to Steam…</string>
@@ -788,8 +793,11 @@
     <string name="gesture_action_right_click">Right Click</string>
     <string name="gesture_action_middle_click">Middle Click</string>
     <string name="gesture_pan_middle_mouse">Middle Mouse Pan</string>
+    <string name="gesture_pan_inverted_middle_mouse">Inverted Middle Mouse Pan</string>
     <string name="gesture_pan_wasd">WASD</string>
+    <string name="gesture_pan_inverted_wasd">Inverted WASD</string>
     <string name="gesture_pan_arrow_keys">Arrow Keys</string>
+    <string name="gesture_pan_inverted_arrow_keys">Inverted Arrow Keys</string>
     <string name="gesture_pan_left_click_drag">Left Click Drag</string>
     <string name="gesture_pan_right_click_drag">Right Click Drag</string>
     <string name="gesture_zoom_scroll_wheel">Scroll Wheel</string>
@@ -803,9 +811,13 @@
     <string name="gesture_header_special">Special</string>
     <string name="gesture_header_mouse">Mouse</string>
     <string name="gesture_header_common_game">Common Game Keys</string>
+    <string name="gesture_header_navigation_editing">Navigation / Editing</string>
+    <string name="gesture_header_symbols">Symbols</string>
     <string name="gesture_header_letters">Letters A\u2013Z</string>
     <string name="gesture_header_numbers">Numbers 0\u20139</string>
+    <string name="gesture_header_numpad">Numpad</string>
     <string name="gesture_header_function_keys">Function Keys</string>
+    <string name="gesture_header_modifiers_locks">Modifiers / Locks</string>
     <string name="gesture_delay_label">Delay</string>
     <string name="gesture_two_finger_hold">Two-Finger Hold</string>
     <string name="gesture_two_finger_hold_delay">Two-Finger Hold Delay (ms)</string>
@@ -964,6 +976,8 @@
     <string name="settings_interface_show_gamepad_hints_title">Show controller hints</string>
     <string name="settings_interface_show_gamepad_hints_subtitle">Show the controller button hints bar at the bottom of the screen</string>
     <string name="settings_interface_icon_style">Icon style</string>
+    <string name="settings_interface_custom_games">Custom Games</string>
+    <string name="settings_interface_custom_game_import_as_steam">Import custom games as Steam games</string>
     <string name="settings_interface_wifi_only_title">Download only over Wi-Fi/LAN</string>
     <string name="settings_interface_wifi_only_subtitle">Prevent downloads on cellular data</string>
     <string name="settings_interface_external_storage_title">Write to external storage</string>
@@ -1217,6 +1231,12 @@
     <string name="library_compatibility_unknown">Unknown</string>
     <string name="library_not_compatible">Not Compatible</string>
 
+    <!-- Device game stats key/legend (for your device) -->
+    <string name="stats_key_runs">Successful runs on your GPU</string>
+    <string name="stats_key_reviews">5-star reviews (your GPU / your device)</string>
+    <string name="stats_key_fps">Expected FPS</string>
+    <string name="stats_key_session">Longest session on your device</string>
+
     <!-- Best Config Compatibility Messages -->
     <string name="best_config_exact_gpu_match">Known config works on your GPU</string>
     <string name="best_config_gpu_family_match">Known config should work on your GPU</string>
@@ -1278,6 +1298,10 @@
     <string name="sort_recently_played">Recently Played</string>
     <string name="sort_size_smallest">Size (Smallest)</string>
     <string name="sort_size_largest">Size (Largest)</string>
+    <string name="sort_fps">Expected FPS</string>
+    <string name="sort_runs">Successful runs</string>
+    <string name="sort_reviews">5-star reviews (device)</string>
+    <string name="sort_reviews_gpu">5-star reviews (GPU)</string>
 
     <!-- Game Options Panel -->
     <string name="game_options_title">Options</string>
@@ -1535,6 +1559,15 @@
     <string name="lsfg_browse_dll">Browse for Lossless.dll…</string>
     <string name="settings_interface_show_recommendations_title">Show game recommendations</string>
     <string name="settings_interface_show_recommendations_subtitle">Show curated indie game picks in your library. Keeping this on helps support indie developers and GameNative.</string>
+
+    <!-- HLTB (How Long To Beat) -->
+    <string name="hltb_main_story">Main Story</string>
+    <string name="hltb_main_plus_extras">Main + Extras</string>
+    <string name="hltb_completionist">Completionist</string>
+    <string name="hltb_all_styles">All Styles</string>
+    <string name="hltb_hours_value">%sh</string>
+    <string name="hltb_section_title">How Long to Beat</string>
+
     <!-- Frontend Sync Settings -->
     <string name="settings_interface_frontend_sync_title">Frontend Sync</string>
     <string name="settings_interface_frontend_sync_subtitle">Auto-export installed games for game library frontends</string>

@@ -12,6 +12,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
+import java.io.File
 import org.junit.Assert.*
 import org.junit.Assume.assumeFalse
 import org.junit.Before
@@ -74,6 +75,16 @@ class BestConfigServiceTest {
 
         // Initialize PrefManager
         PrefManager.init(context)
+
+        val workingDir = File(System.getProperty("user.dir"))
+        val manifestFile = listOf(
+            File(workingDir, "manifest.json"),
+            File(workingDir.parentFile, "manifest.json"),
+        ).firstOrNull { it.exists() }
+        if (manifestFile != null) {
+            PrefManager.componentManifestJson = manifestFile.readText()
+            PrefManager.componentManifestFetchedAt = System.currentTimeMillis()
+        }
     }
 
     /**
@@ -1023,6 +1034,42 @@ class BestConfigServiceTest {
         val result = runBlocking { BestConfigService.parseConfigToContainerData(context, bestConfig, matchType, matchType != "fallback_match") }
 
         assertTrue("Result should be empty map when wineVersion is missing from bestConfig", result == null || result.isEmpty())
+    }
+
+    @Test
+    fun findManifestEntryForVersion_matchesByIdOrName() {
+        val entry = ManifestEntry(
+            id = "Turnip v26.2.0 R4",
+            name = "Turnip_v26.2.0_R4",
+            url = "https://downloads.gamenative.app/drivers/Turnio_v26.2.0_R4.zip",
+            variant = "bionic",
+        )
+        assertEquals(entry, ManifestComponentHelper.findManifestEntryForVersion("Turnip_v26.2.0_R4", listOf(entry)))
+        assertEquals(entry, ManifestComponentHelper.findManifestEntryForVersion("Turnip v26.2.0 R4", listOf(entry)))
+        assertNull(ManifestComponentHelper.findManifestEntryForVersion("nope", listOf(entry)))
+    }
+
+    /**
+     * Fresh-install guard: the wrapper drivers that ContainerUtils.setContainerDefaults assigns must
+     * each resolve to a manifest entry AND equal that entry's id. On a fresh install the driver is
+     * downloaded and installed under its manifest id (== meta.json profile name), so if the default
+     * doesn't equal the id, the installed driver never matches the config and nothing loads.
+     */
+    @Test
+    fun defaultWrapperDriversMatchManifestId() {
+        val manifest = runBlocking { ManifestRepository.loadManifest(context) }
+        val drivers = manifest.items[ManifestContentTypes.DRIVER].orEmpty()
+        assumeFalse("Manifest drivers unavailable in test env", drivers.isEmpty())
+
+        for (def in ContainerUtils.wrapperDriverDefaults) {
+            val entry = ManifestComponentHelper.findManifestEntryForVersion(def, drivers)
+            assertNotNull("Default wrapper '$def' has no manifest entry — fresh installs can't install it", entry)
+            assertEquals(
+                "Default wrapper '$def' must equal the manifest id (the folder it installs as)",
+                def,
+                entry!!.id,
+            )
+        }
     }
 }
 

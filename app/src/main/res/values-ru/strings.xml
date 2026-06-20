@@ -467,9 +467,13 @@
     <string name="gesture_header_special">Специальные</string>
     <string name="gesture_header_mouse">Мышь</string>
     <string name="gesture_header_common_game">Частые игровые клавиши</string>
+    <string name="gesture_header_navigation_editing">Навигация / редактирование</string>
+    <string name="gesture_header_symbols">Символы</string>
     <string name="gesture_header_letters">Буквы A-Z</string>
     <string name="gesture_header_numbers">Цифры 0-9</string>
+    <string name="gesture_header_numpad">Цифровая клавиатура</string>
     <string name="gesture_header_function_keys">Функциональные клавиши</string>
+    <string name="gesture_header_modifiers_locks">Модификаторы / блокировки</string>
     <string name="gesture_two_finger_hold">Удержание двумя пальцами</string>
     <string name="gesture_two_finger_hold_delay">Задержка удержания двумя пальцами (мс)</string>
     <string name="gesture_three_finger_tap">Касание тремя пальцами</string>
@@ -498,8 +502,11 @@
     <string name="gesture_long_press">Долгое нажатие</string>
     <string name="gesture_long_press_delay">Задержка долгого нажатия (мс)</string>
     <string name="gesture_pan_arrow_keys">Клавиши со стрелками</string>
+    <string name="gesture_pan_inverted_arrow_keys">Инвертированные стрелки</string>
     <string name="gesture_pan_middle_mouse">Панорамирование средней кнопки мыши</string>
+    <string name="gesture_pan_inverted_middle_mouse">Инвертированное панорамирование средней кнопкой мыши</string>
     <string name="gesture_pan_wasd">WASD</string>
+    <string name="gesture_pan_inverted_wasd">Инвертированное WASD</string>
     <string name="gesture_pinch">Щипок внутрь/наружу</string>
     <string name="gesture_settings">Настройки жестов</string>
     <string name="gesture_settings_title">Настройки жестов касания</string>
@@ -1046,6 +1053,8 @@ https://gamenative.app
     <string name="settings_interface_show_gamepad_hints_title">Показывать подсказки геймпада</string>
     <string name="settings_interface_show_gamepad_hints_subtitle">Показывает панель подсказок кнопок геймпада в нижней части экрана</string>
     <string name="settings_interface_icon_style">Стиль значка</string>
+    <string name="settings_interface_custom_games">Пользовательские игры</string>
+    <string name="settings_interface_custom_game_import_as_steam">Импортировать пользовательские игры как игры Steam</string>
     <string name="settings_interface_no_external_storage">Внешнее хранилище не обнаружено</string>
     <string name="settings_interface_restart_required_title">Требуется перезагрузка</string>
     <string name="settings_interface_storage_volume_title">Том хранилища</string>
@@ -1383,6 +1392,13 @@ https://gamenative.app
      <string name="steam_save_import_failed">Не удалось импортировать сохранения: %s</string>
     <string name="option_import_saves">Импортировать сохранения</string>
     <string name="option_export_saves">Экспортировать сохранения</string>
+    <!-- HLTB (How Long To Beat) -->
+    <string name="hltb_main_story">Основной сюжет</string>
+    <string name="hltb_main_plus_extras">Основное + Дополнения</string>
+    <string name="hltb_completionist">Перфекционист</string>
+    <string name="hltb_all_styles">Все стили</string>
+    <string name="hltb_hours_value">%sh</string>
+    <string name="hltb_section_title">HLTB</string>
 
     <!-- LSFG-VK frame generation -->
     <string name="lsfg_tab_title">LSFG-VK</string>
@@ -1463,4 +1479,17 @@ https://gamenative.app
     <string name="screen_effects_scaling_mode_dls_desc">Повышение резкости / чёткости.</string>
     <string name="screen_effects_scaling_mode_natural">Естественный</string>
     <string name="screen_effects_scaling_mode_natural_desc">Более тёплый оттенок.</string>
+    <string name="stats_key_runs">Успешные запуски на вашем GPU</string>
+    <string name="stats_key_reviews">5-звёздочные отзывы (ваш GPU / ваше устройство)</string>
+    <string name="stats_key_fps">Ожидаемый FPS</string>
+    <string name="stats_key_session">Самая длинная сессия на вашем устройстве</string>
+    <string name="sort_fps">Ожидаемый FPS</string>
+    <string name="sort_runs">Успешные запуски</string>
+    <string name="sort_reviews">5-звёздочные отзывы (устройство)</string>
+    <string name="sort_reviews_gpu">5-звёздочные отзывы (GPU)</string>
+    <string name="filter_expired">Истекшие</string>
+    <string name="filter_playable">Играбельно (30+ FPS)</string>
+    <string name="filter_five_star_device">5-звёздочные отзывы на устройстве</string>
+    <string name="filter_five_star_gpu">5-звёздочные отзывы на GPU</string>
+    <string name="filter_proven_gpu">Проверено на вашем GPU</string>
 </resources>

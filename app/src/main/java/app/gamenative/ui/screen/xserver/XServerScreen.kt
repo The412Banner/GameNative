@@ -458,6 +458,7 @@ fun XServerScreen(
     var keepPausedForEditor by remember { mutableStateOf(false) }
     var hasPhysicalKeyboard by remember { mutableStateOf(false) }
     var hasPhysicalMouse by remember { mutableStateOf(false) }
+    var usingScreenMirror by remember { mutableStateOf(false) }
     var hasInternalTouchpad by remember { mutableStateOf(false) }
     var hasUpdatedScreenGamepad by remember { mutableStateOf(false) }
     var isPerformanceHudEnabled by remember { mutableStateOf(PrefManager.showFps) }
@@ -825,10 +826,7 @@ fun XServerScreen(
     }
 
     val tryCapturePointer: () -> Boolean = {
-        // Only recapture when we have a physical mouse plugged in (or internal touchpad),
-        // no menus are open and we're not in Touchscreen mode
-        if ((hasPhysicalMouse || hasInternalTouchpad) &&
-            !showElementEditor && !keepPausedForEditor && !showQuickMenu && !isEditMode &&
+        if (!showElementEditor && !keepPausedForEditor && !showQuickMenu && !isEditMode &&
             !container.isTouchscreenMode) {
             PluviaApp.touchpadView?.postDelayed({
                 val view = PluviaApp.touchpadView
@@ -861,7 +859,8 @@ fun XServerScreen(
         controllerManager.scanForDevices()
         hasPhysicalController = controllerManager.getDetectedDevices().isNotEmpty()
 
-        if (!hasInternalTouchpad && !hasPhysicalMouse && !hasPhysicalKeyboard && !hasPhysicalController &&
+        if (!usingScreenMirror &&
+            !hasInternalTouchpad && !hasPhysicalMouse && !hasPhysicalKeyboard && !hasPhysicalController &&
             !container.isTouchscreenMode) {
             val manager = PluviaApp.inputControlsManager
             val profiles = manager?.getProfiles(false) ?: listOf()
@@ -1323,13 +1322,11 @@ fun XServerScreen(
                     else -> false
                 }
             } else if ((showElementEditor || keepPausedForEditor || showQuickMenu || isEditMode) && (isGamepad || isKeyboard)) {
-                val escOrBackPressed = !keepPausedForEditor &&
-                    (
-                        isKeyboard && it.event.keyCode == KeyEvent.KEYCODE_ESCAPE ||
-                            isPhysicalKeyboard && it.event.keyCode == KeyEvent.KEYCODE_BACK
-                        )
-                if (escOrBackPressed) {
-                    keyboardEscMenuHandler.handleOverlayEscOrBack(it.event, keyboard)
+                val escPressed = !keepPausedForEditor &&
+                    isKeyboard &&
+                    it.event.keyCode == KeyEvent.KEYCODE_ESCAPE
+                if (escPressed) {
+                    keyboardEscMenuHandler.handleOverlayEsc(it.event, keyboard)
                     if (it.event.action == KeyEvent.ACTION_DOWN && it.event.repeatCount == 0) {
                         if (BuildConfig.MODERN_ANDROID) {
                             (context as? ComponentActivity)?.onBackPressedDispatcher?.onBackPressed()
@@ -1361,9 +1358,9 @@ fun XServerScreen(
                         keyboardEscMenuHandler.cancel()
                         gameBack()
                         handled = true
-                    } else if (isPhysicalKeyboard && keyboardEscMenuHandler.isEscOrBack(it.event) &&
+                    } else if (isPhysicalKeyboard && keyboardEscMenuHandler.isEsc(it.event) &&
                         !showElementEditor && !keepPausedForEditor && !showQuickMenu && !isEditMode) {
-                        handled = keyboardEscMenuHandler.handleGameEscOrBack(
+                        handled = keyboardEscMenuHandler.handleGameEsc(
                             event = it.event,
                             keyboard = keyboard,
                             canOpenMenu = { !showElementEditor && !keepPausedForEditor && !showQuickMenu && !isEditMode },
@@ -1412,6 +1409,11 @@ fun XServerScreen(
                         }
                         tryCapturePointer()
                     }
+                }
+                val event = it.event
+                val device = event?.device
+                if (!usingScreenMirror && device?.name == "scrcpy") {
+                    usingScreenMirror = true
                 }
                 handled
             }
@@ -3288,8 +3290,7 @@ private fun setupXEnvironment(
         envVars.put("PULSE_SERVER", imageFs.getRootDir().getPath() + UnixSocketConfig.PULSE_SERVER_PATH)
         environment.addComponent(PulseAudioComponent(
             UnixSocketConfig.createSocket(imageFs.getRootDir().getPath(), UnixSocketConfig.PULSE_SERVER_PATH),
-            container.getPulseaudioSuspendBehavior(),
-            container.getPulseaudioLowLatency()
+            container.pulseaudioLowLatency
         ))
     }
 
@@ -4119,7 +4120,7 @@ private fun unpackExecutableFile(
             Timber.tag("installRedist").e(e, "Error installing redistributables: ${e.message}")
         }
     }
-    if (!needsUnpacking){
+    if (!needsUnpacking || ContainerUtils.extractGameSourceFromContainerId(appId) != GameSource.STEAM){
         return
     }
     try {
@@ -4138,7 +4139,7 @@ private fun unpackExecutableFile(
                         try {
                             val origDll = File("${imageFs.wineprefix}/dosdevices/a:/$relDllPath")
                             if (origDll.exists()) {
-                                val genCmd = "wine z:\\generate_interfaces_file.exe A:\\" + relDllPath.replace('/', '\\')
+                                val genCmd = "wine cmd /c \"z:\\generate_interfaces_file.exe A:\\" + relDllPath.replace('/', '\\') + " & wineserver -k\""
                                 Timber.i("Running generate_interfaces_file $genCmd")
                                 val genOutput = guestProgramLauncherComponent.execShellCommand(genCmd)
 
@@ -4179,7 +4180,7 @@ private fun unpackExecutableFile(
 
         output = StringBuilder()
 
-        if (!container.isLaunchRealSteam) {
+        if (!container.isLaunchRealSteam && !container.isLaunchBionicSteam) {
             val exePaths = if (container.isUnpackFiles) {
                 val scanned = ContainerUtils.scanExecutablesInADrive(container.drives)
                 val filtered = ContainerUtils.filterExesForUnpacking(scanned)
@@ -4503,7 +4504,7 @@ private suspend fun applyGeneralPatches(
 
 private fun refreshComponentsFiles(context: Context) {
     val extractionPairs = listOf(
-        "pulseaudio-gamenative-20260606.tzst" to File(context.filesDir, "pulseaudio")
+        "pulseaudio-gamenative-20260612.tzst" to File(context.filesDir, "pulseaudio")
     )
 
     AssetUtils.extractComponentsWithVersionCheck(
@@ -5065,7 +5066,10 @@ private suspend fun extractGraphicsDriverFiles(
                     container.putExtra("lastInstalledMainWrapper", mainWrapperSelection)
                     container.saveData()
                 } catch (e: Exception) {
-                    Log.e("GraphicsDriverExtraction", "Failed to extract wrapper: ${e.message}")
+                    throw IllegalStateException(
+                        "Failed to install graphics driver '$wrapperComponentId'. An internet connection is required the first time this driver is used.",
+                        e,
+                    )
                 }
                 Log.d("XServerDisplayActivity", "First time container boot, extracting extra_libs.tzst")
                 extractGraphicsDriverComponent(context, "extra_libs", rootDir!!)
@@ -5200,17 +5204,17 @@ private fun extractSteamFiles(
             }
         }
 
-        val drmArchive = File(imageFs.getFilesDir(), "experimental-drm-20260116.tzst")
-        if (drmArchive.exists()) {
-            Timber.i("Extracting experimental-drm.tzst (bionic mode)")
+        val steamclientDllsArchive = File(imageFs.getFilesDir(), "steamclient-dlls-20260619.tzst")
+        if (steamclientDllsArchive.exists()) {
+            Timber.i("Extracting steamclient-dlls.tzst (genuine Valve steamclient.dll for SteamStub)")
             TarCompressorUtils.extract(
                 TarCompressorUtils.Type.ZSTD,
-                drmArchive,
+                steamclientDllsArchive,
                 imageFs.getRootDir(),
                 onExtractFileListener,
             )
         } else {
-            Timber.e("experimental-drm-20260116.tzst missing at ${drmArchive.absolutePath}")
+            Timber.e("steamclient-dlls-20260619.tzst missing at ${steamclientDllsArchive.absolutePath}")
         }
 
         try {

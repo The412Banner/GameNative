@@ -242,7 +242,9 @@ private fun rememberContainerConfigDialogStaticData(): ContainerConfigDialogStat
         glibcWineEntriesBase = stringArrayResource(R.array.glibc_wine_entries).toList(),
         emulatorEntries = stringArrayResource(R.array.emulator_entries).toList(),
         bionicGraphicsDrivers = stringArrayResource(R.array.bionic_graphics_driver_entries).toList(),
-        baseWrapperVersions = stringArrayResource(R.array.wrapper_graphics_driver_version_entries).toList(),
+        baseWrapperVersions = ManifestComponentHelper.bundledGraphicsDriverBase(
+            stringArrayResource(R.array.wrapper_graphics_driver_version_entries).toList(),
+        ),
         languages = listOf(
             "arabic", "bulgarian", "schinese", "tchinese", "czech", "danish", "dutch", "english",
             "finnish", "french", "german", "greek", "hungarian", "italian", "japanese", "koreana",
@@ -285,9 +287,9 @@ fun ContainerConfigDialog(
         val graphicsDriversRef = remember { mutableStateOf(baseGraphicsDrivers.toMutableList()) }
         var graphicsDrivers by graphicsDriversRef
         val dxWrappers = staticData.dxWrappers
-        // Start with defaults from resources
-        val dxvkVersionsBase = staticData.dxvkVersionsBase
-        val vkd3dVersionsBase = staticData.vkd3dVersionsBase
+        // Start with defaults from resources (modern: un-greyed comes from on-disk + manifest)
+        val dxvkVersionsBase = ManifestComponentHelper.bundledDxWrapperBase(staticData.dxvkVersionsBase)
+        val vkd3dVersionsBase = ManifestComponentHelper.bundledDxWrapperBase(staticData.vkd3dVersionsBase)
         val audioDrivers = staticData.audioDrivers
         val gpuCards = staticData.gpuCards
         val presentModes = staticData.presentModes

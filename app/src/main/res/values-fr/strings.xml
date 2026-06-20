@@ -749,8 +749,11 @@
     <string name="gesture_action_right_click">Clic droit</string>
     <string name="gesture_action_middle_click">Clic central</string>
     <string name="gesture_pan_middle_mouse">Pan souris centrale</string>
+    <string name="gesture_pan_inverted_middle_mouse">Pan souris centrale inversé</string>
     <string name="gesture_pan_wasd">WASD</string>
+    <string name="gesture_pan_inverted_wasd">WASD inversé</string>
     <string name="gesture_pan_arrow_keys">Touches fléchées</string>
+    <string name="gesture_pan_inverted_arrow_keys">Touches fléchées inversées</string>
     <string name="gesture_zoom_scroll_wheel">Molette de défilement</string>
     <string name="gesture_zoom_plus_minus">Touches +/-</string>
     <string name="gesture_zoom_page_up_down">Page haut/bas</string>
@@ -769,9 +772,13 @@
     <string name="gesture_header_special">Spécial</string>
     <string name="gesture_header_mouse">Souris</string>
     <string name="gesture_header_common_game">Touches de jeu courantes</string>
+    <string name="gesture_header_navigation_editing">Navigation / édition</string>
+    <string name="gesture_header_symbols">Symboles</string>
     <string name="gesture_header_letters">Lettres A-Z</string>
     <string name="gesture_header_numbers">Nombres 0-9</string>
+    <string name="gesture_header_numpad">Pavé numérique</string>
     <string name="gesture_header_function_keys">Touches de fonction</string>
+    <string name="gesture_header_modifiers_locks">Modificateurs / verrouillage</string>
     <string name="gesture_two_finger_hold">Maintien à deux doigts</string>
     <string name="gesture_two_finger_hold_delay">Délai du maintien à deux doigts (ms)</string>
     <string name="gesture_three_finger_tap">Appui à trois doigts</string>
@@ -962,6 +969,8 @@
     <string name="settings_interface_show_gamepad_hints_title">Afficher les indications de manette</string>
     <string name="settings_interface_show_gamepad_hints_subtitle">Affiche la barre d\'indications des boutons de la manette en bas de l\'écran</string>
     <string name="settings_interface_icon_style">Style d\'icône</string>
+    <string name="settings_interface_custom_games">Jeux personnalisés</string>
+    <string name="settings_interface_custom_game_import_as_steam">Importer les jeux personnalisés comme jeu Steam</string>
     <string name="settings_interface_wifi_only_title">Télécharger uniquement via Wi-Fi/LAN</string>
     <string name="settings_interface_wifi_only_subtitle">Empêcher les téléchargements sur données cellulaires</string>
     <string name="settings_interface_external_storage_title">Écrire sur le stockage externe</string>
@@ -1450,6 +1459,13 @@
      <string name="steam_save_import_failed">Échec de l\'importation des sauvegardes : %s</string>
     <string name="option_import_saves">Importer les sauvegardes</string>
     <string name="option_export_saves">Exporter les sauvegardes</string>
+    <!-- HLTB (How Long To Beat) -->
+    <string name="hltb_main_story">Histoire principale</string>
+    <string name="hltb_main_plus_extras">Principal + Extras</string>
+    <string name="hltb_completionist">Complétiste</string>
+    <string name="hltb_all_styles">Tous les styles</string>
+    <string name="hltb_hours_value">%sh</string>
+    <string name="hltb_section_title">HLTB</string>
 
     <!-- LSFG-VK frame generation -->
     <string name="lsfg_tab_title">LSFG-VK</string>
@@ -1530,4 +1546,17 @@
     <string name="screen_effects_scaling_mode_dls_desc">Passe de netteté / clarté.</string>
     <string name="screen_effects_scaling_mode_natural">Naturel</string>
     <string name="screen_effects_scaling_mode_natural_desc">Teinte plus chaude.</string>
+    <string name="stats_key_runs">Lancements réussis sur votre GPU</string>
+    <string name="stats_key_reviews">Avis 5 étoiles (votre GPU / votre appareil)</string>
+    <string name="stats_key_fps">FPS attendus</string>
+    <string name="stats_key_session">Session la plus longue sur votre appareil</string>
+    <string name="sort_fps">FPS attendus</string>
+    <string name="sort_runs">Lancements réussis</string>
+    <string name="sort_reviews">Avis 5 étoiles (appareil)</string>
+    <string name="sort_reviews_gpu">Avis 5 étoiles (GPU)</string>
+    <string name="filter_expired">Expiré</string>
+    <string name="filter_playable">Jouable (30+ FPS)</string>
+    <string name="filter_five_star_device">Avis 5 étoiles sur l\'appareil</string>
+    <string name="filter_five_star_gpu">Avis 5 étoiles sur le GPU</string>
+    <string name="filter_proven_gpu">Éprouvé sur votre GPU</string>
 </resources>

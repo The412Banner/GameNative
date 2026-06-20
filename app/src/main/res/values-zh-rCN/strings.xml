@@ -744,8 +744,11 @@
     <string name="gesture_action_right_click">右键单击</string>
     <string name="gesture_action_middle_click">中键单击</string>
     <string name="gesture_pan_middle_mouse">中键平移</string>
+    <string name="gesture_pan_inverted_middle_mouse">反向中键平移</string>
     <string name="gesture_pan_wasd">WASD</string>
+    <string name="gesture_pan_inverted_wasd">反向 WASD</string>
     <string name="gesture_pan_arrow_keys">方向键</string>
+    <string name="gesture_pan_inverted_arrow_keys">反向方向键</string>
     <string name="gesture_zoom_scroll_wheel">滚轮</string>
     <string name="gesture_zoom_plus_minus">+/- 键</string>
     <string name="gesture_zoom_page_up_down">Page Up/Down</string>
@@ -764,9 +767,13 @@
     <string name="gesture_header_special">特殊</string>
     <string name="gesture_header_mouse">鼠标</string>
     <string name="gesture_header_common_game">常用游戏按键</string>
+    <string name="gesture_header_navigation_editing">导航 / 编辑</string>
+    <string name="gesture_header_symbols">符号</string>
     <string name="gesture_header_letters">字母 A-Z</string>
     <string name="gesture_header_numbers">数字 0-9</string>
+    <string name="gesture_header_numpad">数字键盘</string>
     <string name="gesture_header_function_keys">功能键</string>
+    <string name="gesture_header_modifiers_locks">修饰键 / 锁定键</string>
     <string name="gesture_two_finger_hold">双指长按</string>
     <string name="gesture_two_finger_hold_delay">双指长按延迟 (ms)</string>
     <string name="gesture_three_finger_tap">三指点按</string>
@@ -1533,9 +1540,18 @@
 
     <!-- 设置：界面组 -->
     <string name="settings_interface_icon_style">图标样式</string>
+    <string name="settings_interface_custom_games">自定义游戏</string>
+    <string name="settings_interface_custom_game_import_as_steam">将自定义游戏作为 Steam 游戏导入</string>
 
     <!-- 工具：Wine 进程 -->
     <string name="tools_wine_processes_empty">未检测到正在运行的EXE。</string>
+    <!-- HLTB (How Long To Beat) -->
+    <string name="hltb_main_story">主线剧情</string>
+    <string name="hltb_main_plus_extras">主线 + 支线</string>
+    <string name="hltb_completionist">完美主义者</string>
+    <string name="hltb_all_styles">所有风格</string>
+    <string name="hltb_hours_value">%sh</string>
+    <string name="hltb_section_title">HLTB</string>
 
     <!-- LSFG-VK frame generation -->
     <string name="lsfg_tab_title">LSFG-VK</string>
@@ -1595,4 +1611,17 @@
     <string name="frontend_sync_confirm_keep">保留</string>
     <string name="frontend_sync_resync_all">重新同步全部</string>
     <string name="frontend_sync_resync_complete">前端同步完成</string>
+    <string name="stats_key_runs">在您的GPU上成功运行的次数</string>
+    <string name="stats_key_reviews">五星好评（您的GPU / 您的设备）</string>
+    <string name="stats_key_fps">预计FPS</string>
+    <string name="stats_key_session">在您设备上的最长游戏时长</string>
+    <string name="sort_fps">预计FPS</string>
+    <string name="sort_runs">成功运行次数</string>
+    <string name="sort_reviews">五星好评（设备）</string>
+    <string name="sort_reviews_gpu">五星好评（GPU）</string>
+    <string name="filter_expired">已过期</string>
+    <string name="filter_playable">可流畅运行（30+ FPS）</string>
+    <string name="filter_five_star_device">设备上的五星好评</string>
+    <string name="filter_five_star_gpu">GPU上的五星好评</string>
+    <string name="filter_proven_gpu">已在您的GPU上验证</string>
 </resources>

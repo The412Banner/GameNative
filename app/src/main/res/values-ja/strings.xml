@@ -773,8 +773,11 @@
     <string name="gesture_action_right_click">右クリック</string>
     <string name="gesture_action_middle_click">中クリック</string>
     <string name="gesture_pan_middle_mouse">中マウスパン</string>
+    <string name="gesture_pan_inverted_middle_mouse">反転中マウスパン</string>
     <string name="gesture_pan_wasd">WASD</string>
+    <string name="gesture_pan_inverted_wasd">反転WASD</string>
     <string name="gesture_pan_arrow_keys">矢印キー</string>
+    <string name="gesture_pan_inverted_arrow_keys">反転矢印キー</string>
     <string name="gesture_pan_left_click_drag">左クリックでドラッグ</string>
     <string name="gesture_pan_right_click_drag">右クリックしてドラッグ</string>
     <string name="gesture_zoom_scroll_wheel">スクロールホイール</string>
@@ -788,9 +791,13 @@
     <string name="gesture_header_special">特別</string>
     <string name="gesture_header_mouse">ねずみ</string>
     <string name="gesture_header_common_game">共通のゲームキー</string>
+    <string name="gesture_header_navigation_editing">ナビゲーション / 編集</string>
+    <string name="gesture_header_symbols">記号</string>
     <string name="gesture_header_letters">文字A\u2013Z</string>
     <string name="gesture_header_numbers">数字0\u20139</string>
+    <string name="gesture_header_numpad">テンキー</string>
     <string name="gesture_header_function_keys">ファンクションキー</string>
+    <string name="gesture_header_modifiers_locks">修飾キー / ロック</string>
     <string name="gesture_delay_label">遅れ</string>
     <string name="gesture_two_finger_hold">2本指ホールド</string>
     <string name="gesture_two_finger_hold_delay">2 本指ホールド遅延 (ミリ秒)</string>
@@ -949,6 +956,8 @@
     <string name="settings_interface_show_gamepad_hints_title">ゲームパッドのヒントを表示</string>
     <string name="settings_interface_show_gamepad_hints_subtitle">画面下部にゲームパッド操作ヒントバーを表示します</string>
     <string name="settings_interface_icon_style">アイコンのスタイル</string>
+    <string name="settings_interface_custom_games">カスタムゲーム</string>
+    <string name="settings_interface_custom_game_import_as_steam">カスタムゲームを Steam ゲームとしてインポート</string>
     <string name="settings_interface_wifi_only_title">Wi-Fi/LAN接続時のみダウンロード</string>
     <string name="settings_interface_wifi_only_subtitle">モバイルデータ通信でのダウンロードを防止します</string>
     <string name="settings_interface_external_storage_title">外部ストレージに保存</string>
@@ -1544,4 +1553,17 @@
     <string name="game_launch_tip_22">ヒント: タッチスクリーン モードを有効にすることができます。</string>
     <string name="game_launch_tip_23">ヒント: Mali GPU をお持ちの場合は、システム ドライバーを使用してください。</string>
     <string name="game_launch_tip_24">ヒント: 空白の画面が表示されますか?メニューの \"%s\" オプションを使用して、ドライバーが正しく動作しているかどうかを確認してください。</string>
+    <string name="stats_key_runs">お使いのGPUでの成功した実行回数</string>
+    <string name="stats_key_reviews">5つ星レビュー（GPU / お使いのデバイス）</string>
+    <string name="stats_key_fps">予想FPS</string>
+    <string name="stats_key_session">お使いのデバイスでの最長セッション</string>
+    <string name="sort_fps">予想FPS</string>
+    <string name="sort_runs">成功した実行回数</string>
+    <string name="sort_reviews">5つ星レビュー（デバイス）</string>
+    <string name="sort_reviews_gpu">5つ星レビュー（GPU）</string>
+    <string name="filter_expired">期限切れ</string>
+    <string name="filter_playable">プレイ可能（30+ FPS）</string>
+    <string name="filter_five_star_device">5つ星レビュー（デバイス）</string>
+    <string name="filter_five_star_gpu">5つ星レビュー（GPU）</string>
+    <string name="filter_proven_gpu">お使いのGPUで実証済み</string>
 </resources>

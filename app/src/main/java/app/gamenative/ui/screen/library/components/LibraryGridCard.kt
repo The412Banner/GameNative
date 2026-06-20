@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -56,6 +57,8 @@ import app.gamenative.data.GameCompatibilityStatus
 import app.gamenative.data.GameSource
 import app.gamenative.data.LibraryItem
 import app.gamenative.ui.component.CompatibilityBadge
+import app.gamenative.ui.component.GameStatsRow
+import app.gamenative.ui.data.GameCardStats
 import app.gamenative.ui.enums.PaneType
 import app.gamenative.ui.theme.PluviaTheme
 import app.gamenative.ui.util.ListItemImage
@@ -84,6 +87,7 @@ internal fun GridViewCard(
     imageAlpha: Float,
     onImageLoadFailed: () -> Unit,
     compatibilityStatus: GameCompatibilityStatus?,
+    gameStats: GameCardStats?,
     showFocusGlow: Boolean,
     context: Context,
 ) {
@@ -249,31 +253,39 @@ internal fun GridViewCard(
                         ),
                 )
 
-                // Title and status icons at bottom
-                Row(
+                // Title + status icons, with per-device stats directly under the title
+                Column(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
                         .fillMaxWidth()
                         .padding(horizontal = 10.dp, vertical = cardContentBottomPadding),
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Text(
-                        text = appInfo.name,
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            shadow = Shadow(
-                                color = Color.Black,
-                                offset = Offset(1f, 1f),
-                                blurRadius = 2f,
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = appInfo.name,
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                shadow = Shadow(
+                                    color = Color.Black,
+                                    offset = Offset(1f, 1f),
+                                    blurRadius = 2f,
+                                ),
                             ),
-                        ),
-                        color = Color.White,
-                        maxLines = if (paneType == PaneType.GRID_CAPSULE) 2 else 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
+                            color = Color.White,
+                            maxLines = if (paneType == PaneType.GRID_CAPSULE) 2 else 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
 
-                    GridStatusIcons(appInfo = appInfo)
+                        GridStatusIcons(appInfo = appInfo)
+                    }
+
+                    GameStatsRow(
+                        stats = gameStats,
+                        tint = Color.White.copy(alpha = 0.55f),
+                        onDark = true,
+                    )
                 }
 
                 // Compatibility / Recommended badge (top left)
@@ -397,10 +409,12 @@ private fun GridStatusIcons(appInfo: LibraryItem) {
 internal data class GridImageUrls(val primary: String, val fallback: String = "")
 
 private fun getGridContentScale(paneType: PaneType): ContentScale {
-    return if (paneType == PaneType.GRID_HERO) {
-        ContentScale.Crop
-    } else {
-        ContentScale.Fit
+    return when (paneType) {
+        // Hero and capsule both show cover art that should fill the slot. Capsule art is
+        // close to but not always exactly 2:3 (e.g. GOG covers are ~0.71), so cropping the
+        // overflow looks better than letterboxing it against the blurred backdrop.
+        PaneType.GRID_HERO, PaneType.GRID_CAPSULE -> ContentScale.Crop
+        else -> ContentScale.Fit
     }
 }
 
@@ -436,10 +450,18 @@ internal fun getGridImageUrl(
         GameSource.CUSTOM_GAME -> {
             val primary = when (paneType) {
                 PaneType.GRID_CAPSULE ->
-                    findSteamGridDBImage("grid_capsule") ?: appInfo.capsuleImageUrl
+                    // Capsule (vertical): user "coverv"/"cover" wins over SteamGridDB capsule.
+                    CustomGameScanner.findCapsuleCoverForCustomGame(appInfo.appId)
+                        ?: findSteamGridDBImage("grid_capsule")
+                        ?: appInfo.capsuleImageUrl
                 PaneType.GRID_HERO ->
-                    findSteamGridDBImage("grid_hero") ?: appInfo.headerImageUrl
+                    // Hero (horizontal): user "coverh"/"cover" wins over SteamGridDB hero.
+                    CustomGameScanner.findHeroCoverForCustomGame(appInfo.appId)
+                        ?: findSteamGridDBImage("grid_hero")
+                        ?: appInfo.headerImageUrl
                 else -> {
+                    // Default/carousel banner is also a horizontal hero view.
+                    val heroCover = CustomGameScanner.findHeroCoverForCustomGame(appInfo.appId)
                     val gameFolderPath = CustomGameScanner.getFolderPathFromAppId(appInfo.appId)
                     val heroUrl = gameFolderPath?.let { path ->
                         val folder = File(path)
@@ -454,7 +476,7 @@ internal fun getGridImageUrl(
                         }
                         heroFile?.let { android.net.Uri.fromFile(it).toString() }
                     }
-                    heroUrl ?: appInfo.headerImageUrl
+                    heroCover ?: heroUrl ?: appInfo.headerImageUrl
                 }
             }
             GridImageUrls(primary = primary)

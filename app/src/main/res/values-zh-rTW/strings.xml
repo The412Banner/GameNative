@@ -746,8 +746,11 @@
     <string name="gesture_action_right_click">右鍵點擊</string>
     <string name="gesture_action_middle_click">中鍵點擊</string>
     <string name="gesture_pan_middle_mouse">中鍵平移</string>
+    <string name="gesture_pan_inverted_middle_mouse">反向中鍵平移</string>
     <string name="gesture_pan_wasd">WASD</string>
+    <string name="gesture_pan_inverted_wasd">反向 WASD</string>
     <string name="gesture_pan_arrow_keys">方向鍵</string>
+    <string name="gesture_pan_inverted_arrow_keys">反向方向鍵</string>
     <string name="gesture_zoom_scroll_wheel">滾輪</string>
     <string name="gesture_zoom_plus_minus">+/- 鍵</string>
     <string name="gesture_zoom_page_up_down">Page Up/Down</string>
@@ -766,9 +769,13 @@
     <string name="gesture_header_special">特殊</string>
     <string name="gesture_header_mouse">滑鼠</string>
     <string name="gesture_header_common_game">常用遊戲按鍵</string>
+    <string name="gesture_header_navigation_editing">導覽 / 編輯</string>
+    <string name="gesture_header_symbols">符號</string>
     <string name="gesture_header_letters">字母 A-Z</string>
     <string name="gesture_header_numbers">數字 0-9</string>
+    <string name="gesture_header_numpad">數字鍵盤</string>
     <string name="gesture_header_function_keys">功能鍵</string>
+    <string name="gesture_header_modifiers_locks">修飾鍵 / 鎖定鍵</string>
     <string name="gesture_two_finger_hold">雙指長按</string>
     <string name="gesture_two_finger_hold_delay">雙指長按延遲 (ms)</string>
     <string name="gesture_three_finger_tap">三指點按</string>
@@ -1526,8 +1533,17 @@
     <string name="screen_effects_launch_sharpness_note">CAS 與 DLS 透過 vkBasalt 應用，將於下次啟動遊戲時生效。</string>
 
     <string name="settings_interface_icon_style">圖示樣式</string>
+    <string name="settings_interface_custom_games">自訂遊戲</string>
+    <string name="settings_interface_custom_game_import_as_steam">將自訂遊戲作為 Steam 遊戲匯入</string>
 
     <string name="tools_wine_processes_empty">未偵測到正在執行的 EXE。</string>
+    <!-- HLTB (How Long To Beat) -->
+    <string name="hltb_main_story">主線劇情</string>
+    <string name="hltb_main_plus_extras">主線 + 支線</string>
+    <string name="hltb_completionist">完美主義者</string>
+    <string name="hltb_all_styles">所有風格</string>
+    <string name="hltb_hours_value">%sh</string>
+    <string name="hltb_section_title">HLTB</string>
 
     <!-- LSFG-VK frame generation -->
     <string name="lsfg_tab_title">LSFG-VK</string>
@@ -1587,4 +1603,17 @@
     <string name="frontend_sync_confirm_keep">保留</string>
     <string name="frontend_sync_resync_all">重新同步全部</string>
     <string name="frontend_sync_resync_complete">前端同步完成</string>
+    <string name="stats_key_runs">在您的GPU上成功執行的次數</string>
+    <string name="stats_key_reviews">五星評論（您的GPU / 您的裝置）</string>
+    <string name="stats_key_fps">預計FPS</string>
+    <string name="stats_key_session">在您裝置上的最長遊戲時長</string>
+    <string name="sort_fps">預計FPS</string>
+    <string name="sort_runs">成功執行次數</string>
+    <string name="sort_reviews">五星評論（裝置）</string>
+    <string name="sort_reviews_gpu">五星評論（GPU）</string>
+    <string name="filter_expired">已過期</string>
+    <string name="filter_playable">可流暢執行（30+ FPS）</string>
+    <string name="filter_five_star_device">裝置上的五星評論</string>
+    <string name="filter_five_star_gpu">GPU上的五星評論</string>
+    <string name="filter_proven_gpu">已在您的GPU上驗證</string>
 </resources>

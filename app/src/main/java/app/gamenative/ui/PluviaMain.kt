@@ -102,6 +102,7 @@ import app.gamenative.utils.UpdateInfo
 import app.gamenative.utils.UpdateInstaller
 import app.gamenative.utils.LaunchDependencies
 import app.gamenative.workshop.WorkshopManager
+import app.gamenative.workshop.compatibility.SlayTheSpireModTheSpireCompatibility
 import com.google.android.play.core.splitcompat.SplitCompat
 import com.winlator.container.Container
 import com.winlator.container.ContainerData
@@ -1235,6 +1236,7 @@ fun PluviaMain(
                 BootingSplash(
                     visible = state.showBootingSplash,
                     text = state.bootingSplashText,
+                    heroImageUrl = state.bootingSplashHeroImageUrl,
                 )
             }
 
@@ -1898,6 +1900,15 @@ fun preLaunchApp(
                     Timber.tag("Workshop").w(
                         "Steam not connected/logged in or offline, skipping workshop sync for appId=$gameId"
                     )
+                    if (gameId == SlayTheSpireModTheSpireCompatibility.APP_ID) {
+                        setLoadingMessage(context.getString(R.string.workshop_processing))
+                        setLoadingProgress(-1f)
+                        WorkshopManager.configureLocalWorkshopContentForEnabledIds(
+                            context = context,
+                            appId = gameId,
+                            enabledIds = enabledWorkshopIds,
+                        )
+                    }
                 } else {
                 // If a background download is still running from the save
                 // handler, wait for it to finish so its markers are on disk
@@ -2026,6 +2037,13 @@ fun preLaunchApp(
                 } // else (isLoggedIn)
             } catch (e: Exception) {
                 Timber.tag("Workshop").e(e, "Workshop mod sync failed, continuing without mods")
+            }
+        } else if (
+            gameId == SlayTheSpireModTheSpireCompatibility.APP_ID &&
+            File(SteamService.getAppDirPath(gameId)).isDirectory
+        ) {
+            withContext(Dispatchers.IO) {
+                WorkshopManager.cleanupDisabledWorkshopArtifactsForApp(context, gameId)
             }
         }
 
