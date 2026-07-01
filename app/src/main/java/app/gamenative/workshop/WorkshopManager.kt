@@ -2329,6 +2329,7 @@ object WorkshopManager {
         gameName: String = "",
         workshopModPath: String = "",
         compatibilityOverride: WorkshopCompatibilityOverride? = null,
+        bionicSteam: Boolean = PrefManager.launchBionicSteam,
     ) {
         val appId = workshopContentDir.name.toIntOrNull() ?: -1
         val isSlayTheSpire = appId == SlayTheSpireModTheSpireCompatibility.APP_ID
@@ -2591,13 +2592,19 @@ object WorkshopManager {
                 val isHighConfSymlink = detection.strategy is WorkshopModPathStrategy.SymlinkIntoDir &&
                     detection.confidence == WorkshopModPathDetector.Confidence.HIGH
 
-                if (isHighConfSymlink && detection.stdSeen) {
+                if (isHighConfSymlink && detection.stdSeen && !bionicSteam) {
                     stdSeenWithHighDir = true
                     Timber.tag(TAG).i(
                         "ISteamUGC binary signals + HIGH-confidence mod dir for $gameName — " +
                             "preferring ISteamUGC path (mods.json), suppressing filesystem symlinks"
                     )
-                    false  // use ISteamUGC, not filesystem
+                    false  // use ISteamUGC (gbe_fork mods.json), not filesystem
+                } else if (isHighConfSymlink && detection.stdSeen) {
+                    Timber.tag(TAG).i(
+                        "Bionic Steam enabled for $gameName — gbe_fork mods.json is ignored; " +
+                            "using filesystem symlinks into the game's mod dir instead"
+                    )
+                    true
                 } else {
                     (isHighConfSymlink || unityModTargets.isNotEmpty())
                 }
@@ -3746,14 +3753,15 @@ object WorkshopManager {
             appId.toString(),
         )
 
-        // Read the user's manual mod path override from the container
         val containerId = "STEAM_$appId"
-        val modPathOverride = try {
+        var modPathOverride = ""
+        var bionicSteam = PrefManager.launchBionicSteam
+        try {
             val container = ContainerUtils.getContainer(context, containerId)
-            container.getExtra("workshopModPath", "")
+            modPathOverride = container.getExtra("workshopModPath", "")
+            bionicSteam = container.isLaunchBionicSteam
         } catch (e: Exception) {
-            Timber.tag(TAG).w(e, "Failed to read workshopModPath for appId $appId")
-            ""
+            Timber.tag(TAG).w(e, "Failed to read container settings for appId $appId")
         }
 
         configureModSymlinks(
@@ -3764,6 +3772,7 @@ object WorkshopManager {
             gameName = gameName,
             workshopModPath = modPathOverride,
             compatibilityOverride = compatibilityOverride,
+            bionicSteam = bionicSteam,
         )
     }
 

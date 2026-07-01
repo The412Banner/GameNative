@@ -1,6 +1,7 @@
 package app.gamenative.ui
 
 import android.content.Context
+import android.app.Activity
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -63,6 +64,7 @@ import app.gamenative.enums.PathType
 import app.gamenative.enums.SaveLocation
 import app.gamenative.enums.SyncResult
 import app.gamenative.events.AndroidEvent
+import app.gamenative.service.ActiveGameRegistry
 import app.gamenative.service.SteamService
 import app.gamenative.service.amazon.AmazonService
 import com.posthog.PostHog
@@ -79,6 +81,7 @@ import app.gamenative.ui.component.dialog.state.MessageDialogState
 import app.gamenative.ui.components.BootingSplash
 import app.gamenative.ui.enums.AppOptionMenuType
 import app.gamenative.ui.enums.ConnectionState
+import app.gamenative.launch.LaunchReadiness
 import app.gamenative.ui.enums.DialogType
 import app.gamenative.ui.enums.Orientation
 import app.gamenative.ui.model.MainViewModel
@@ -327,6 +330,7 @@ fun PluviaMain(
 
     // Check for updates on app start
     LaunchedEffect(Unit) {
+        if (BuildConfig.MODERN_ANDROID) return@LaunchedEffect
         val checkedUpdateInfo = UpdateChecker.checkForUpdate(context)
         if (checkedUpdateInfo != null) {
             val appVersionCode = BuildConfig.VERSION_CODE
@@ -342,36 +346,44 @@ fun PluviaMain(
     // shared intent-launch path. resolves isOffline at the call site because intent launches can
     // arrive pre-login (cold-boot via stored creds) and downstream cloud-sync needs a settled answer.
     val launchIntentApp: (resolvedAppId: String, hasTemporaryOverride: Boolean) -> Unit = { resolvedAppId, hasTemporaryOverride ->
-        MainActivity.wasLaunchedViaExternalIntent = true
-        trackGameLaunched(resolvedAppId)
-        viewModel.setLaunchedAppId(resolvedAppId)
-        viewModel.setBootToContainer(false)
-        scope.launch(Dispatchers.IO) {
-            val gameSource = ContainerUtils.extractGameSourceFromContainerId(resolvedAppId)
-            val isOffline = when {
-                gameSource != GameSource.STEAM -> false
-                SteamService.isLoggedIn -> false
-                !NetworkMonitor.hasInternet.value -> true
-                else -> {
-                    viewModel.setLoadingDialogVisible(true)
-                    viewModel.setLoadingDialogMessage(context.getString(R.string.connecting_to_steam))
-                    viewModel.setLoadingDialogProgress(-1f)
-                    !SteamUtils.awaitSteamLogin()
-                }
+        val requestedGameId = runCatching { ContainerUtils.extractGameIdFromContainerId(resolvedAppId) }.getOrNull()
+        if (SteamService.keepAlive && requestedGameId != null && ActiveGameRegistry.get()?.appId == requestedGameId) {
+            Timber.i("[PluviaMain]: Game $resolvedAppId already running; bringing XServer screen forward")
+            if (navController.currentDestination?.route != PluviaScreen.XServer.route) {
+                navController.navigate(PluviaScreen.XServer.route)
             }
-            // sync viewModel — dialog retries + replaceSteamApi read isOffline.value
-            viewModel.setOffline(isOffline)
-            preLaunchApp(
-                context = context,
-                appId = resolvedAppId,
-                useTemporaryOverride = hasTemporaryOverride,
-                setLoadingDialogVisible = viewModel::setLoadingDialogVisible,
-                setLoadingProgress = viewModel::setLoadingDialogProgress,
-                setLoadingMessage = viewModel::setLoadingDialogMessage,
-                setMessageDialogState = setMessageDialogState,
-                onSuccess = viewModel::launchApp,
-                isOffline = isOffline,
-            )
+        } else {
+            MainActivity.wasLaunchedViaExternalIntent = true
+            trackGameLaunched(resolvedAppId)
+            viewModel.setLaunchedAppId(resolvedAppId)
+            viewModel.setBootToContainer(false)
+            scope.launch(Dispatchers.IO) {
+                val gameSource = ContainerUtils.extractGameSourceFromContainerId(resolvedAppId)
+                val isOffline = when {
+                    gameSource != GameSource.STEAM -> false
+                    SteamService.isLoggedIn -> false
+                    !NetworkMonitor.hasInternet.value -> true
+                    else -> {
+                        viewModel.setLoadingDialogVisible(true)
+                        viewModel.setLoadingDialogMessage(context.getString(R.string.connecting_to_steam))
+                        viewModel.setLoadingDialogProgress(-1f)
+                        !SteamUtils.awaitSteamLogin()
+                    }
+                }
+                // sync viewModel — dialog retries + replaceSteamApi read isOffline.value
+                viewModel.setOffline(isOffline)
+                preLaunchApp(
+                    context = context,
+                    appId = resolvedAppId,
+                    useTemporaryOverride = hasTemporaryOverride,
+                    setLoadingDialogVisible = viewModel::setLoadingDialogVisible,
+                    setLoadingProgress = viewModel::setLoadingDialogProgress,
+                    setLoadingMessage = viewModel::setLoadingDialogMessage,
+                    setMessageDialogState = setMessageDialogState,
+                    onSuccess = viewModel::launchApp,
+                    isOffline = isOffline,
+                )
+            }
         }
     }
 
@@ -838,6 +850,7 @@ fun PluviaMain(
                 setMessageDialogState(MessageDialogState(false))
             }
         }
+
 
         DialogType.EXECUTABLE_NOT_FOUND -> {
             onConfirmClick = null
@@ -1545,6 +1558,12 @@ fun preLaunchApp(
     val gameId = ContainerUtils.extractGameIdFromContainerId(appId)
 
     CoroutineScope(Dispatchers.IO).launch {
+        if (LaunchReadiness.pending) {
+            setLoadingDialogVisible(false)
+            (context as? Activity)?.let { LaunchReadiness.resolve(it) }
+            return@launch
+        }
+
         // create container if it does not already exist
         // TODO: combine somehow with container creation in HomeLibraryAppScreen
         val containerManager = ContainerManager(context)
@@ -1806,18 +1825,50 @@ fun preLaunchApp(
             } else {
                 Timber.tag("GOG").i("[Cloud Saves] GOG Game detected for $appId — syncing cloud saves before launch")
 
-                // Sync cloud saves (download latest saves before playing)
-                Timber.tag("GOG").d("[Cloud Saves] Starting pre-game download sync for $appId")
-                val syncSuccess = app.gamenative.service.gog.GOGService.syncCloudSaves(
+                // Map an explicit user choice (from the conflict dialog) to a forced sync direction.
+                val gogPreferredAction = when (preferredSave) {
+                    SaveLocation.Local -> "forceupload" // "Keep local" -> force local up, past the conflict guard
+                    SaveLocation.Remote -> "download" // "Keep remote" -> pull cloud down
+                    SaveLocation.None -> null
+                }
+
+                // Initial launch (no choice yet): detect a conflict and prompt before syncing.
+                if (gogPreferredAction == null) {
+                    val conflict = GOGService.detectCloudSaveConflict(context, appId)
+                    if (conflict != null) {
+                        Timber.tag("GOG").i("[Cloud Saves] Conflict detected for $appId — prompting user")
+                        val localDate = Date(conflict.localTimestamp).toString()
+                        val remoteDate = Date(conflict.remoteTimestamp).toString()
+                        setLoadingDialogVisible(false)
+                        setMessageDialogState(
+                            MessageDialogState(
+                                visible = true,
+                                type = DialogType.SYNC_CONFLICT,
+                                title = context.getString(R.string.main_save_conflict_title),
+                                message = context.getString(R.string.main_save_conflict_message, localDate, remoteDate),
+                                dismissBtnText = context.getString(R.string.main_keep_local),
+                                confirmBtnText = context.getString(R.string.main_keep_remote),
+                            ),
+                        )
+                        // Wait for the user; the dialog handlers re-enter preLaunchApp with a SaveLocation.
+                        return@launch
+                    }
+                }
+
+                // No conflict, or the user already chose a side: perform the sync.
+                val action = gogPreferredAction ?: "none"
+                Timber.tag("GOG").d("[Cloud Saves] Starting pre-game sync for $appId (action: $action)")
+                val syncSuccess = GOGService.syncCloudSaves(
                     context = context,
                     appId = appId,
+                    preferredAction = action,
                 )
 
                 if (!syncSuccess) {
-                    Timber.tag("GOG").w("[Cloud Saves] Download sync failed for $appId, proceeding with launch anyway")
+                    Timber.tag("GOG").w("[Cloud Saves] Pre-game sync failed for $appId, proceeding with launch anyway")
                     // Don't block launch on sync failure - log warning and continue
                 } else {
-                    Timber.tag("GOG").i("[Cloud Saves] Download sync completed successfully for $appId")
+                    Timber.tag("GOG").i("[Cloud Saves] Pre-game sync completed successfully for $appId")
                 }
             }
 
