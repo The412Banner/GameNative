@@ -8,10 +8,10 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.byteArrayPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import app.gamenative.data.GameSource
 import app.gamenative.enums.AppTheme
@@ -345,7 +345,7 @@ object PrefManager {
     var quickMenuLastTab: Int
         get() = getPref(QUICK_MENU_LAST_TAB, 0)
         set(value) {
-            setPref(QUICK_MENU_LAST_TAB, value.coerceIn(0, 2))
+            setPref(QUICK_MENU_LAST_TAB, value.coerceIn(0, 6))
         }
 
     private val SHOW_FPS = booleanPreferencesKey("show_fps")
@@ -509,6 +509,12 @@ object PrefManager {
             setPref(LAUNCH_REAL_STEAM, value)
         }
 
+    private val SHOW_CONTROLLER_DEBUG_MENU = booleanPreferencesKey("show_controller_debug_menu")
+    var showControllerDebugMenu: Boolean
+        get() = getPref(SHOW_CONTROLLER_DEBUG_MENU, false)
+        set(value) {
+            setPref(SHOW_CONTROLLER_DEBUG_MENU, value)
+        }
     private val LAUNCH_BIONIC_STEAM = booleanPreferencesKey("launch_bionic_steam")
     var launchBionicSteam: Boolean
         get() = getPref(LAUNCH_BIONIC_STEAM, false)
@@ -869,6 +875,28 @@ object PrefManager {
             setPref(LIBRARY_SORT_KEY, value.key)
         }
 
+    private val LIBRARY_STEAM_COLLECTIONS_CACHE = stringPreferencesKey("library_steam_collections_cache")
+    var librarySteamCollectionsCache: String
+        get() = getPref(LIBRARY_STEAM_COLLECTIONS_CACHE, "")
+        set(value) { setPref(LIBRARY_STEAM_COLLECTIONS_CACHE, value) }
+
+    private val LIBRARY_STEAM_COLLECTIONS_SKIPPED_DYNAMIC = booleanPreferencesKey("library_steam_collections_skipped_dynamic")
+    var librarySteamCollectionsSkippedDynamic: Boolean
+        get() = getPref(LIBRARY_STEAM_COLLECTIONS_SKIPPED_DYNAMIC, false)
+        set(value) { setPref(LIBRARY_STEAM_COLLECTIONS_SKIPPED_DYNAMIC, value) }
+
+    private val LIBRARY_STEAM_COLLECTIONS = stringPreferencesKey("library_steam_collections")
+    private const val COLLECTION_ID_SEPARATOR = "" // unit separator; cannot appear in a collection id
+    var librarySteamCollections: Set<String>
+        get() {
+            val raw = getPref(LIBRARY_STEAM_COLLECTIONS, "")
+            if (raw.isEmpty()) return emptySet()
+            return raw.split(COLLECTION_ID_SEPARATOR).filter { it.isNotEmpty() }.toSet()
+        }
+        set(value) {
+            setPref(LIBRARY_STEAM_COLLECTIONS, value.joinToString(COLLECTION_ID_SEPARATOR))
+        }
+
     /**
      * Get or Set the last known Persona State. See [EPersonaState]
      */
@@ -1135,6 +1163,13 @@ object PrefManager {
             setPref(SHOW_RECOMMENDATIONS, value)
         }
 
+    private val REC_DISCLOSURE_SHOWN = booleanPreferencesKey("rec_disclosure_shown")
+    var recDisclosureShown: Boolean
+        get() = getPref(REC_DISCLOSURE_SHOWN, false)
+        set(value) {
+            setPref(REC_DISCLOSURE_SHOWN, value)
+        }
+
     // Show dialog when adding custom game folder
     private val SHOW_ADD_CUSTOM_GAME_DIALOG = booleanPreferencesKey("show_add_custom_game_dialog")
     var showAddCustomGameDialog: Boolean
@@ -1353,6 +1388,11 @@ object PrefManager {
         get() = getPref(ACHIEVEMENT_SHOW_NOTIFICATION, true)
         set(value) { setPref(ACHIEVEMENT_SHOW_NOTIFICATION, value) }
 
+    private val ACHIEVEMENT_PLAY_SOUND = booleanPreferencesKey("achievement_play_sound")
+    var achievementPlaySound: Boolean
+        get() = getPref(ACHIEVEMENT_PLAY_SOUND, true)
+        set(value) { setPref(ACHIEVEMENT_PLAY_SOUND, value) }
+
     private val ACHIEVEMENT_NOTIFICATION_POSITION = stringPreferencesKey("achievement_notification_position")
     var achievementNotificationPosition: String
         get() = getPref(ACHIEVEMENT_NOTIFICATION_POSITION, "bottom_right")
@@ -1367,4 +1407,15 @@ object PrefManager {
     var usageAnalyticsEnabled: Boolean
         get() = getPref(USAGE_ANALYTICS_ENABLED, true)
         set(value) { setPref(USAGE_ANALYTICS_ENABLED, value) }
+
+    private val NEXUS_LAST_PLACEMENT_JSON = stringPreferencesKey("nexus_last_placement_json")
+    var nexusLastPlacementJson: String
+        get() = getPref(NEXUS_LAST_PLACEMENT_JSON, "{}")
+        set(value) {
+            if (value.isBlank() || value == "{}") {
+                removePref(NEXUS_LAST_PLACEMENT_JSON)
+            } else {
+                setPref(NEXUS_LAST_PLACEMENT_JSON, value)
+            }
+        }
 }

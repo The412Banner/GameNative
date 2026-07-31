@@ -64,8 +64,8 @@ android {
         buildConfigField("boolean", "XR_BUILD", "false")
         buildConfigField("boolean", "MODERN_XR", "false")
 
-        versionCode = 18
-        versionName = "1.0.4"
+        versionCode = 19
+        versionName = "1.0.5"
 
         buildConfigField("boolean", "GOLD", "false")
         fun secret(name: String) =
@@ -331,8 +331,8 @@ dependencies {
     // JavaSteam
     val localBuild = false // Change to 'true' needed when building JavaSteam manually
     if (localBuild) {
-        implementation(files("../../JavaSteam/build/libs/javasteam-1.8.0.1-20-SNAPSHOT.jar"))
-        implementation(files("../../JavaSteam/javasteam-depotdownloader/build/libs/javasteam-depotdownloader-1.8.0.1-20-SNAPSHOT.jar"))
+        implementation(files("../../JavaSteam/build/libs/javasteam-1.8.0.1-22-SNAPSHOT.jar"))
+        implementation(files("../../JavaSteam/javasteam-depotdownloader/build/libs/javasteam-depotdownloader-1.8.0.1-22-SNAPSHOT.jar"))
         implementation(libs.bundles.javasteam.dev)
     } else {
         implementation(libs.javasteam) {
@@ -350,6 +350,7 @@ dependencies {
 
     // Winlator
     implementation(libs.bundles.winlator)
+    implementation(libs.libarchive.android)
     implementation(libs.zstd.jni) { artifact { type = "aar" } }
     implementation(libs.xz)
 

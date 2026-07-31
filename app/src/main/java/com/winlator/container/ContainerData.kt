@@ -84,6 +84,8 @@ data class ContainerData(
     val shooterMode: Boolean = true,
     /** Serialised JSON gesture configuration (used when touchscreenMode is true) **/
     val gestureConfig: String = "",
+    /** Serialised JSON shooter mode configuration (used when shooterMode is true) **/
+    val shooterConfig: String = "",
     /** External display input handling: off|touchpad|keyboard|hybrid **/
     val externalDisplayMode: String = Container.DEFAULT_EXTERNAL_DISPLAY_MODE,
     /** Swap game/input between internal and external displays **/
@@ -106,6 +108,8 @@ data class ContainerData(
     val lsfgEnabled: Boolean = false,
     /** URI string of a manually selected Lossless.dll (fallback when Steam auto-discovery fails) */
     val lsfgCustomDllPath: String = "",
+    /** Whether bionic-fg AI frame generation is enabled for this container */
+    val bionicFgEnabled: Boolean = false,
 ) {
     companion object {
         val Saver = mapSaver(
@@ -160,6 +164,7 @@ data class ContainerData(
                     "touchscreenMode" to state.touchscreenMode,
                     "shooterMode" to state.shooterMode,
                     "gestureConfig" to state.gestureConfig,
+                    "shooterConfig" to state.shooterConfig,
                     "externalDisplayMode" to state.externalDisplayMode,
                     "externalDisplaySwap" to state.externalDisplaySwap,
                     "useDRI3" to state.useDRI3,
@@ -177,6 +182,7 @@ data class ContainerData(
                     "sharpnessDenoise" to state.sharpnessDenoise,
                     "lsfgEnabled" to state.lsfgEnabled,
                     "lsfgCustomDllPath" to state.lsfgCustomDllPath,
+                    "bionicFgEnabled" to state.bionicFgEnabled,
                 )
             },
             restore = { savedMap ->
@@ -230,6 +236,7 @@ data class ContainerData(
                     touchscreenMode = savedMap["touchscreenMode"] as Boolean,
                     shooterMode = (savedMap["shooterMode"] as? Boolean) ?: true,
                     gestureConfig = (savedMap["gestureConfig"] as? String) ?: "",
+                    shooterConfig = (savedMap["shooterConfig"] as? String) ?: "",
                     externalDisplayMode = (savedMap["externalDisplayMode"] as? String) ?: Container.DEFAULT_EXTERNAL_DISPLAY_MODE,
                     externalDisplaySwap = (savedMap["externalDisplaySwap"] as? Boolean) ?: false,
                     useDRI3 = (savedMap["useDRI3"] as? Boolean) ?: true,
@@ -247,6 +254,7 @@ data class ContainerData(
                     sharpnessDenoise = (savedMap["sharpnessDenoise"] as? Int) ?: 100,
                     lsfgEnabled = (savedMap["lsfgEnabled"] as? Boolean) ?: false,
                     lsfgCustomDllPath = (savedMap["lsfgCustomDllPath"] as? String) ?: "",
+                    bionicFgEnabled = (savedMap["bionicFgEnabled"] as? Boolean) ?: false,
                 )
             },
         )

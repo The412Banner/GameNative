@@ -1,5 +1,5 @@
 # Privacy Policy for GameNative
-<sub>Last Updated: June 26, 2026</sub>
+<sub>Last Updated: July 12, 2026</sub>
 
 GameNative is an unofficial client application that lets you access your libraries from supported PC game stores and play your owned games on your device.
 
@@ -27,6 +27,20 @@ This data:
 
 GameNative does not build user profiles, track browsing activity, or sell data to third parties.
 
+## Game Recommendations
+
+GameNative can suggest games you might like from GOG.com, based on the games you already play. **We do not send any of your game or account information to GOG unless you explicitly opt in by accepting an in-app consent prompt.** Until you consent, nothing about the games you play is shared with GOG. You can turn the feature off again at any time in **Settings → Interface → Show game recommendations**.
+
+Once you have opted in:
+
+- The app looks at which games you play most and most recently on your device, and shares the corresponding game identifiers with GOG's recommendation service to generate suggestions.
+- If you are signed into GOG, your GOG account identifier is included, so recommendations can be tailored and games you already own can be excluded.
+- These identifiers are sent directly to GOG's recommendation, catalog, and games-database services. GOG's handling of them is governed by GOG's own privacy policy.
+
+Recommended games link to GOG's store through an affiliate program (Commission Junction). If you follow one of these links, the affiliate network may record the click for attribution, and GameNative may earn a commission on any resulting purchase. This does not change the price you pay.
+
+Turning recommendations off stops all of the above: no game or account information is sent to GOG for recommendations, and the recommendations section is hidden.
+
 ## Third-Party Services
 
 GameNative functions as an interface to the game stores you choose to use (Steam, Epic Games, GOG, and Amazon). We have no control over or responsibility for how those platforms collect, use, or store your information. Please refer to each platform's privacy policy to understand how they handle your data.
@@ -49,7 +63,7 @@ You can clear all locally stored data at any time by:
 - Clearing app data through your device settings
 - Uninstalling the application
 
-We do not retain your personal information on our own servers. If you believe we hold any data associated with you — for example, support correspondence — you can request its deletion by emailing support@gamenative.app, and we will action verified requests.
+We do not retain your personal information on our own servers. If you believe we hold any data associated with you — for example, support correspondence — you can request its deletion by emailing support[at]gamenative[dot]app, and we will action verified requests.
 
 ## Changes to Privacy Policy
 
@@ -57,7 +71,7 @@ We reserve the right to update this privacy policy at any time. Any changes will
 
 ## Contact Information
 
-For questions about this privacy policy or GameNative's privacy practices, please contact us at support@gamenative.app.
+For questions about this privacy policy or GameNative's privacy practices, please contact us at support[at]gamenative[dot]app.
 
 ## Age Requirements
 
