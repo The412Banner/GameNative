@@ -1,6 +1,7 @@
 package com.winlator.container
 
 import androidx.compose.runtime.saveable.mapSaver
+import app.gamenative.PluviaApp
 import com.winlator.box86_64.Box86_64Preset
 import com.winlator.core.DefaultVersion
 import com.winlator.core.WineInfo
@@ -11,7 +12,7 @@ import kotlin.String
 
 data class ContainerData(
     val name: String = "",
-    val screenSize: String = Container.DEFAULT_SCREEN_SIZE,
+    val screenSize: String = PluviaApp.getDefaultScreenSize(),
     val envVars: String = Container.DEFAULT_ENV_VARS,
     val graphicsDriver: String = Container.DEFAULT_GRAPHICS_DRIVER,
     val graphicsDriverVersion: String = "",
@@ -109,7 +110,6 @@ data class ContainerData(
     /** URI string of a manually selected Lossless.dll (fallback when Steam auto-discovery fails) */
     val lsfgCustomDllPath: String = "",
     /** Whether bionic-fg AI frame generation is enabled for this container */
-    val bionicFgEnabled: Boolean = false,
 ) {
     companion object {
         val Saver = mapSaver(
@@ -182,7 +182,6 @@ data class ContainerData(
                     "sharpnessDenoise" to state.sharpnessDenoise,
                     "lsfgEnabled" to state.lsfgEnabled,
                     "lsfgCustomDllPath" to state.lsfgCustomDllPath,
-                    "bionicFgEnabled" to state.bionicFgEnabled,
                 )
             },
             restore = { savedMap ->
@@ -254,7 +253,6 @@ data class ContainerData(
                     sharpnessDenoise = (savedMap["sharpnessDenoise"] as? Int) ?: 100,
                     lsfgEnabled = (savedMap["lsfgEnabled"] as? Boolean) ?: false,
                     lsfgCustomDllPath = (savedMap["lsfgCustomDllPath"] as? String) ?: "",
-                    bionicFgEnabled = (savedMap["bionicFgEnabled"] as? Boolean) ?: false,
                 )
             },
         )

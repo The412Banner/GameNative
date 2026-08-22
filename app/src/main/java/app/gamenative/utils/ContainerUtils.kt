@@ -366,7 +366,6 @@ object ContainerUtils {
             // LSFG Vulkan frame generation
             lsfgEnabled = container.getExtra(LsfgVkManager.EXTRA_ARMED, "false").toBoolean(),
             lsfgCustomDllPath = container.getExtra(LsfgVkManager.EXTRA_CUSTOM_DLL_PATH, ""),
-            bionicFgEnabled = container.getExtra(BionicFgManager.EXTRA_ARMED, "false").toBoolean(),
         )
     }
 
@@ -551,7 +550,6 @@ object ContainerUtils {
         // LSFG Vulkan frame generation
         container.putExtra(LsfgVkManager.EXTRA_ARMED, containerData.lsfgEnabled.toString())
         container.putExtra(LsfgVkManager.EXTRA_CUSTOM_DLL_PATH, containerData.lsfgCustomDllPath)
-        container.putExtra(BionicFgManager.EXTRA_ARMED, containerData.bionicFgEnabled.toString())
         try {
             container.language = containerData.language
         } catch (e: Exception) {
@@ -1232,10 +1230,8 @@ object ContainerUtils {
         GameSource.GOG,
         GameSource.EPIC,
         GameSource.AMAZON,
-        -> true
-
         GameSource.CUSTOM_GAME,
-        -> false
+        -> true
     }
 
     /**
